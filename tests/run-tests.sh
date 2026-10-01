@@ -26,6 +26,9 @@ run_test() {
 # 1. Phonetic core test
 run_test "Phonetic Core Rules" "gjs ${ROOT_DIR}/tests/core/test-phonetic.js"
 
+# 2. Deterministic Regression Corpus test
+run_test "Deterministic Regression Corpus" "gjs ${ROOT_DIR}/tests/core/test-regression-corpus.js"
+
 # 2. Dictionary & suggestions test
 run_test "Dictionary & Suggestions" "gjs ${ROOT_DIR}/tests/core/test-dictionary.js"
 

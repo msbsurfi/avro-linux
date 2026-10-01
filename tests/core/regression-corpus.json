@@ -1,0 +1,566 @@
+{
+  "description": "Deterministic Avro Phonetic Regression Corpus for Avro Linux",
+  "version": "1.0.0",
+  "test_cases": [
+    {
+      "category": "independent_vowels",
+      "input": "o",
+      "expected": "অ"
+    },
+    {
+      "category": "independent_vowels",
+      "input": "a",
+      "expected": "আ"
+    },
+    {
+      "category": "independent_vowels",
+      "input": "i",
+      "expected": "ই"
+    },
+    {
+      "category": "independent_vowels",
+      "input": "I",
+      "expected": "ঈ"
+    },
+    {
+      "category": "independent_vowels",
+      "input": "u",
+      "expected": "উ"
+    },
+    {
+      "category": "independent_vowels",
+      "input": "U",
+      "expected": "ঊ"
+    },
+    {
+      "category": "independent_vowels",
+      "input": "rri",
+      "expected": "ঋ"
+    },
+    {
+      "category": "independent_vowels",
+      "input": "e",
+      "expected": "এ"
+    },
+    {
+      "category": "independent_vowels",
+      "input": "OI",
+      "expected": "ঐ"
+    },
+    {
+      "category": "independent_vowels",
+      "input": "O",
+      "expected": "ও"
+    },
+    {
+      "category": "independent_vowels",
+      "input": "OU",
+      "expected": "ঔ"
+    },
+    {
+      "category": "consonants",
+      "input": "k",
+      "expected": "ক"
+    },
+    {
+      "category": "consonants",
+      "input": "kh",
+      "expected": "খ"
+    },
+    {
+      "category": "consonants",
+      "input": "g",
+      "expected": "গ"
+    },
+    {
+      "category": "consonants",
+      "input": "gh",
+      "expected": "ঘ"
+    },
+    {
+      "category": "consonants",
+      "input": "Ng",
+      "expected": "ঙ"
+    },
+    {
+      "category": "consonants",
+      "input": "c",
+      "expected": "চ"
+    },
+    {
+      "category": "consonants",
+      "input": "ch",
+      "expected": "ছ"
+    },
+    {
+      "category": "consonants",
+      "input": "j",
+      "expected": "জ"
+    },
+    {
+      "category": "consonants",
+      "input": "jh",
+      "expected": "ঝ"
+    },
+    {
+      "category": "consonants",
+      "input": "NG",
+      "expected": "ঞ"
+    },
+    {
+      "category": "consonants",
+      "input": "T",
+      "expected": "ট"
+    },
+    {
+      "category": "consonants",
+      "input": "Th",
+      "expected": "ঠ"
+    },
+    {
+      "category": "consonants",
+      "input": "D",
+      "expected": "ড"
+    },
+    {
+      "category": "consonants",
+      "input": "Dh",
+      "expected": "ঢ"
+    },
+    {
+      "category": "consonants",
+      "input": "N",
+      "expected": "ণ"
+    },
+    {
+      "category": "consonants",
+      "input": "t",
+      "expected": "ত"
+    },
+    {
+      "category": "consonants",
+      "input": "th",
+      "expected": "থ"
+    },
+    {
+      "category": "consonants",
+      "input": "d",
+      "expected": "দ"
+    },
+    {
+      "category": "consonants",
+      "input": "dh",
+      "expected": "ধ"
+    },
+    {
+      "category": "consonants",
+      "input": "n",
+      "expected": "ন"
+    },
+    {
+      "category": "consonants",
+      "input": "p",
+      "expected": "প"
+    },
+    {
+      "category": "consonants",
+      "input": "ph",
+      "expected": "ফ"
+    },
+    {
+      "category": "consonants",
+      "input": "f",
+      "expected": "ফ"
+    },
+    {
+      "category": "consonants",
+      "input": "b",
+      "expected": "ব"
+    },
+    {
+      "category": "consonants",
+      "input": "bh",
+      "expected": "ভ"
+    },
+    {
+      "category": "consonants",
+      "input": "v",
+      "expected": "ভ"
+    },
+    {
+      "category": "consonants",
+      "input": "m",
+      "expected": "ম"
+    },
+    {
+      "category": "consonants",
+      "input": "z",
+      "expected": "য"
+    },
+    {
+      "category": "consonants",
+      "input": "r",
+      "expected": "র"
+    },
+    {
+      "category": "consonants",
+      "input": "l",
+      "expected": "ল"
+    },
+    {
+      "category": "consonants",
+      "input": "sh",
+      "expected": "শ"
+    },
+    {
+      "category": "consonants",
+      "input": "Sh",
+      "expected": "ষ"
+    },
+    {
+      "category": "consonants",
+      "input": "s",
+      "expected": "স"
+    },
+    {
+      "category": "consonants",
+      "input": "h",
+      "expected": "হ"
+    },
+    {
+      "category": "consonants",
+      "input": "R",
+      "expected": "ড়"
+    },
+    {
+      "category": "consonants",
+      "input": "Rh",
+      "expected": "ঢ়"
+    },
+    {
+      "category": "consonants",
+      "input": "Y",
+      "expected": "য়"
+    },
+    {
+      "category": "vowel_signs_kar",
+      "input": "ka",
+      "expected": "কা"
+    },
+    {
+      "category": "vowel_signs_kar",
+      "input": "ki",
+      "expected": "কি"
+    },
+    {
+      "category": "vowel_signs_kar",
+      "input": "kI",
+      "expected": "কী"
+    },
+    {
+      "category": "vowel_signs_kar",
+      "input": "ku",
+      "expected": "কু"
+    },
+    {
+      "category": "vowel_signs_kar",
+      "input": "kU",
+      "expected": "কূ"
+    },
+    {
+      "category": "vowel_signs_kar",
+      "input": "krri",
+      "expected": "কৃ"
+    },
+    {
+      "category": "vowel_signs_kar",
+      "input": "ke",
+      "expected": "কে"
+    },
+    {
+      "category": "vowel_signs_kar",
+      "input": "kOI",
+      "expected": "কৈ"
+    },
+    {
+      "category": "vowel_signs_kar",
+      "input": "kO",
+      "expected": "কো"
+    },
+    {
+      "category": "vowel_signs_kar",
+      "input": "kOU",
+      "expected": "কৌ"
+    },
+    {
+      "category": "conjuncts",
+      "input": "kk",
+      "expected": "ক্ক"
+    },
+    {
+      "category": "conjuncts",
+      "input": "kkh",
+      "expected": "ক্ষ"
+    },
+    {
+      "category": "conjuncts",
+      "input": "kSh",
+      "expected": "ক্ষ"
+    },
+    {
+      "category": "conjuncts",
+      "input": "kt",
+      "expected": "ক্ত"
+    },
+    {
+      "category": "conjuncts",
+      "input": "ks",
+      "expected": "ক্স"
+    },
+    {
+      "category": "conjuncts",
+      "input": "cch",
+      "expected": "চ্ছ"
+    },
+    {
+      "category": "conjuncts",
+      "input": "jj",
+      "expected": "জ্জ"
+    },
+    {
+      "category": "conjuncts",
+      "input": "tt",
+      "expected": "ত্ত"
+    },
+    {
+      "category": "conjuncts",
+      "input": "tth",
+      "expected": "ত্থ"
+    },
+    {
+      "category": "conjuncts",
+      "input": "tr",
+      "expected": "ত্র"
+    },
+    {
+      "category": "conjuncts",
+      "input": "dd",
+      "expected": "দ্দ"
+    },
+    {
+      "category": "conjuncts",
+      "input": "ddh",
+      "expected": "দ্ধ"
+    },
+    {
+      "category": "conjuncts",
+      "input": "nt",
+      "expected": "ন্ত"
+    },
+    {
+      "category": "conjuncts",
+      "input": "nd",
+      "expected": "ন্দ"
+    },
+    {
+      "category": "conjuncts",
+      "input": "ndh",
+      "expected": "ন্ধ"
+    },
+    {
+      "category": "conjuncts",
+      "input": "mp",
+      "expected": "ম্প"
+    },
+    {
+      "category": "conjuncts",
+      "input": "mb",
+      "expected": "ম্ব"
+    },
+    {
+      "category": "conjuncts",
+      "input": "mbh",
+      "expected": "ম্ভ"
+    },
+    {
+      "category": "conjuncts",
+      "input": "st",
+      "expected": "স্ত"
+    },
+    {
+      "category": "conjuncts",
+      "input": "sk",
+      "expected": "স্ক"
+    },
+    {
+      "category": "conjuncts",
+      "input": "sp",
+      "expected": "স্প"
+    },
+    {
+      "category": "conjuncts",
+      "input": "Ngk",
+      "expected": "ঙ্ক"
+    },
+    {
+      "category": "conjuncts",
+      "input": "Ngg",
+      "expected": "ঙ্গ"
+    },
+    {
+      "category": "hasanta_and_modifiers",
+      "input": "k,,",
+      "expected": "ক্‌"
+    },
+    {
+      "category": "hasanta_and_modifiers",
+      "input": "t``",
+      "expected": "ৎ"
+    },
+    {
+      "category": "hasanta_and_modifiers",
+      "input": "ca^d",
+      "expected": "চাঁদ"
+    },
+    {
+      "category": "hasanta_and_modifiers",
+      "input": "du:kho",
+      "expected": "দুঃখ"
+    },
+    {
+      "category": "numbers",
+      "input": "0123456789",
+      "expected": "০১২৩৪৫৬৭৮৯"
+    },
+    {
+      "category": "numbers",
+      "input": "1971",
+      "expected": "১৯৭১"
+    },
+    {
+      "category": "numbers",
+      "input": "2026",
+      "expected": "২০২৬"
+    },
+    {
+      "category": "punctuation",
+      "input": ".",
+      "expected": "।"
+    },
+    {
+      "category": "punctuation",
+      "input": "..",
+      "expected": "।।"
+    },
+    {
+      "category": "punctuation",
+      "input": "!",
+      "expected": "!"
+    },
+    {
+      "category": "punctuation",
+      "input": "?",
+      "expected": "?"
+    },
+    {
+      "category": "words_and_phrases",
+      "input": "ami banglay gan gai",
+      "expected": "আমি বাংলায় গান গাই"
+    },
+    {
+      "category": "words_and_phrases",
+      "input": "bangladesh",
+      "expected": "বাংলাদেশ"
+    },
+    {
+      "category": "words_and_phrases",
+      "input": "Dhaka",
+      "expected": "ঢাকা"
+    },
+    {
+      "category": "words_and_phrases",
+      "input": "bhaSha",
+      "expected": "ভাষা"
+    },
+    {
+      "category": "words_and_phrases",
+      "input": "matrribhaSha",
+      "expected": "মাতৃভাষা"
+    },
+    {
+      "category": "words_and_phrases",
+      "input": "swadhInota",
+      "expected": "স্বাধীনতা"
+    },
+    {
+      "category": "words_and_phrases",
+      "input": "muktizuddho",
+      "expected": "মুক্তিযুদ্ধ"
+    },
+    {
+      "category": "words_and_phrases",
+      "input": "shohId minar",
+      "expected": "শহীদ মিনার"
+    },
+    {
+      "category": "words_and_phrases",
+      "input": "korrmo",
+      "expected": "কর্ম"
+    },
+    {
+      "category": "words_and_phrases",
+      "input": "kromo",
+      "expected": "ক্রম"
+    },
+    {
+      "category": "words_and_phrases",
+      "input": "dhorrmo",
+      "expected": "ধর্ম"
+    },
+    {
+      "category": "words_and_phrases",
+      "input": "prothom",
+      "expected": "প্রথম"
+    },
+    {
+      "category": "words_and_phrases",
+      "input": "shobdo",
+      "expected": "শব্দ"
+    },
+    {
+      "category": "words_and_phrases",
+      "input": "brritto",
+      "expected": "বৃত্ত"
+    },
+    {
+      "category": "padding_and_boundaries",
+      "input": "(bangla)",
+      "expected": "(বাংলা)"
+    },
+    {
+      "category": "padding_and_boundaries",
+      "input": "\"desh\"",
+      "expected": "\"দেশ\""
+    },
+    {
+      "category": "padding_and_boundaries",
+      "input": "desh!",
+      "expected": "দেশ!"
+    },
+    {
+      "category": "padding_and_boundaries",
+      "input": "desh?",
+      "expected": "দেশ?"
+    },
+    {
+      "category": "padding_and_boundaries",
+      "input": "desh,",
+      "expected": "দেশ,"
+    },
+    {
+      "category": "padding_and_boundaries",
+      "input": "desh;",
+      "expected": "দেশ;"
+    }
+  ]
+}
