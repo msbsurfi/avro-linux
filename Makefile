@@ -57,6 +57,10 @@ install: build
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/48x48/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/doc/avro-linux
 
+	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/daemon
+	install -d -m 0755 $(DESTDIR)$(datadir)/avro-linux/autostart
+	install -d -m 0755 /etc/xdg/autostart 2>/dev/null || true
+
 	# Command-line binary launchers
 	install -m 0755 bin/avro $(DESTDIR)$(prefix)/bin/avro
 	install -m 0755 bin/avro-topbar $(DESTDIR)$(prefix)/bin/avro-topbar
@@ -64,6 +68,10 @@ install: build
 	install -m 0755 bin/avro-converter $(DESTDIR)$(prefix)/bin/avro-converter
 	install -m 0755 bin/avro-layout $(DESTDIR)$(prefix)/bin/avro-layout
 	install -m 0755 bin/avro-preferences $(DESTDIR)$(prefix)/bin/avro-preferences
+	install -m 0755 bin/avro-daemon $(DESTDIR)$(prefix)/bin/avro-daemon
+
+	# Daemon (system-wide input, no IBus needed)
+	install -m 0755 src/daemon/avro-daemon.py $(DESTDIR)$(pkgdatadir)/daemon/avro-daemon.py
 
 	# Common & Engine scripts
 	install -m 0644 src/common/evars.js $(DESTDIR)$(pkgdatadir)/common/evars.js
@@ -101,6 +109,8 @@ install: build
 	install -m 0644 data/applications/avro-layout.desktop $(DESTDIR)$(datadir)/applications/avro-layout.desktop
 	install -m 0644 data/applications/ibus-setup-avro.desktop $(DESTDIR)$(datadir)/applications/ibus-setup-avro.desktop
 	install -m 0644 data/metainfo/com.github.sarim.ibus.avro.metainfo.xml $(DESTDIR)$(datadir)/metainfo/com.github.sarim.ibus.avro.metainfo.xml
+	install -m 0644 data/autostart/avro-daemon.desktop /etc/xdg/autostart/avro-daemon.desktop || \
+	    install -m 0644 data/autostart/avro-daemon.desktop $(DESTDIR)$(datadir)/avro-linux/autostart/avro-daemon.desktop
 
 	# Icons
 	install -m 0644 data/icons/avro-bangla.png $(DESTDIR)$(pkgdatadir)/icons/avro-bangla.png

@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Avro Phonetic Input Daemon
+Comment=System-wide Bengali phonetic input (Remastered by MD Shifat Bin Siddique Urfi)
+Exec=avro-daemon
+Icon=input-keyboard
+Terminal=false
+NoDisplay=true
+StartupNotify=false
+X-GNOME-Autostart-enabled=true
+Categories=Utility;Accessibility;

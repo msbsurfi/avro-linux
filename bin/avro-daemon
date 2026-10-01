@@ -1,0 +1,4 @@
+#!/bin/bash
+# avro-daemon launcher
+# Starts the Avro system-wide input daemon (no IBus required)
+exec python3 /usr/share/avro-linux/daemon/avro-daemon.py "$@"
