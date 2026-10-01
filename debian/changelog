@@ -1,9 +1,13 @@
 avro-linux (1.0.0-1) unstable; urgency=medium
 
-  * Initial release of Avro Linux.
-  * Modernized repository structure and build targets.
-  * Full Avro Phonetic engine with deterministic regression tests.
-  * Native GTK preferences application with privacy-preserving diagnostics.
-  * Debian packaging and IBus desktop integration.
+  * Remastered release of Avro Linux by MD Shifat Bin Siddique Urfi.
+  * Added floating sticky always-on-top Windows-style Avro TopBar with full options.
+  * Added standalone Avro Pad text editor with live inline Bengali phonetic typing.
+  * Added 100% roundtrip Unicode <-> Bijoy (SutonnyMJ) Converter.
+  * Added interactive visual Keyboard Layout Viewer.
+  * Fixed F12 key handling to toggle between Bangla and English mode.
+  * Modernized IBus engine key event processing for Wayland and modern Linux distributions (Ubuntu 24.04/26.04, Debian 12/13).
+  * Automated IBus cache registration in postinst/postrm.
+  * Full deterministic regression test suites.
 
- -- Avro Linux Team <avro-linux@github.com>  Thu, 01 Oct 2026 21:00:00 +0600
+ -- MD Shifat Bin Siddique Urfi <msbsu@github.com>  Thu, 01 Oct 2026 22:50:00 +0600

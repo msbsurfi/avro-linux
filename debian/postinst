@@ -16,6 +16,12 @@ if [ "$1" = "configure" ]; then
     if command -v gtk-update-icon-cache >/dev/null 2>&1; then
         gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true
     fi
+
+    # Update IBus component registry cache
+    if command -v ibus >/dev/null 2>&1; then
+        ibus write-cache --system 2>/dev/null || true
+        ibus write-cache 2>/dev/null || true
+    fi
 fi
 
 exit 0

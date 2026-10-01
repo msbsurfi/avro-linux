@@ -1,10 +1,11 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: Avro Linux
-Upstream-Contact: Avro Linux Team <avro-linux@github.com>
-Source: https://github.com/sarim/ibus-avro
+Upstream-Name: Avro Linux (Remastered Edition)
+Upstream-Contact: MD Shifat Bin Siddique Urfi <msbsu@github.com>
+Source: https://github.com/avro-linux/avro-linux
 
 Files: *
-Copyright: 2024-2026 Avro Linux Contributors
+Copyright: 2026 MD Shifat Bin Siddique Urfi <msbsu@github.com>
+           2024-2026 Avro Linux Contributors
            2012-2021 Sarim Khan <sarim2005@gmail.com>
 License: MPL-2.0
 
@@ -20,12 +21,14 @@ License: public-domain
  Damerau-Levenshtein distance algorithm implementation from public domain sources.
 
 Files: data/metainfo/*
-Copyright: 2019 Sarim Khan <sarim2005@gmail.com>
+Copyright: 2026 MD Shifat Bin Siddique Urfi <msbsu@github.com>
+           2019 Sarim Khan <sarim2005@gmail.com>
            2024-2026 Avro Linux Contributors
 License: CC0-1.0
 
 Files: debian/*
-Copyright: 2026 Avro Linux Contributors
+Copyright: 2026 MD Shifat Bin Siddique Urfi <msbsu@github.com>
+           2026 Avro Linux Contributors
            2019-2023 Gunnar Hjalmarsson <gunnarhj@debian.org>
            2024 Boyuan Yang <byang@debian.org>
 License: MPL-2.0

@@ -38,24 +38,27 @@ Section: utils
 Priority: optional
 Architecture: ${ARCH}
 Installed-Size: ${INSTALLED_SIZE}
-Maintainer: Avro Linux Team <avro-linux@github.com>
+Maintainer: MD Shifat Bin Siddique Urfi <msbsu@github.com>
 Depends: gjs (>= 1.70.0), ibus (>= 1.5.0), dconf-gsettings-backend | gsettings-backend
 Recommends: gir1.2-gtk-3.0
 Conflicts: ibus-avro
 Replaces: ibus-avro
-Homepage: https://github.com/sarim/ibus-avro
-Description: Modern Avro Phonetic Bengali input method for Linux
- Avro Linux is a modernized, reliable implementation of the popular
- Avro Phonetic Bengali typing method for Linux desktops. It integrates
- natively through the IBus input method framework, providing fast,
- accurate phonetic Latin-to-Bengali transliteration.
+Homepage: https://github.com/avro-linux/avro-linux
+Description: Modern Avro Phonetic Bengali input method for Linux (Remastered)
+ Avro Linux Remastered is a modern, reliable implementation of the popular
+ Avro Phonetic Bengali typing method for Linux desktops (Ubuntu 24.04/26.04,
+ Debian 12/13). Remastered by MD Shifat Bin Siddique Urfi.
  .
  Features include:
+  * Windows-style floating sticky Avro TopBar (always-on-top, non-focus-stealing)
+  * Standalone Avro Pad text editor with live inline phonetic typing
+  * 100% roundtrip Unicode to Bijoy (SutonnyMJ) and ANSI converter
+  * Interactive visual keyboard layout viewer and phonetic guide
+  * Modernized IBus engine with F12 mode toggle and robust modifier handling
   * Full phonetic rules, vowels, consonants, and conjuncts (যুক্তবর্ণ)
   * Comprehensive dictionary suggestions and grammatical suffix inflections
   * Autocorrect and custom candidate learning
   * Full-featured GTK preferences application with privacy-preserving diagnostics
-  * Seamless desktop integration and IBus setup
 EOF
 
 # Copy maintainer scripts

@@ -122,6 +122,16 @@ for (let i = 0; i < DESKTOP_FILES.length; i++) {
     assert(file.query_exists(null), "Desktop file exists: " + path);
 }
 
+// 5. Test CLI --version and maintainer credit
+try {
+    let [res, stdout] = GLib.spawn_command_line_sync("gjs src/standalone/main.js --version");
+    assert(res === true, "main.js --version executed successfully");
+    let outStr = String.fromCharCode.apply(null, stdout);
+    assert(outStr.indexOf("MD Shifat Bin Siddique Urfi") !== -1, "Version output credits MD Shifat Bin Siddique Urfi");
+} catch (e) {
+    assert(false, "CLI version check failed: " + e.message);
+}
+
 print("\nStandalone Suite Test Summary:");
 print("  Total Passed: " + passedCount);
 print("  Total Failed: " + failedCount);

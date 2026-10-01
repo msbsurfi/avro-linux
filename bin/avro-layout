@@ -2,4 +2,9 @@
 # Launcher script for Avro Layout Viewer
 # SPDX-License-Identifier: MPL-2.0
 
-exec /usr/share/avro-linux/standalone/main.js --layout "$@"
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -f "${SCRIPT_DIR}/src/standalone/main.js" ]; then
+    exec "${SCRIPT_DIR}/src/standalone/main.js" --layout "$@"
+elif [ -f "/usr/share/avro-linux/standalone/main.js" ]; then
+    exec /usr/share/avro-linux/standalone/main.js --layout "$@"
+fi

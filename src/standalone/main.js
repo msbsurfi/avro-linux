@@ -43,7 +43,10 @@ try { LayoutViewer = imports.layoutviewer; } catch (e) {}
 try { PrefApp = imports.pref; } catch (e) {}
 
 function printHelp() {
-    print("Avro Linux — Standalone Input Software");
+    print("Avro Linux (Remastered Edition) — Standalone Bengali Input Suite");
+    print("Lead Developer & Maintainer: MD Shifat Bin Siddique Urfi");
+    print("Version: 1.0.0");
+    print("");
     print("Usage: avro [OPTION...]");
     print("");
     print("Options:");
@@ -52,12 +55,20 @@ function printHelp() {
     print("  --converter     Launch Unicode to Bijoy (SutonnyMJ) Converter");
     print("  --layout        Launch Visual Keyboard Layout Viewer & Rules Guide");
     print("  --preferences   Launch Avro Preferences configuration dialog");
+    print("  --version, -v   Display version and maintainer information");
     print("  --help, -h      Display this help message");
     print("");
 }
 
 function main() {
     let args = typeof ARGV !== 'undefined' ? ARGV : [];
+
+    if (args.indexOf('--version') !== -1 || args.indexOf('-v') !== -1) {
+        print("Avro Linux (Remastered Edition) v1.0.0");
+        print("Lead Developer & Remaster Maintainer: MD Shifat Bin Siddique Urfi");
+        print("License: MPL-2.0");
+        return;
+    }
 
     if (args.indexOf('--help') !== -1 || args.indexOf('-h') !== -1) {
         printHelp();

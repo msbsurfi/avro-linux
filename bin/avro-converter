@@ -2,4 +2,9 @@
 # Launcher script for Avro Unicode to Bijoy Converter
 # SPDX-License-Identifier: MPL-2.0
 
-exec /usr/share/avro-linux/standalone/main.js --converter "$@"
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -f "${SCRIPT_DIR}/src/standalone/main.js" ]; then
+    exec "${SCRIPT_DIR}/src/standalone/main.js" --converter "$@"
+elif [ -f "/usr/share/avro-linux/standalone/main.js" ]; then
+    exec /usr/share/avro-linux/standalone/main.js --converter "$@"
+fi

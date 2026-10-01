@@ -288,6 +288,7 @@ function runpref() {
 
     let gridShortcuts = new Gtk.Grid({ row_spacing: 10, column_spacing: 16 });
     let shortcutsList = [
+        ["F12", "Toggle between Bangla and English input mode"],
         ["Space / Tab / Return", "Commit current Bengali candidate"],
         ["Left / Right / Up / Down", "Navigate candidate suggestions"],
         ["Backspace", "Edit preedit buffer (deletes previous character)"],
@@ -347,16 +348,18 @@ function runpref() {
     /* ========================================================================= */
     let aboutBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 10, border_width: 20, halign: Gtk.Align.CENTER });
     
-    let appNameLabel = new Gtk.Label({ label: "<big><b>Avro Linux</b></big>", use_markup: true });
-    let appVerLabel = new Gtk.Label({ label: "Version 1.0.0 (Debian Edition)" });
+    let appNameLabel = new Gtk.Label({ label: "<big><b>Avro Linux (Remastered Edition)</b></big>", use_markup: true });
+    let appVerLabel = new Gtk.Label({ label: "Version 1.0.0 — Modern Linux Edition" });
     appVerLabel.get_style_context().add_class("dim-label");
     let appDescLabel = new Gtk.Label({
-        label: "Modern Linux implementation of Avro Phonetic Bengali input method.",
+        label: "Modern Linux implementation of Avro Phonetic Bengali input method\nwith Windows-style floating TopBar, standalone Avro Pad, and Bijoy converter.",
         justify: Gtk.Justification.CENTER
     });
 
     let creditsLabel = new Gtk.Label({
-        label: "<b>Original Authors & Attribution:</b>\n" +
+        label: "<b>Lead Developer & Remaster Maintainer:</b>\n" +
+               "• <b>MD Shifat Bin Siddique Urfi</b>\n\n" +
+               "<b>Original Authors & Historical Attribution:</b>\n" +
                "• OmicronLab (Dr. Mehdi Hasan Khan & Rifat Nabi)\n" +
                "• Sarim Khan (ibus-avro)\n" +
                "• Debian Maintainers (Gunnar Hjalmarsson, Boyuan Yang)\n" +
@@ -373,7 +376,7 @@ function runpref() {
     licenseLabel.get_style_context().add_class("dim-label");
 
     let btnWebsite = new Gtk.LinkButton({
-        uri: "https://github.com/sarim/ibus-avro",
+        uri: "https://github.com/avro-linux/avro-linux",
         label: "Visit Project Repository",
         margin_top: 6
     });

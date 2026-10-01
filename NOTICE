@@ -1,8 +1,15 @@
-Avro Linux
+Avro Linux (Remastered Edition)
+Copyright (c) 2026 MD Shifat Bin Siddique Urfi.
 Copyright (c) 2024-2026 Avro Linux Project Contributors.
 
 This software is licensed under the Mozilla Public License, Version 2.0 (MPL-2.0).
 A copy of the license is included in the LICENSE file.
+
+REMASTERED LINUX EDITION:
+Remastered by MD Shifat Bin Siddique Urfi <msbsu@github.com> for modern Linux distributions
+including Ubuntu 24.04, 26.04, Debian 12 (Bookworm), and Debian 13 (Trixie).
+Features standalone Windows-style floating sticky TopBar, standalone Avro Pad with live phonetic
+composition, Unicode <-> Bijoy converter, visual layout viewer, and resilient IBus integration.
 
 THIRD-PARTY COMPONENTS AND ATTRIBUTIONS:
 
@@ -28,5 +35,5 @@ THIRD-PARTY COMPONENTS AND ATTRIBUTIONS:
    License: Public Domain / Permissive
 
 5. AppStream Metadata
-   Copyright (c) 2019 Sarim Khan, 2024-2026 Avro Linux Contributors
+   Copyright (c) 2019 Sarim Khan, 2024-2026 Avro Linux Contributors, 2026 MD Shifat Bin Siddique Urfi
    License: CC0-1.0 Universal

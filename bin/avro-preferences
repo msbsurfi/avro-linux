@@ -1,5 +1,10 @@
 #!/bin/sh
-# Launcher script for Avro Linux Preferences Application
+# Launcher script for Avro Preferences
 # SPDX-License-Identifier: MPL-2.0
 
-exec /usr/share/avro-linux/preferences/pref.js --standalone "$@"
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -f "${SCRIPT_DIR}/src/preferences/pref.js" ]; then
+    exec /usr/bin/env gjs "${SCRIPT_DIR}/src/preferences/pref.js" --standalone "$@"
+elif [ -f "/usr/share/avro-linux/preferences/pref.js" ]; then
+    exec /usr/bin/env gjs /usr/share/avro-linux/preferences/pref.js --standalone "$@"
+fi

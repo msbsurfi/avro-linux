@@ -82,7 +82,23 @@ engine.update_preedit_text = function(text, cursor_pos, visible) {
 };
 
 function simulateKey(keyval, state) {
-    state = (state || 0) & IBus.ModifierType.MODIFIER_MASK;
+    state = state || 0;
+
+    // F12 toggle handling
+    if (keyval === IBus.KEY_F12 || keyval === IBus.F12 || keyval === 0xffc9) {
+        let isRelease = (state & IBus.ModifierType.RELEASE_MASK) !== 0;
+        if (!isRelease) {
+            engine.mode_bangla = !engine.mode_bangla;
+            if (engine.buffertext.length > 0) {
+                let selected = engine.currentSuggestions[engine.currentSelection] || "";
+                engine.commit_text(IBus.Text.new_from_string(selected));
+                engine.buffertext = "";
+                engine.currentSuggestions = [];
+                engine.preedit_text = "";
+            }
+        }
+        return true;
+    }
 
     if (!engine.mode_bangla) {
         return false;
@@ -178,6 +194,20 @@ assertTrue(!consumed, "Key event not consumed in English mode");
 assertEqual(engine.buffertext, "", "Buffer not modified in English mode");
 
 engine.mode_bangla = true;
+
+// 6. F12 Mode Toggle
+let f12Handled = simulateKey(IBus.KEY_F12, 0);
+assertTrue(f12Handled, "F12 key press handled");
+assertEqual(engine.mode_bangla, false, "F12 switched mode to English");
+
+// Typing while in English mode
+let enConsumed = simulateKey(97, 0);
+assertTrue(!enConsumed, "English typing passed through");
+
+// Press F12 again to switch back to Bangla
+let f12HandledBack = simulateKey(IBus.KEY_F12, 0);
+assertTrue(f12HandledBack, "F12 key press handled again");
+assertEqual(engine.mode_bangla, true, "F12 switched mode back to Bangla");
 
 // Clean up
 engine.destroy();

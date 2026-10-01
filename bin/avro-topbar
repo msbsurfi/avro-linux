@@ -2,4 +2,9 @@
 # Launcher script for Avro TopBar
 # SPDX-License-Identifier: MPL-2.0
 
-exec /usr/share/avro-linux/standalone/main.js --topbar "$@"
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -f "${SCRIPT_DIR}/src/standalone/main.js" ]; then
+    exec "${SCRIPT_DIR}/src/standalone/main.js" --topbar "$@"
+elif [ -f "/usr/share/avro-linux/standalone/main.js" ]; then
+    exec /usr/share/avro-linux/standalone/main.js --topbar "$@"
+fi
