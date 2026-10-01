@@ -27,12 +27,31 @@
 const gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 
-const dictsearch = imports.dbsearch;
-const autocorrectdb = imports.autocorrect.db;
-const Avroparser = imports.avrolib.OmicronLab.Avro.Phonetic;
-const utfconv = imports.utf8;
-const EditDistance = imports.levenshtein;
-const suffixDict = imports.suffixdict.db;
+let dictsearch = null;
+try { dictsearch = imports.dbsearch; } catch (e) {}
+
+let autocorrectdb = {};
+try { autocorrectdb = imports.autocorrect.db; } catch (e) {}
+
+let Avroparser = null;
+try { Avroparser = imports.avrolib.OmicronLab.Avro.Phonetic; } catch (e) {}
+
+let utfconv = null;
+try {
+    utfconv = imports.utf8;
+} catch (e) {
+    utfconv = { utf8Decode: function(s) { return decodeURIComponent(unescape(s)); } };
+}
+
+let EditDistance = null;
+try {
+    EditDistance = imports.levenshtein;
+} catch (e) {
+    EditDistance = { levenshtein: function(a, b) { return Math.abs(a.length - b.length); } };
+}
+
+let suffixDict = {};
+try { suffixDict = imports.suffixdict.db; } catch (e) {}
 
 function SuggestionBuilder(){
     this._init();
@@ -41,7 +60,15 @@ function SuggestionBuilder(){
 SuggestionBuilder.prototype = {
     
     _init: function(){
-        this._dbSearch = new dictsearch.DBSearch ();
+        if (dictsearch && typeof dictsearch.DBSearch === 'function') {
+            try {
+                this._dbSearch = new dictsearch.DBSearch();
+            } catch (e) {
+                this._dbSearch = null;
+            }
+        } else {
+            this._dbSearch = null;
+        }
         this._candidateSelections = {};
         this._phoneticCache = {};
         this._loadCandidateSelectionsFromFile();
@@ -365,76 +392,71 @@ SuggestionBuilder.prototype = {
     },
     
     
+    _getCandidateSelectionsFile: function(forWriting) {
+        let configDir = GLib.get_user_config_dir();
+        let avroDir = gio.File.new_for_path(configDir + "/avro");
+        let xdgFile = gio.File.new_for_path(configDir + "/avro/candidate-selections.json");
+
+        if (forWriting) {
+            if (!avroDir.query_exists(null)) {
+                try {
+                    avroDir.make_directory_with_parents(null);
+                } catch (e) {}
+            }
+            return xdgFile;
+        }
+
+        if (xdgFile.query_exists(null)) {
+            return xdgFile;
+        }
+
+        let legacyFile = gio.File.new_for_path(GLib.get_home_dir() + "/.candidate-selections.json");
+        if (legacyFile.query_exists(null)) {
+            return legacyFile;
+        }
+
+        return xdgFile;
+    },
+
     _loadCandidateSelectionsFromFile: function(){
         try {
-            var file = gio.File.new_for_path(GLib.get_home_dir() + "/.candidate-selections.json");
-        
-            if (file.query_exists (null)) {
-                
-                var file_stream = file.read(null);
-                var data_stream = gio.DataInputStream.new(file_stream);
-                var json = data_stream.read_until("", null);
-                this._candidateSelections = JSON.parse(json[0]) || {};
-                
-                /*
-                file.read_async(0, null,
-                		function(source, result){
-                		    var file_stream = source.read_finish(result);
-                		    
-                		    if (file_stream){
-                		        var data_stream = gio.DataInputStream.new(file_stream);
-                                var json = data_stream.read_until("", null);
-                                this._candidateSelections = JSON.parse(json[0]);
-                		    } else {
-                		        this._logger(e, 'Error in _loadCandidateSelectionsFromFile');
-                		    }
-                		});
-                */
+            var file = this._getCandidateSelectionsFile(false);
+            if (file.query_exists(null)) {
+                let [ok, contents] = file.load_contents(null);
+                if (ok) {
+                    let decoder = new TextDecoder('utf-8');
+                    let text = decoder.decode(contents);
+                    this._candidateSelections = JSON.parse(text) || {};
+                } else {
+                    this._candidateSelections = {};
+                }
             } else {
                 this._candidateSelections = {};
             }
         } catch (e){
-           this._candidateSelections = {};
-           this._logger(e, 'Error in _loadCandidateSelectionsFromFile');
+            this._candidateSelections = {};
         }
     },
     
-    
     _saveCandidateSelectionsToFile: function(){
         try {
-            var file = gio.File.new_for_path ( GLib.get_home_dir() + "/.candidate-selections.json");
-            
-            if (file.query_exists (null)) {
-                file.delete (null);
-            }
-            /*
-            var file_stream = file.create (gio.FileCreateFlags.NONE, null);
-            var json = JSON.stringify(this._candidateSelections);
-            json = this._convertToUnicodeValue(json);
-            // Write text data to file
-            var data_stream =  gio.DataOutputStream.new (file_stream);
-            data_stream.put_string (json, null);
-            */
-            var that = this;
-            // Create a new file with this name
-            file.create_async(gio.FileCreateFlags.NONE, 0, null, 
-                    function(source, result){
-                        var file_stream = source.create_finish(result);
-                        
-                        if (file_stream){
-                            var json = JSON.stringify(that._candidateSelections);
-                            json = that._convertToUnicodeValue(json);
-
-                            // Write text data to file
-                            var data_stream =  gio.DataOutputStream.new (file_stream);
-                            data_stream.put_string (json, null);
-                        } else {
-                            this._logger(e, 'Error in _saveCandidateSelectionsToFile');
-                        }
-                    });
-        } catch (e) {
-           this._logger(e, '_saveCandidateSelectionsToFile Error');
-       }
+            var file = this._getCandidateSelectionsFile(true);
+            var json = JSON.stringify(this._candidateSelections, null, 2);
+            var encoder = new TextEncoder();
+            var bytes = encoder.encode(json);
+            file.replace_contents_async(
+                bytes,
+                null,
+                false,
+                gio.FileCreateFlags.REPLACE_DESTINATION,
+                null,
+                function(source, result) {
+                    try {
+                        source.replace_contents_finish(result);
+                    } catch (err) {}
+                }
+            );
+        } catch (e) {}
     },
 
 

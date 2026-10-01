@@ -32,6 +32,12 @@ run_test "Dictionary & Suggestions" "gjs ${ROOT_DIR}/tests/core/test-dictionary.
 # 3. Autocorrect test
 run_test "Autocorrect" "gjs ${ROOT_DIR}/tests/core/test-autocorrect.js"
 
+# 4. Engine buffer & key event logic test
+run_test "Engine Buffer & Lifecycle Logic" "gjs ${ROOT_DIR}/tests/engine/test-engine-buffer.js"
+
+# 5. Live IBus Engine Integration test
+run_test "IBus Engine Live Integration" "gjs ${ROOT_DIR}/tests/engine/test-ibus-engine-integration.js"
+
 # 4. Desktop and metadata validation
 run_test "Metadata & Schema Validation" "${ROOT_DIR}/tests/integration/test-metadata.sh"
 
