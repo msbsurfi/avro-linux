@@ -1,0 +1,15 @@
+#!/usr/bin/make -f
+# debian/rules for avro-linux
+# SPDX-License-Identifier: MPL-2.0
+
+%:
+	@if command -v dh >/dev/null 2>&1; then dh $@; else $(MAKE) -f debian/rules fallback-$@; fi
+
+fallback-build:
+	$(MAKE) all
+
+fallback-binary:
+	./scripts/build-deb.sh
+
+fallback-clean:
+	$(MAKE) clean

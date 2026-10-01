@@ -21,6 +21,9 @@ jobs:
             fakeroot \
             dpkg-dev \
             gjs \
+            ibus \
+            gir1.2-ibus-1.0 \
+            gir1.2-gtk-3.0 \
             libglib2.0-bin \
             desktop-file-utils \
             appstream
