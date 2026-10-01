@@ -43,6 +43,7 @@ install: build
 	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/icons
 
 	# System integration directories
+	install -d -m 0755 $(DESTDIR)$(prefix)/bin
 	install -d -m 0755 $(DESTDIR)$(datadir)/ibus/component
 	install -d -m 0755 $(DESTDIR)$(datadir)/glib-2.0/schemas
 	install -d -m 0755 $(DESTDIR)$(datadir)/applications
@@ -50,6 +51,9 @@ install: build
 	install -d -m 0755 $(DESTDIR)$(datadir)/pixmaps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/48x48/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/doc/avro-linux
+
+	# Command-line binary launcher
+	install -m 0755 bin/avro-preferences $(DESTDIR)$(prefix)/bin/avro-preferences
 
 	# Common & Engine scripts
 	install -m 0644 src/common/evars.js $(DESTDIR)$(pkgdatadir)/common/evars.js

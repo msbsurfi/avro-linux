@@ -29,6 +29,7 @@ echo "  ✓ Package control fields verified."
 
 # 2. Check essential file locations
 echo "[2/4] Checking critical file locations inside .deb..."
+grep -q "\./usr/bin/avro-preferences" "${TMP_DIR}/contents.txt"
 grep -q "\./usr/share/avro-linux/engine/main-gjs.js" "${TMP_DIR}/contents.txt"
 grep -q "\./usr/share/avro-linux/preferences/pref.js" "${TMP_DIR}/contents.txt"
 grep -q "\./usr/share/ibus/component/ibus-avro.xml" "${TMP_DIR}/contents.txt"
@@ -41,6 +42,7 @@ echo "  ✓ Critical file locations present."
 
 # 3. Check file permissions
 echo "[3/4] Checking executable permissions..."
+grep "\./usr/bin/avro-preferences" "${TMP_DIR}/contents.txt" | grep -q "^-rwxr-xr-x"
 grep "\./usr/share/avro-linux/engine/main-gjs.js" "${TMP_DIR}/contents.txt" | grep -q "^-rwxr-xr-x"
 grep "\./usr/share/avro-linux/preferences/pref.js" "${TMP_DIR}/contents.txt" | grep -q "^-rwxr-xr-x"
 echo "  ✓ Executables properly flagged with 0755."

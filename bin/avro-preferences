@@ -1,0 +1,5 @@
+#!/bin/sh
+# Launcher script for Avro Linux Preferences Application
+# SPDX-License-Identifier: MPL-2.0
+
+exec /usr/share/avro-linux/preferences/pref.js --standalone "$@"
