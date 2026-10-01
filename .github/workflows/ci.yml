@@ -39,6 +39,7 @@ jobs:
 
       - name: Inspect built Debian package
         run: |
+          ./tests/packaging/test-package.sh
           dpkg-deb -I avro-linux_*.deb
           dpkg-deb -c avro-linux_*.deb
 

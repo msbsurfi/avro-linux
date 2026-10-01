@@ -10,3 +10,4 @@ Terminal=false
 Categories=Utility;TextTools;
 Keywords=avro;bengali;bangla;bijoy;sutonnymj;converter;unicode;
 StartupNotify=true
+StartupWMClass=AvroConverter

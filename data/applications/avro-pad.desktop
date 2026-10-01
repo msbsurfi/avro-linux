@@ -10,3 +10,4 @@ Terminal=false
 Categories=Utility;TextEditor;
 Keywords=avro;bengali;bangla;keyboard;input;pad;editor;
 StartupNotify=true
+StartupWMClass=AvroPad

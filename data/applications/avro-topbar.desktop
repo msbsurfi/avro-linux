@@ -10,3 +10,4 @@ Terminal=false
 Categories=Settings;DesktopSettings;
 Keywords=avro;bengali;bangla;keyboard;input;ime;topbar;
 StartupNotify=true
+StartupWMClass=AvroTopBar

@@ -53,6 +53,9 @@ try {
 let suffixDict = {};
 try { suffixDict = imports.suffixdict.db; } catch (e) {}
 
+let userdictionary = null;
+try { userdictionary = imports.userdictionary; } catch (e) {}
+
 function SuggestionBuilder(){
     this._init();
 }
@@ -71,6 +74,7 @@ SuggestionBuilder.prototype = {
         }
         this._candidateSelections = {};
         this._phoneticCache = {};
+        this._userDictionary = userdictionary ? new userdictionary.UserDictionary() : null;
         this._loadCandidateSelectionsFromFile();
         this._tempCache = {};
         this._pref = this._defaultPref();
@@ -92,8 +96,12 @@ SuggestionBuilder.prototype = {
         
         if (this._phoneticCache[key]){
             words = this._phoneticCache[key].slice(0);
-        } else {
+        } else if (this._dbSearch) {
             words = this._dbSearch.search(key);
+        }
+        if (this._userDictionary) {
+            let personal = this._userDictionary.get(key);
+            words = personal.concat(words.filter(function (item) { return personal.indexOf(item) === -1; }));
         }
         return words;
     },

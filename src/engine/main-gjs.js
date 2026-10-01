@@ -89,6 +89,7 @@ if (bus.is_connected()) {
         engine.connect('candidate-clicked', engine_candidate_clicked);
         engine.connect('focus-out', engine_focus_out);
         engine.connect('focus-in', engine_focus_in);
+        engine.connect('reset', engine_reset);
         engine.connect('property-activate', engine_property_activate);
 
         engine.lookuptable = IBus.LookupTable.new(16, 0, true, true);        
@@ -160,16 +161,6 @@ if (bus.is_connected()) {
             return false;
         }
 
-        // Candidate selection by number 1-9 while composing
-        if (engine.buffertext.length > 0 && keyval >= 49 && keyval <= 57) {
-            let idx = keyval - 49;
-            if (idx < engine.currentSuggestions.length) {
-                engine.currentSelection = idx;
-                commitCandidateWithSuffix(engine, " ");
-                return true;
-            }
-        }
-
         // Word boundaries and separators
         if (keyval === IBus.space || keyval === IBus.KEY_space) {
             if (engine.buffertext.length > 0) {
@@ -201,6 +192,7 @@ if (bus.is_connected()) {
                 commitCandidateWithSuffix(engine, ",");
                 return true;
             }
+            return false;
         } else if (keyval === IBus.Escape || keyval === IBus.KEY_Escape) {
             if (engine.buffertext.length > 0) {
                 resetAll(engine);
@@ -293,6 +285,10 @@ if (bus.is_connected()) {
         }
     }
 
+    function engine_reset(engine) {
+        resetAll(engine);
+    }
+
     var proplist = new IBus.PropList();
     var prop_mode = IBus.Property.new(
         'mode',
@@ -333,6 +329,9 @@ if (bus.is_connected()) {
                 resetAll(engine);
             }
             updateEngineProperty(engine);
+            try {
+                if (engine.setting) engine.setting.set_boolean('mode-bangla', engine.mode_bangla);
+            } catch (e) {}
         }
     }
 
@@ -369,11 +368,6 @@ if (bus.is_connected()) {
             engine.lookuptable.set_orientation(engine.setting.get_int('cboxorient'));
             engine.setting_lutable_size = engine.setting.get_int('lutable-size');
             engine.lookuptable.set_page_size(engine.setting_lutable_size);
-            
-            if (!engine.setting_switch_preview) {
-                engine.setting_switch_dict = false;
-                engine.setting_switch_newline = false;
-            }
             
             var dictPref = suggestionBuilder.getPref();
             dictPref.dictEnable = engine.setting_switch_dict;
@@ -443,7 +437,7 @@ if (bus.is_connected()) {
             selectedWord.length
         ));
         preeditText.set_attributes(attrs);
-        engine.update_preedit_text(preeditText, selectedWord.length, true);
+        engine.update_preedit_text(preeditText, Array.from(selectedWord).length, true);
     }
     
     function commitCandidate(engine) {

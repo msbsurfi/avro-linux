@@ -65,6 +65,14 @@ function getCandidateSelectionsFile() {
     return xdgFile;
 }
 
+function getUserDictionary() {
+    try {
+        return new imports.userdictionary.UserDictionary();
+    } catch (e) {
+        return null;
+    }
+}
+
 function createDiagnosticReport() {
     let diagText = "";
     diagText += "Application: Avro Linux\n";
@@ -78,6 +86,9 @@ function createDiagnosticReport() {
     diagText += "GJS Version: " + (typeof imports.system !== 'undefined' && imports.system.version ? imports.system.version : "Modern") + "\n";
     diagText += "GTK Version: " + Gtk.MAJOR_VERSION + "." + Gtk.MINOR_VERSION + "." + Gtk.MICRO_VERSION + "\n";
     diagText += "GSettings Schema: com.omicronlab.avro\n";
+    diagText += "Display server: " + (GLib.getenv("XDG_SESSION_TYPE") || "unknown") + "\n";
+    diagText += "Desktop session: " + (GLib.getenv("XDG_CURRENT_DESKTOP") || "unknown") + "\n";
+    diagText += "IBus session address: " + (GLib.getenv("IBUS_ADDRESS") ? "available" : "not detected") + "\n";
     diagText += "User Storage: " + getCandidateSelectionsFile().get_path() + "\n";
     diagText += "Installation Prefix: " + getPkgDataDir() + "\n";
     return diagText;
@@ -92,6 +103,7 @@ function runpref() {
         default_height: 480,
         window_position: Gtk.WindowPosition.CENTER
     });
+    try { window.set_wmclass("avro-preferences", "AvroPreferences"); } catch (e) {}
 
     // Try setting icon
     let iconPath = getPkgDataDir() + "/icons/avro-bangla.png";
@@ -174,6 +186,7 @@ function runpref() {
             setting.reset("switch-newline");
             setting.reset("lutable-size");
             setting.reset("cboxorient");
+            setting.reset("mode-bangla");
             readFromSettings();
         }
     });
@@ -191,9 +204,9 @@ function runpref() {
     // Enter / Return Key behavior
     let newlineBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12 });
     let newlineLabelBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
-    let newlineTitle = new Gtk.Label({ label: "<b>Commit Without Newline</b>", use_markup: true, xalign: 0 });
+    let newlineTitle = new Gtk.Label({ label: "<b>Insert a Newline after Commit</b>", use_markup: true, xalign: 0 });
     let newlineSubtitle = new Gtk.Label({
-        label: "Pressing Enter commits candidate without inserting a newline character",
+        label: "Pressing Enter commits the candidate, then inserts a newline",
         xalign: 0
     });
     newlineSubtitle.get_style_context().add_class("dim-label");
@@ -241,6 +254,46 @@ function runpref() {
     dictToggleBox.pack_end(switchDict, false, false, 0);
     dictBox.pack_start(dictToggleBox, false, false, 0);
 
+    // Personal dictionary is deliberately separate from the shipped dictionary.
+    // It stays in XDG_CONFIG_HOME and is read by the engine without a restart.
+    let personalDict = getUserDictionary();
+    let personalBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 8, margin_top: 12 });
+    let personalTitle = new Gtk.Label({ label: "<b>Personal Dictionary</b>", use_markup: true, xalign: 0 });
+    let personalHint = new Gtk.Label({
+        label: "Add a phonetic spelling and its Bengali word. Remove uses the same exact pair.",
+        xalign: 0
+    });
+    personalHint.get_style_context().add_class("dim-label");
+    let personalRow = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8 });
+    let phoneticEntry = new Gtk.Entry({ placeholder_text: "Phonetic spelling (for example, amarnaam)", hexpand: true });
+    let bengaliEntry = new Gtk.Entry({ placeholder_text: "Bengali word", hexpand: true });
+    let addWord = new Gtk.Button({ label: "Add" });
+    let removeWord = new Gtk.Button({ label: "Remove" });
+    let personalStatus = new Gtk.Label({ xalign: 0 });
+    personalStatus.get_style_context().add_class("dim-label");
+    function changePersonalDictionary(action) {
+        if (!personalDict) {
+            personalStatus.set_text("Personal dictionary is unavailable in this installation.");
+            return;
+        }
+        let phonetic = phoneticEntry.get_text();
+        let bengali = bengaliEntry.get_text();
+        let ok = action === "add" ? personalDict.add(phonetic, bengali) : personalDict.remove(phonetic, bengali);
+        personalStatus.set_text(ok ? (action === "add" ? "Word saved." : "Word removed.") : "Enter a valid exact phonetic/Bengali pair.");
+        if (ok) bengaliEntry.set_text("");
+    }
+    addWord.connect("clicked", function() { changePersonalDictionary("add"); });
+    removeWord.connect("clicked", function() { changePersonalDictionary("remove"); });
+    personalRow.pack_start(phoneticEntry, true, true, 0);
+    personalRow.pack_start(bengaliEntry, true, true, 0);
+    personalRow.pack_start(addWord, false, false, 0);
+    personalRow.pack_start(removeWord, false, false, 0);
+    personalBox.pack_start(personalTitle, false, false, 0);
+    personalBox.pack_start(personalHint, false, false, 0);
+    personalBox.pack_start(personalRow, false, false, 0);
+    personalBox.pack_start(personalStatus, false, false, 0);
+    dictBox.pack_start(personalBox, false, false, 0);
+
     // Learned Choices Management
     let learnedBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12, margin_top: 16 });
     let learnedLabelBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
@@ -269,9 +322,7 @@ function runpref() {
             });
             infoDialog.run();
             infoDialog.destroy();
-        } catch (e) {
-            print("Error clearing candidate selections: " + e.message);
-        }
+        } catch (e) {}
     });
     learnedBox.pack_start(learnedLabelBox, true, true, 0);
     learnedBox.pack_end(btnClearLearned, false, false, 0);
@@ -288,12 +339,12 @@ function runpref() {
 
     let gridShortcuts = new Gtk.Grid({ row_spacing: 10, column_spacing: 16 });
     let shortcutsList = [
-        ["F12", "Toggle between Bangla and English input mode"],
+        ["F12", "Toggle Bangla/English while Avro is the active IBus engine"],
         ["Space / Tab / Return", "Commit current Bengali candidate"],
         ["Left / Right / Up / Down", "Navigate candidate suggestions"],
         ["Backspace", "Edit preedit buffer (deletes previous character)"],
         ["Escape", "Cancel active preedit and clear suggestion list"],
-        ["Super + Space", "Switch system input source between English and Avro"],
+        ["System input-source shortcut", "Switch between English and Avro; configure this in your desktop settings"],
         ["IBus Menu → Mode", "Toggle between Bangla and English mode directly inside Avro"]
     ];
 

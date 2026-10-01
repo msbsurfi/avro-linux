@@ -1,5 +1,5 @@
 [Desktop Entry]
-Name=Avro Bengali Input Preferences
+Name=Avro Linux Preferences
 Name[bn]=অভ্র বাংলা ইনপুট পছন্দসমূহ
 Comment=Configure Avro Phonetic Bengali input method settings
 Comment[bn]=অভ্র ফোনেটিক বাংলা কিবোর্ড সেটিংস কনফিগার করুন
@@ -10,3 +10,4 @@ Terminal=false
 Categories=Settings;DesktopSettings;
 Keywords=avro;bengali;bangla;keyboard;input;ime;preferences;
 StartupNotify=true
+StartupWMClass=AvroPreferences

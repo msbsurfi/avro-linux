@@ -1,33 +1,23 @@
 #!/bin/sh
 set -e
 
-if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
-    rm -f /etc/profile.d/avro-linux.sh
-    rm -f /etc/environment.d/99-avro-linux.conf
-    rm -f /etc/xdg/plasma-workspace/env/avro-linux.sh
-    rm -f /etc/xdg/autostart/avro-ibus-autostart.desktop
-    rm -f /usr/share/glib-2.0/schemas/99-avro-linux.gschema.override
-
-    # Recompile GSettings schemas
-    if command -v glib-compile-schemas >/dev/null 2>&1; then
-        glib-compile-schemas /usr/share/glib-2.0/schemas || true
-    fi
-
-    # Update desktop database
-    if command -v update-desktop-database >/dev/null 2>&1; then
-        update-desktop-database -q /usr/share/applications || true
-    fi
-
-    # Update icon caches
-    if command -v gtk-update-icon-cache >/dev/null 2>&1; then
-        gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true
-    fi
-
-    # Update IBus component registry cache
-    if command -v ibus >/dev/null 2>&1; then
-        ibus write-cache --system 2>/dev/null || true
-        ibus write-cache 2>/dev/null || true
-    fi
-fi
+# Package-owned files are removed by dpkg. Personal settings and the XDG
+# personal dictionary remain intact across remove, purge, and upgrade.
+case "$1" in
+    remove|purge|abort-install|disappear)
+        if command -v glib-compile-schemas >/dev/null 2>&1; then
+            glib-compile-schemas /usr/share/glib-2.0/schemas || true
+        fi
+        if command -v update-desktop-database >/dev/null 2>&1; then
+            update-desktop-database -q /usr/share/applications || true
+        fi
+        if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+            gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true
+        fi
+        if command -v ibus >/dev/null 2>&1; then
+            ibus write-cache --system 2>/dev/null || true
+        fi
+        ;;
+esac
 
 exit 0

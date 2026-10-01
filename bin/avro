@@ -3,13 +3,6 @@
 # SPDX-License-Identifier: MPL-2.0
 # Remastered by MD Shifat Bin Siddique Urfi
 
-# Ensure ibus-daemon is running in background if not already
-if ! pgrep -u "$(id -u)" -x ibus-daemon >/dev/null 2>&1; then
-    ibus-daemon -drx >/dev/null 2>&1 || true
-    sleep 0.5
-fi
-ibus engine ibus-avro >/dev/null 2>&1 || true
-
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 if [ -f "${SCRIPT_DIR}/src/standalone/main.js" ]; then
     exec "${SCRIPT_DIR}/src/standalone/main.js" "$@"

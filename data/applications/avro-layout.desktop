@@ -10,3 +10,4 @@ Terminal=false
 Categories=Utility;Documentation;
 Keywords=avro;bengali;bangla;keyboard;layout;phonetic;rules;
 StartupNotify=true
+StartupWMClass=AvroLayout

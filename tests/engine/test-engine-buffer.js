@@ -158,6 +158,12 @@ captured = engine.processChar("a");
 assertTrue(captured, "Keystroke captured when toggled back to Bangla mode");
 assertEqual(engine.buffertext, "a", "Buffer updated in Bangla mode");
 
+// 7. Numeric input remains phonetic input, not candidate-selection shortcuts.
+engine.reset();
+for (let digit of "2026") engine.processChar(digit);
+assertEqual(engine.buffertext, "2026", "Numeric input remains intact while composing");
+assertEqual(engine.preeditText, "২০২৬", "Numeric input produces Bengali digits");
+
 print("Results: " + passed + " passed, " + failed + " failed.");
 if (failed > 0) {
     imports.system.exit(1);

@@ -54,11 +54,14 @@ install: build
 	install -d -m 0755 $(DESTDIR)$(datadir)/applications
 	install -d -m 0755 $(DESTDIR)$(datadir)/metainfo
 	install -d -m 0755 $(DESTDIR)$(datadir)/pixmaps
+	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps
+	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/16x16/apps
+	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/32x32/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/48x48/apps
+	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/64x64/apps
+	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/128x128/apps
+	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/256x256/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/doc/avro-linux
-
-	install -d -m 0755 $(DESTDIR)/etc/xdg/autostart
-	install -m 0644 data/autostart/avro-ibus-autostart.desktop $(DESTDIR)/etc/xdg/autostart/avro-ibus-autostart.desktop
 
 	# Command-line binary launchers
 	install -m 0755 bin/avro $(DESTDIR)$(prefix)/bin/avro
@@ -86,6 +89,7 @@ install: build
 	install -m 0644 src/avro-core/dictionary/avrodict.js $(DESTDIR)$(pkgdatadir)/avro-core/dictionary/avrodict.js
 	install -m 0644 src/avro-core/dictionary/suffixdict.js $(DESTDIR)$(pkgdatadir)/avro-core/dictionary/suffixdict.js
 	install -m 0644 src/avro-core/dictionary/dbsearch.js $(DESTDIR)$(pkgdatadir)/avro-core/dictionary/dbsearch.js
+	install -m 0644 src/avro-core/dictionary/userdictionary.js $(DESTDIR)$(pkgdatadir)/avro-core/dictionary/userdictionary.js
 	install -m 0644 src/avro-core/autocorrect/autocorrect.js $(DESTDIR)$(pkgdatadir)/avro-core/autocorrect/autocorrect.js
 	install -m 0644 src/avro-core/suggestions/levenshtein.js $(DESTDIR)$(pkgdatadir)/avro-core/suggestions/levenshtein.js
 	install -m 0644 src/avro-core/suggestions/suggestionbuilder.js $(DESTDIR)$(pkgdatadir)/avro-core/suggestions/suggestionbuilder.js
@@ -97,7 +101,7 @@ install: build
 	# Integration files
 	install -m 0644 data/ibus/ibus-avro.xml $(DESTDIR)$(datadir)/ibus/component/ibus-avro.xml
 	install -m 0644 data/gsettings/com.omicronlab.avro.gschema.xml $(DESTDIR)$(datadir)/glib-2.0/schemas/com.omicronlab.avro.gschema.xml
-	install -m 0644 data/applications/avro-preferences.desktop $(DESTDIR)$(datadir)/applications/avro-preferences.desktop
+	install -m 0644 data/applications/com.github.avrolinux.Avro.desktop $(DESTDIR)$(datadir)/applications/com.github.avrolinux.Avro.desktop
 	install -m 0644 data/applications/avro-topbar.desktop $(DESTDIR)$(datadir)/applications/avro-topbar.desktop
 	install -m 0644 data/applications/avro-pad.desktop $(DESTDIR)$(datadir)/applications/avro-pad.desktop
 	install -m 0644 data/applications/avro-converter.desktop $(DESTDIR)$(datadir)/applications/avro-converter.desktop
@@ -108,13 +112,22 @@ install: build
 	# Icons
 	install -m 0644 data/icons/avro-bangla.png $(DESTDIR)$(pkgdatadir)/icons/avro-bangla.png
 	install -m 0644 data/icons/avro-bangla.png $(DESTDIR)$(datadir)/pixmaps/avro-bangla.png
+	install -m 0644 data/icons/avro-bangla.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps/avro-bangla.svg
+	install -m 0644 data/icons/16x16/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/16x16/apps/avro-bangla.png
+	install -m 0644 data/icons/32x32/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/32x32/apps/avro-bangla.png
 	install -m 0644 data/icons/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/48x48/apps/avro-bangla.png
+	install -m 0644 data/icons/64x64/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/64x64/apps/avro-bangla.png
+	install -m 0644 data/icons/128x128/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/128x128/apps/avro-bangla.png
+	install -m 0644 data/icons/256x256/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/256x256/apps/avro-bangla.png
 
 	# Documentation
 	install -m 0644 README.md $(DESTDIR)$(datadir)/doc/avro-linux/README.md
 	install -m 0644 LICENSE $(DESTDIR)$(datadir)/doc/avro-linux/copyright
 	install -m 0644 NOTICE $(DESTDIR)$(datadir)/doc/avro-linux/NOTICE
 	install -m 0644 debian/changelog $(DESTDIR)$(datadir)/doc/avro-linux/changelog.Debian
+	install -m 0644 docs/compatibility.md $(DESTDIR)$(datadir)/doc/avro-linux/compatibility.md
+	install -m 0644 docs/licensing-notes.md $(DESTDIR)$(datadir)/doc/avro-linux/licensing-notes.md
+	install -m 0644 docs/FINAL_RELEASE_REPORT.md $(DESTDIR)$(datadir)/doc/avro-linux/FINAL_RELEASE_REPORT.md
 
 package: build
 	@./scripts/build-deb.sh

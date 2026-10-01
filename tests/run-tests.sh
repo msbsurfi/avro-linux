@@ -9,6 +9,8 @@ echo "          Avro Linux Test Suite Runner            "
 echo "=================================================="
 
 FAILED=0
+USER_DICT_TMP="$(mktemp -d)"
+trap 'rm -rf "${USER_DICT_TMP}"' EXIT
 
 run_test() {
     local name="$1"
@@ -35,6 +37,9 @@ run_test "Dictionary & Suggestions" "gjs ${ROOT_DIR}/tests/core/test-dictionary.
 # 3. Autocorrect test
 run_test "Autocorrect" "gjs ${ROOT_DIR}/tests/core/test-autocorrect.js"
 
+# 4. Per-user dictionary (isolated from the developer's actual configuration)
+run_test "Personal Dictionary" "XDG_CONFIG_HOME='${USER_DICT_TMP}' gjs ${ROOT_DIR}/tests/core/test-user-dictionary.js"
+
 # 4. Engine buffer & key event logic test
 run_test "Engine Buffer & Lifecycle Logic" "gjs ${ROOT_DIR}/tests/engine/test-engine-buffer.js"
 
@@ -49,11 +54,6 @@ run_test "Standalone Suite & Windows UI Integration" "gjs ${ROOT_DIR}/tests/inte
 
 # 4. Desktop and metadata validation
 run_test "Metadata & Schema Validation" "${ROOT_DIR}/tests/integration/test-metadata.sh"
-
-# 5. Package verification (if deb exists)
-if ls "${ROOT_DIR}"/avro-linux_*.deb 1>/dev/null 2>&1; then
-    run_test "Package Verification (.deb)" "${ROOT_DIR}/tests/packaging/test-package.sh"
-fi
 
 echo ""
 echo "=================================================="

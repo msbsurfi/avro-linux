@@ -1,0 +1,27 @@
+[Desktop Entry]
+Name=Avro Linux
+Name[bn]=অভ্র লিনাক্স
+GenericName=Bengali Input Method Preferences
+Comment=Configure the Avro Phonetic Bengali input method
+Comment[bn]=অভ্র ফোনেটিক বাংলা ইনপুট পদ্ধতি কনফিগার করুন
+Type=Application
+Exec=avro-preferences
+Icon=avro-bangla
+Terminal=false
+Categories=Settings;
+Keywords=avro;bengali;bangla;keyboard;input;ime;preferences;
+StartupNotify=true
+StartupWMClass=AvroPreferences
+Actions=Pad;Layout;Converter;
+
+[Desktop Action Pad]
+Name=Open Avro Pad
+Exec=avro-pad
+
+[Desktop Action Layout]
+Name=Open Keyboard Layout
+Exec=avro-layout
+
+[Desktop Action Converter]
+Name=Open Unicode to Bijoy Converter
+Exec=avro-converter

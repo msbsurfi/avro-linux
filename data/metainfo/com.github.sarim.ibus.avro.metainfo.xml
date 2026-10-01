@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="inputmethod">
-  <id>com.github.sarim.ibus.avro</id>
+  <id>com.github.avrolinux.Avro</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MPL-2.0</project_license>
-  <name>Avro Phonetic</name>
-  <summary>Bangla phonetic input method for IBus</summary>
+  <name>Avro Linux</name>
+  <summary>Bangla phonetic input method and preferences for IBus</summary>
   <description>
     <p>
       Avro Phonetic is a modern Linux implementation of the popular Avro Phonetic
@@ -25,11 +25,12 @@
   </developer>
   <icon type="stock">avro-bangla</icon>
   <provides>
+    <id>com.github.avrolinux.Avro.desktop</id>
     <id>ibus-avro</id>
   </provides>
   <content_rating type="oars-1.1" />
   <releases>
-    <release version="1.0.0" date="2026-10-01">
+    <release version="1.0.0" date="2026-10-02">
       <description>
         <p>Avro Linux release with modernized GTK preferences, privacy hardening, and full regression testing.</p>
       </description>

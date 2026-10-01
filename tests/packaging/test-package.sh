@@ -45,18 +45,25 @@ grep -q "\./usr/share/avro-linux/standalone/bijoyconverter.js" "${TMP_DIR}/conte
 grep -q "\./usr/share/avro-linux/standalone/layoutviewer.js" "${TMP_DIR}/contents.txt"
 grep -q "\./usr/share/ibus/component/ibus-avro.xml" "${TMP_DIR}/contents.txt"
 grep -q "\./usr/share/glib-2.0/schemas/com.omicronlab.avro.gschema.xml" "${TMP_DIR}/contents.txt"
-grep -q "\./usr/share/applications/avro-preferences.desktop" "${TMP_DIR}/contents.txt"
+grep -q "\./usr/share/applications/com.github.avrolinux.Avro.desktop" "${TMP_DIR}/contents.txt"
 grep -q "\./usr/share/applications/avro-topbar.desktop" "${TMP_DIR}/contents.txt"
 grep -q "\./usr/share/applications/avro-pad.desktop" "${TMP_DIR}/contents.txt"
 grep -q "\./usr/share/applications/avro-converter.desktop" "${TMP_DIR}/contents.txt"
 grep -q "\./usr/share/applications/avro-layout.desktop" "${TMP_DIR}/contents.txt"
 grep -q "\./usr/share/metainfo/com.github.sarim.ibus.avro.metainfo.xml" "${TMP_DIR}/contents.txt"
 grep -q "\./usr/share/icons/hicolor/48x48/apps/avro-bangla.png" "${TMP_DIR}/contents.txt"
+grep -q "\./usr/share/icons/hicolor/scalable/apps/avro-bangla.svg" "${TMP_DIR}/contents.txt"
 grep -q "\./usr/share/pixmaps/avro-bangla.png" "${TMP_DIR}/contents.txt"
 echo "  ✓ Critical file locations present."
 
+# The package must not claim ownership of desktop-wide IM configuration.
+echo "[3/5] Checking non-invasive maintainer scripts..."
+dpkg-deb -e "${DEB_FILE}" "${TMP_DIR}/control"
+! grep -Eq 'org\.gnome\.desktop\.input-sources|GTK_IM_MODULE=|QT_IM_MODULE=|ibus-daemon -drx' "${TMP_DIR}/control/postinst"
+echo "  ✓ Per-user input-method configuration is preserved."
+
 # 3. Check file permissions
-echo "[3/4] Checking executable permissions..."
+echo "[4/5] Checking executable permissions..."
 grep "\./usr/bin/avro" "${TMP_DIR}/contents.txt" | grep -q "^-rwxr-xr-x"
 grep "\./usr/bin/avro-topbar" "${TMP_DIR}/contents.txt" | grep -q "^-rwxr-xr-x"
 grep "\./usr/bin/avro-pad" "${TMP_DIR}/contents.txt" | grep -q "^-rwxr-xr-x"
@@ -67,8 +74,7 @@ grep "\./usr/share/avro-linux/standalone/main.js" "${TMP_DIR}/contents.txt" | gr
 echo "  ✓ Executables properly flagged with 0755."
 
 # 4. Check maintainer scripts
-echo "[4/4] Checking maintainer scripts in control archive..."
-dpkg-deb -e "${DEB_FILE}" "${TMP_DIR}/control"
+echo "[5/5] Checking maintainer scripts in control archive..."
 test -f "${TMP_DIR}/control/postinst"
 test -f "${TMP_DIR}/control/postrm"
 test -f "${TMP_DIR}/control/md5sums"
