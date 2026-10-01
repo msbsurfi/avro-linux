@@ -41,6 +41,9 @@ run_test "Engine Buffer & Lifecycle Logic" "gjs ${ROOT_DIR}/tests/engine/test-en
 # 5. Live IBus Engine Integration test
 run_test "IBus Engine Live Integration" "gjs ${ROOT_DIR}/tests/engine/test-ibus-engine-integration.js"
 
+# 6. Preferences & GSettings integration test
+run_test "Preferences & GSettings Integration" "gjs ${ROOT_DIR}/tests/integration/test-preferences.js"
+
 # 4. Desktop and metadata validation
 run_test "Metadata & Schema Validation" "${ROOT_DIR}/tests/integration/test-metadata.sh"
 

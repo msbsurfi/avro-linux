@@ -1,3 +1,4 @@
+#!/usr/bin/env gjs
 /*
     =============================================================================
     *****************************************************************************
@@ -5,87 +6,442 @@
     License, v. 2.0. If a copy of the MPL was not distributed with this
     file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-    Software distributed under the License is distributed on an "AS IS"
-    basis, WITHOUT WARRANTY OF ANY KIND, either express or implied. See the
-    License for the specific language governing rights and limitations
-    under the License.
-
     The Original Code is ibus-avro
+    Initial Developer: Sarim Khan <sarim2005@gmail.com>
+    Copyright (C) Sarim Khan. All Rights Reserved.
 
-    The Initial Developer of the Original Code is
-    Sarim Khan <sarim2005@gmail.com>
-
-    Copyright (C) Sarim Khan (http://www.sarimkhan.com). All Rights Reserved.
-
-
-    Contributor(s): ______________________________________.
-
+    Contributor(s): Mehdi Hasan Khan <mhasan@omicronlab.com>
+                    Avro Linux Contributors
     *****************************************************************************
     =============================================================================
 */
 
 imports.gi.versions.Gtk = '3.0';
-imports.searchPath.unshift('.');
+
 const Gio = imports.gi.Gio;
 const Gtk = imports.gi.Gtk;
+const Gdk = imports.gi.Gdk;
 const GLib = imports.gi.GLib;
-const eevars = imports.evars;
 
-var prefwindow, switch_preview, switch_newline, switch_dict, lutable_size, cboxorient, scale1;
+// Discover base path
+let baseDir = '/usr/share/avro-linux';
+try {
+    let scriptPath = ARGV[0] || '.';
+    let scriptDir = GLib.path_get_dirname(scriptPath);
+    if (GLib.file_test(scriptDir + '/../common/evars.js', GLib.FileTest.EXISTS)) {
+        baseDir = GLib.path_get_dirname(scriptDir);
+    } else if (GLib.file_test(scriptDir + '/../src/common/evars.js', GLib.FileTest.EXISTS)) {
+        baseDir = GLib.path_get_dirname(scriptDir) + '/src';
+    }
+} catch (e) {}
+
+imports.searchPath.unshift(baseDir + '/common');
+imports.searchPath.unshift(baseDir + '/src/common');
+imports.searchPath.unshift('/usr/share/avro-linux/common');
+
+let eevars = null;
+try {
+    eevars = imports.evars;
+    eevars.init_search_paths(baseDir);
+} catch (e) {}
+
+function getPkgDataDir() {
+    if (eevars && typeof eevars.get_pkgdatadir === 'function') {
+        return eevars.get_pkgdatadir();
+    }
+    return '/usr/share/avro-linux';
+}
+
+function getCandidateSelectionsFile() {
+    let configDir = GLib.get_user_config_dir();
+    let xdgFile = Gio.File.new_for_path(configDir + "/avro/candidate-selections.json");
+    if (xdgFile.query_exists(null)) {
+        return xdgFile;
+    }
+    let legacyFile = Gio.File.new_for_path(GLib.get_home_dir() + "/.candidate-selections.json");
+    if (legacyFile.query_exists(null)) {
+        return legacyFile;
+    }
+    return xdgFile;
+}
+
+function createDiagnosticReport() {
+    let diagText = "";
+    diagText += "Application: Avro Linux\n";
+    diagText += "Version: 1.0.0-1\n";
+    diagText += "Engine: IBus Avro Phonetic Engine\n";
+    try {
+        diagText += "System: " + (GLib.get_os_info("PRETTY_NAME") || "Linux") + "\n";
+    } catch (e) {
+        diagText += "System: Linux\n";
+    }
+    diagText += "GJS Version: " + (typeof imports.system !== 'undefined' && imports.system.version ? imports.system.version : "Modern") + "\n";
+    diagText += "GTK Version: " + Gtk.MAJOR_VERSION + "." + Gtk.MINOR_VERSION + "." + Gtk.MICRO_VERSION + "\n";
+    diagText += "GSettings Schema: com.omicronlab.avro\n";
+    diagText += "User Storage: " + getCandidateSelectionsFile().get_path() + "\n";
+    diagText += "Installation Prefix: " + getPkgDataDir() + "\n";
+    return diagText;
+}
 
 function runpref() {
+    Gtk.init(null);
 
-    Gtk.init(null, 0);
-    let builder = new Gtk.Builder();
-    builder.add_from_file(eevars.get_pkgdatadir() + "/avropref.ui");
+    let window = new Gtk.Window({
+        title: "Avro Preferences",
+        default_width: 540,
+        default_height: 480,
+        window_position: Gtk.WindowPosition.CENTER
+    });
 
-    prefwindow = builder.get_object("window1");
-    switch_preview = builder.get_object("switch_preview");
-    switch_newline = builder.get_object("switch_newline");
-    switch_dict = builder.get_object("switch_dict");
-    lutable_size = builder.get_object("lutable_size"); 
-    scale1 = builder.get_object("scale1"); 
-    cboxorient = builder.get_object("cboxorient");
+    // Try setting icon
+    let iconPath = getPkgDataDir() + "/icons/avro-bangla.png";
+    if (GLib.file_test(iconPath, GLib.FileTest.EXISTS)) {
+        try {
+            window.set_icon_from_file(iconPath);
+        } catch (e) {}
+    } else if (GLib.file_test("/usr/share/pixmaps/avro-bangla.png", GLib.FileTest.EXISTS)) {
+        try {
+            window.set_icon_from_file("/usr/share/pixmaps/avro-bangla.png");
+        } catch (e) {}
+    }
+
+    // Connect to GSettings
+    let setting = null;
+    try {
+        setting = new Gio.Settings({ schema_id: "com.omicronlab.avro" });
+    } catch (e) {
+        print("Warning: Could not connect to GSettings schema com.omicronlab.avro: " + e.message);
+    }
+
+    let notebook = new Gtk.Notebook();
+    notebook.set_border_width(12);
+
+    /* ========================================================================= */
+    /* 1. GENERAL TAB                                                            */
+    /* ========================================================================= */
+    let generalBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 18, border_width: 16 });
+
+    // Preview Window Toggle
+    let previewBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12 });
+    let previewLabelBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
+    let previewTitle = new Gtk.Label({ label: "<b>Show Preview / Candidate Window</b>", use_markup: true, xalign: 0 });
+    let previewSubtitle = new Gtk.Label({
+        label: "Displays auxiliary Latin text and Bengali candidates while typing",
+        xalign: 0
+    });
+    previewSubtitle.get_style_context().add_class("dim-label");
+    previewLabelBox.pack_start(previewTitle, false, false, 0);
+    previewLabelBox.pack_start(previewSubtitle, false, false, 0);
+    let switchPreview = new Gtk.Switch({ valign: Gtk.Align.CENTER });
+    previewBox.pack_start(previewLabelBox, true, true, 0);
+    previewBox.pack_end(switchPreview, false, false, 0);
+    generalBox.pack_start(previewBox, false, false, 0);
+
+    // Orientation selector
+    let orientBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12 });
+    let orientLabelBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
+    let orientTitle = new Gtk.Label({ label: "<b>Candidate List Orientation</b>", use_markup: true, xalign: 0 });
+    let orientSubtitle = new Gtk.Label({ label: "Display suggestion candidates horizontally or vertically", xalign: 0 });
+    orientSubtitle.get_style_context().add_class("dim-label");
+    orientLabelBox.pack_start(orientTitle, false, false, 0);
+    orientLabelBox.pack_start(orientSubtitle, false, false, 0);
+    let cboxOrient = new Gtk.ComboBoxText({ valign: Gtk.Align.CENTER });
+    cboxOrient.append_text("Horizontal");
+    cboxOrient.append_text("Vertical");
+    cboxOrient.set_active(0);
+    orientBox.pack_start(orientLabelBox, true, true, 0);
+    orientBox.pack_end(cboxOrient, false, false, 0);
+    generalBox.pack_start(orientBox, false, false, 0);
+
+    // Reset settings
+    let resetBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12, margin_top: 24 });
+    let resetLabel = new Gtk.Label({ label: "Restore all preferences to their factory defaults", xalign: 0 });
+    let btnReset = new Gtk.Button({ label: "Reset to Defaults", valign: Gtk.Align.CENTER });
+    btnReset.connect("clicked", function() {
+        let dialog = new Gtk.MessageDialog({
+            transient_for: window,
+            modal: true,
+            message_type: Gtk.MessageType.QUESTION,
+            buttons: Gtk.ButtonsType.OK_CANCEL,
+            text: "Reset All Settings?",
+            secondary_text: "Are you sure you want to reset all Avro configuration settings to defaults?"
+        });
+        let res = dialog.run();
+        dialog.destroy();
+        if (res === Gtk.ResponseType.OK && setting) {
+            setting.reset("switch-preview");
+            setting.reset("switch-dict");
+            setting.reset("switch-newline");
+            setting.reset("lutable-size");
+            setting.reset("cboxorient");
+            readFromSettings();
+        }
+    });
+    resetBox.pack_start(resetLabel, true, true, 0);
+    resetBox.pack_end(btnReset, false, false, 0);
+    generalBox.pack_start(resetBox, false, false, 0);
+
+    notebook.append_page(generalBox, new Gtk.Label({ label: "General" }));
+
+    /* ========================================================================= */
+    /* 2. TYPING TAB                                                             */
+    /* ========================================================================= */
+    let typingBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 18, border_width: 16 });
+
+    // Enter / Return Key behavior
+    let newlineBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12 });
+    let newlineLabelBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
+    let newlineTitle = new Gtk.Label({ label: "<b>Commit Without Newline</b>", use_markup: true, xalign: 0 });
+    let newlineSubtitle = new Gtk.Label({
+        label: "Pressing Enter commits candidate without inserting a newline character",
+        xalign: 0
+    });
+    newlineSubtitle.get_style_context().add_class("dim-label");
+    newlineLabelBox.pack_start(newlineTitle, false, false, 0);
+    newlineLabelBox.pack_start(newlineSubtitle, false, false, 0);
+    let switchNewline = new Gtk.Switch({ valign: Gtk.Align.CENTER });
+    newlineBox.pack_start(newlineLabelBox, true, true, 0);
+    newlineBox.pack_end(switchNewline, false, false, 0);
+    typingBox.pack_start(newlineBox, false, false, 0);
+
+    // Candidate List Size
+    let sizeBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12 });
+    let sizeLabelBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
+    let sizeTitle = new Gtk.Label({ label: "<b>Maximum Suggestions</b>", use_markup: true, xalign: 0 });
+    let sizeSubtitle = new Gtk.Label({ label: "Maximum number of candidate words shown in list (5 - 15)", xalign: 0 });
+    sizeSubtitle.get_style_context().add_class("dim-label");
+    sizeLabelBox.pack_start(sizeTitle, false, false, 0);
+    sizeLabelBox.pack_start(sizeSubtitle, false, false, 0);
+    let adjSize = new Gtk.Adjustment({ lower: 5, upper: 15, step_increment: 1, page_increment: 2, value: 15 });
+    let spinSize = new Gtk.SpinButton({ adjustment: adjSize, climb_rate: 1, digits: 0, valign: Gtk.Align.CENTER });
+    sizeBox.pack_start(sizeLabelBox, true, true, 0);
+    sizeBox.pack_end(spinSize, false, false, 0);
+    typingBox.pack_start(sizeBox, false, false, 0);
+
+    notebook.append_page(typingBox, new Gtk.Label({ label: "Typing" }));
+
+    /* ========================================================================= */
+    /* 3. DICTIONARY & AUTOCORRECT TAB                                           */
+    /* ========================================================================= */
+    let dictBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 18, border_width: 16 });
+
+    // Dictionary Suggestion Toggle
+    let dictToggleBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12 });
+    let dictLabelBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
+    let dictTitle = new Gtk.Label({ label: "<b>Dictionary-Assisted Suggestions</b>", use_markup: true, xalign: 0 });
+    let dictSubtitle = new Gtk.Label({
+        label: "Matches input against Bengali dictionary and grammatical suffix rules",
+        xalign: 0
+    });
+    dictSubtitle.get_style_context().add_class("dim-label");
+    dictLabelBox.pack_start(dictTitle, false, false, 0);
+    dictLabelBox.pack_start(dictSubtitle, false, false, 0);
+    let switchDict = new Gtk.Switch({ valign: Gtk.Align.CENTER });
+    dictToggleBox.pack_start(dictLabelBox, true, true, 0);
+    dictToggleBox.pack_end(switchDict, false, false, 0);
+    dictBox.pack_start(dictToggleBox, false, false, 0);
+
+    // Learned Choices Management
+    let learnedBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12, margin_top: 16 });
+    let learnedLabelBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
+    let learnedTitle = new Gtk.Label({ label: "<b>Learned Word Selections</b>", use_markup: true, xalign: 0 });
+    let learnedSubtitle = new Gtk.Label({
+        label: "Avro remembers your preferred candidate choices for ambiguous phonetic inputs",
+        xalign: 0
+    });
+    learnedSubtitle.get_style_context().add_class("dim-label");
+    learnedLabelBox.pack_start(learnedTitle, false, false, 0);
+    learnedLabelBox.pack_start(learnedSubtitle, false, false, 0);
+    let btnClearLearned = new Gtk.Button({ label: "Clear Learned Choices", valign: Gtk.Align.CENTER });
+    btnClearLearned.connect("clicked", function() {
+        let f = getCandidateSelectionsFile();
+        try {
+            if (f.query_exists(null)) {
+                f.delete(null);
+            }
+            let infoDialog = new Gtk.MessageDialog({
+                transient_for: window,
+                modal: true,
+                message_type: Gtk.MessageType.INFO,
+                buttons: Gtk.ButtonsType.OK,
+                text: "Learned Choices Cleared",
+                secondary_text: "All custom candidate selection history has been cleared successfully."
+            });
+            infoDialog.run();
+            infoDialog.destroy();
+        } catch (e) {
+            print("Error clearing candidate selections: " + e.message);
+        }
+    });
+    learnedBox.pack_start(learnedLabelBox, true, true, 0);
+    learnedBox.pack_end(btnClearLearned, false, false, 0);
+    dictBox.pack_start(learnedBox, false, false, 0);
+
+    notebook.append_page(dictBox, new Gtk.Label({ label: "Dictionary" }));
+
+    /* ========================================================================= */
+    /* 4. SHORTCUTS TAB                                                          */
+    /* ========================================================================= */
+    let shortcutsBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 12, border_width: 16 });
+    let shortcutsTitle = new Gtk.Label({ label: "<b>Avro Phonetic Keyboard Shortcuts</b>", use_markup: true, xalign: 0 });
+    shortcutsBox.pack_start(shortcutsTitle, false, false, 4);
+
+    let gridShortcuts = new Gtk.Grid({ row_spacing: 10, column_spacing: 16 });
+    let shortcutsList = [
+        ["Space / Tab / Return", "Commit current Bengali candidate"],
+        ["Left / Right / Up / Down", "Navigate candidate suggestions"],
+        ["Backspace", "Edit preedit buffer (deletes previous character)"],
+        ["Escape", "Cancel active preedit and clear suggestion list"],
+        ["Super + Space", "Switch system input source between English and Avro"],
+        ["IBus Menu → Mode", "Toggle between Bangla and English mode directly inside Avro"]
+    ];
+
+    for (let i = 0; i < shortcutsList.length; i++) {
+        let keyLabel = new Gtk.Label({ label: "<tt><b>" + shortcutsList[i][0] + "</b></tt>", use_markup: true, xalign: 0 });
+        let descLabel = new Gtk.Label({ label: shortcutsList[i][1], xalign: 0 });
+        gridShortcuts.attach(keyLabel, 0, i, 1, 1);
+        gridShortcuts.attach(descLabel, 1, i, 1, 1);
+    }
+    shortcutsBox.pack_start(gridShortcuts, false, false, 8);
+
+    notebook.append_page(shortcutsBox, new Gtk.Label({ label: "Shortcuts" }));
+
+    /* ========================================================================= */
+    /* 5. DIAGNOSTICS TAB (Privacy Preserving)                                   */
+    /* ========================================================================= */
+    let diagBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 12, border_width: 16 });
+    let diagTitle = new Gtk.Label({ label: "<b>System &amp; Runtime Diagnostics</b>", use_markup: true, xalign: 0 });
+    let diagNotice = new Gtk.Label({
+        label: "Diagnostics contain technical environment state only. Typed user text is never collected or shown.",
+        xalign: 0
+    });
+    diagNotice.get_style_context().add_class("dim-label");
+    diagBox.pack_start(diagTitle, false, false, 0);
+    diagBox.pack_start(diagNotice, false, false, 4);
+
+    // Build diagnostic summary text
+    let diagText = createDiagnosticReport();
+
+    let diagScrolled = new Gtk.ScrolledWindow({ shadow_type: Gtk.ShadowType.IN, height_request: 140 });
+    let diagTextView = new Gtk.TextView({ editable: false, cursor_visible: false, monospace: true, border_width: 8 });
+    diagTextView.get_buffer().set_text(diagText, -1);
+    diagScrolled.add(diagTextView);
+    diagBox.pack_start(diagScrolled, true, true, 0);
+
+    let btnCopyDiag = new Gtk.Button({ label: "Copy Diagnostics to Clipboard", halign: Gtk.Align.START });
+    btnCopyDiag.connect("clicked", function() {
+        let clipboard = Gtk.Clipboard.get_default(Gdk.Display.get_default());
+        clipboard.set_text(diagText, -1);
+        btnCopyDiag.set_label("Copied!");
+        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, function() {
+            btnCopyDiag.set_label("Copy Diagnostics to Clipboard");
+            return GLib.SOURCE_REMOVE;
+        });
+    });
+    diagBox.pack_start(btnCopyDiag, false, false, 0);
+
+    notebook.append_page(diagBox, new Gtk.Label({ label: "Diagnostics" }));
+
+    /* ========================================================================= */
+    /* 6. ABOUT TAB                                                              */
+    /* ========================================================================= */
+    let aboutBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 10, border_width: 20, halign: Gtk.Align.CENTER });
     
-    switch_preview.connect("notify::active", validate);
-    switch_newline.connect("notify::active", validate);
-    switch_dict.connect("notify::active", validate);
+    let appNameLabel = new Gtk.Label({ label: "<big><b>Avro Linux</b></big>", use_markup: true });
+    let appVerLabel = new Gtk.Label({ label: "Version 1.0.0 (Debian Edition)" });
+    appVerLabel.get_style_context().add_class("dim-label");
+    let appDescLabel = new Gtk.Label({
+        label: "Modern Linux implementation of Avro Phonetic Bengali input method.",
+        justify: Gtk.Justification.CENTER
+    });
 
+    let creditsLabel = new Gtk.Label({
+        label: "<b>Original Authors & Attribution:</b>\n" +
+               "• OmicronLab (Dr. Mehdi Hasan Khan & Rifat Nabi)\n" +
+               "• Sarim Khan (ibus-avro)\n" +
+               "• Debian Maintainers (Gunnar Hjalmarsson, Boyuan Yang)\n" +
+               "• Avro Linux Contributors",
+        use_markup: true,
+        justify: Gtk.Justification.CENTER,
+        margin_top: 8
+    });
 
-    let setting = Gio.Settings.new("com.omicronlab.avro")
-    setting.bind("switch-preview", switch_preview, "active", Gio.SettingsBindFlags.DEFAULT)
-    setting.bind("switch-dict", switch_dict, "active", Gio.SettingsBindFlags.DEFAULT)
-    setting.bind("switch-newline", switch_newline, "active", Gio.SettingsBindFlags.DEFAULT)
-    setting.bind("lutable-size", lutable_size, "value", Gio.SettingsBindFlags.DEFAULT)
-    setting.bind("cboxorient", cboxorient, "active", Gio.SettingsBindFlags.DEFAULT)
+    let licenseLabel = new Gtk.Label({
+        label: "Licensed under the Mozilla Public License, v. 2.0 (MPL-2.0)",
+        margin_top: 8
+    });
+    licenseLabel.get_style_context().add_class("dim-label");
 
-    validate();
+    let btnWebsite = new Gtk.LinkButton({
+        uri: "https://github.com/sarim/ibus-avro",
+        label: "Visit Project Repository",
+        margin_top: 6
+    });
 
-    prefwindow.connect ("destroy", function(){Gtk.main_quit()});
-    prefwindow.show_all();
+    aboutBox.pack_start(appNameLabel, false, false, 0);
+    aboutBox.pack_start(appVerLabel, false, false, 0);
+    aboutBox.pack_start(appDescLabel, false, false, 4);
+    aboutBox.pack_start(creditsLabel, false, false, 4);
+    aboutBox.pack_start(licenseLabel, false, false, 0);
+    aboutBox.pack_start(btnWebsite, false, false, 0);
 
+    notebook.append_page(aboutBox, new Gtk.Label({ label: "About" }));
+
+    window.add(notebook);
+
+    /* ========================================================================= */
+    /* GSETTINGS BINDINGS & LOGIC                                                */
+    /* ========================================================================= */
+    function readFromSettings() {
+        if (!setting) return;
+        try {
+            switchPreview.set_active(setting.get_boolean("switch-preview"));
+            switchDict.set_active(setting.get_boolean("switch-dict"));
+            switchNewline.set_active(setting.get_boolean("switch-newline"));
+            spinSize.set_value(setting.get_int("lutable-size"));
+            cboxOrient.set_active(setting.get_int("cboxorient"));
+            updateSensitivities();
+        } catch (e) {}
+    }
+
+    function updateSensitivities() {
+        let previewActive = switchPreview.get_active();
+        switchDict.set_sensitive(previewActive);
+        switchNewline.set_sensitive(previewActive);
+        spinSize.set_sensitive(previewActive);
+        cboxOrient.set_sensitive(previewActive);
+    }
+
+    if (setting) {
+        setting.bind("switch-preview", switchPreview, "active", Gio.SettingsBindFlags.DEFAULT);
+        setting.bind("switch-dict", switchDict, "active", Gio.SettingsBindFlags.DEFAULT);
+        setting.bind("switch-newline", switchNewline, "active", Gio.SettingsBindFlags.DEFAULT);
+        setting.bind("lutable-size", spinSize, "value", Gio.SettingsBindFlags.DEFAULT);
+        setting.bind("cboxorient", cboxOrient, "active", Gio.SettingsBindFlags.DEFAULT);
+        
+        switchPreview.connect("notify::active", function() {
+            updateSensitivities();
+        });
+
+        readFromSettings();
+    }
+
+    window.connect("destroy", function() {
+        Gtk.main_quit();
+    });
+
+    window.show_all();
     Gtk.main();
 }
 
-function validate(){
-    if (!switch_preview.get_active()){
-        switch_newline.set_active(false);
-        switch_dict.set_active(false);
-
-        switch_dict.sensitive = false;
-        switch_newline.sensitive = false;
-        scale1.sensitive = false;
-        cboxorient.sensitive = false;
-    } else {
-        switch_dict.sensitive = true;
-        switch_newline.sensitive = true;
-        scale1.sensitive = true;
-        cboxorient.sensitive = true;
+let isMain = (typeof ARGV !== 'undefined' && ARGV.indexOf('--standalone') !== -1);
+try {
+    let scriptPath = (typeof ARGV !== 'undefined' && ARGV[0]) ? ARGV[0] : '';
+    if (scriptPath.indexOf('pref.js') !== -1) {
+        isMain = true;
     }
-}
+} catch (e) {}
 
-//check if running standalone
-if(ARGV[0] == '--standalone'){
-    //running standalone, so no one to call me,calling myself
+if (isMain) {
     runpref();
 }
