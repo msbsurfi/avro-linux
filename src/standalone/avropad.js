@@ -454,18 +454,18 @@ function runAvroPad(initialText) {
             selectedIdx = 0;
         }
 
-        /* Render candidates with markup */
+        /* Render candidates with markup — use inline Pango attrs, NOT css class= */
         let parts = [];
         for (let i = 0; i < Math.min(candidates.length, 9); i++) {
             let num = (i + 1).toString();
             let word = candidates[i].replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
             if (i === selectedIdx) {
-                parts.push('<span class="cand-active"><b>[' + num + '. ' + word + ']</b></span>');
+                parts.push('<span foreground="#00e5a0" weight="bold">[ ' + num + '.  ' + word + ' ]</span>');
             } else {
-                parts.push('<span foreground="#8899cc">' + num + '. ' + word + '</span>');
+                parts.push('<span foreground="#6877aa">' + num + '.  ' + word + '</span>');
             }
         }
-        candList.set_markup(parts.join('  '));
+        candList.set_markup(parts.join('   '));
     }
 
     /** Insert the committed Bengali word into TextBuffer and reset state */
