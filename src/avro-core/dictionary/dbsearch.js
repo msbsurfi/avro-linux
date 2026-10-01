@@ -152,10 +152,8 @@ DBSearch.prototype = {
 
 
 	_printWords: function (enText) {
-	    var words = this.search(enText);
-	    for (w in words){
-            print(words[w]);
-        }
+	    // Privacy: safe no-op in production
+	    return this.search(enText);
   	},
   	
   	
