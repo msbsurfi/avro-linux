@@ -1,0 +1,53 @@
+/*
+    Avro Linux Environment Variables & Path Discovery
+    SPDX-License-Identifier: MPL-2.0
+    Copyright (C) 2012-2021 Sarim Khan <sarim2005@gmail.com>
+    Copyright (C) 2024-2026 Avro Linux Contributors
+*/
+
+const GLib = imports.gi.GLib;
+const Gio = imports.gi.Gio;
+
+function get_pkgdatadir() {
+    return "@pkgdatadir@";
+}
+
+function get_libexecdir() {
+    return "@libexecdir@";
+}
+
+/**
+ * Configure imports.searchPath to include all necessary module directories.
+ * If baseDir is provided, uses that base; otherwise defaults to get_pkgdatadir().
+ */
+function init_search_paths(baseDir) {
+    let dir = baseDir || get_pkgdatadir();
+    let paths = [
+        dir,
+        dir + "/common",
+        dir + "/engine",
+        dir + "/avro-core",
+        dir + "/avro-core/phonetic",
+        dir + "/avro-core/dictionary",
+        dir + "/avro-core/autocorrect",
+        dir + "/avro-core/suggestions",
+        dir + "/preferences",
+        // Source tree fallback layout
+        dir + "/src",
+        dir + "/src/common",
+        dir + "/src/engine",
+        dir + "/src/avro-core",
+        dir + "/src/avro-core/phonetic",
+        dir + "/src/avro-core/dictionary",
+        dir + "/src/avro-core/autocorrect",
+        dir + "/src/avro-core/suggestions",
+        dir + "/src/preferences"
+    ];
+
+    for (let i = 0; i < paths.length; i++) {
+        let p = paths[i];
+        if (imports.searchPath.indexOf(p) === -1) {
+            imports.searchPath.unshift(p);
+        }
+    }
+}

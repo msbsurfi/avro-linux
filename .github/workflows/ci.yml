@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            make \
+            fakeroot \
+            dpkg-dev \
+            gjs \
+            libglib2.0-bin \
+            desktop-file-utils \
+            appstream
+
+      - name: Build project
+        run: make all
+
+      - name: Build Debian package
+        run: make package
+
+      - name: Run test suites
+        run: make test
+
+      - name: Inspect built Debian package
+        run: |
+          dpkg-deb -I avro-linux_*.deb
+          dpkg-deb -c avro-linux_*.deb
+
+      - name: Upload .deb artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: avro-linux-deb
+          path: avro-linux_*.deb

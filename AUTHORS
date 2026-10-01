@@ -1,0 +1,11 @@
+Avro Linux Authors and Contributors:
+
+Primary Authors & Contributors:
+* Avro Linux Project Contributors <avro-linux@github.com>
+
+Upstream Authors & Contributors:
+* Dr. Mehdi Hasan Khan <mhasan@omicronlab.com> (Avro Keyboard, jsAvroPhonetic)
+* Rifat Nabi <to.rifat@gmail.com> (jsAvroPhonetic)
+* Sarim Khan <sarim2005@gmail.com> (ibus-avro)
+* Gunnar Hjalmarsson <gunnarhj@debian.org> (Debian packaging)
+* Boyuan Yang <byang@debian.org> (Debian packaging)

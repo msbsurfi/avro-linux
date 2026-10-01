@@ -1,0 +1,44 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: Avro Linux
+Upstream-Contact: Avro Linux Team <avro-linux@github.com>
+Source: https://github.com/sarim/ibus-avro
+
+Files: *
+Copyright: 2024-2026 Avro Linux Contributors
+           2012-2021 Sarim Khan <sarim2005@gmail.com>
+License: MPL-2.0
+
+Files: src/avro-core/*
+Copyright: 2012-2021 OmicronLab <http://www.omicronlab.com>
+           Dr. Mehdi Hasan Khan <mhasan@omicronlab.com>
+           Rifat Nabi <to.rifat@gmail.com>
+License: MPL-2.0
+
+Files: src/avro-core/suggestions/levenshtein.js
+Copyright: Public Domain / Permissive
+License: public-domain
+ Damerau-Levenshtein distance algorithm implementation from public domain sources.
+
+Files: data/metainfo/*
+Copyright: 2019 Sarim Khan <sarim2005@gmail.com>
+           2024-2026 Avro Linux Contributors
+License: CC0-1.0
+
+Files: debian/*
+Copyright: 2026 Avro Linux Contributors
+           2019-2023 Gunnar Hjalmarsson <gunnarhj@debian.org>
+           2024 Boyuan Yang <byang@debian.org>
+License: MPL-2.0
+
+License: MPL-2.0
+ This Source Code Form is subject to the terms of the Mozilla Public
+ License, v. 2.0. If a copy of the MPL was not distributed with this
+ file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+License: CC0-1.0
+ To the extent possible under law, the author(s) have dedicated all copyright
+ and related and neighboring rights to this software to the public domain
+ worldwide. This software is distributed without any warranty.
+ .
+ You should have received a copy of the CC0 Public Domain Dedication along
+ with this software. If not, see <https://creativecommons.org/publicdomain/zero/1.0/>.

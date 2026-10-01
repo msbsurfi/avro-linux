@@ -1,0 +1,19 @@
+# Build and packaging artifacts
+build/
+*.deb
+*.tar.gz
+*.tar.xz
+*.dsc
+*.build
+*.changes
+*.buildinfo
+
+# Generated build files
+src/common/evars.js
+data/ibus/ibus-avro.xml
+
+# Runtime user caches
+.candidate-selections.json
+*~
+*.swp
+.DS_Store

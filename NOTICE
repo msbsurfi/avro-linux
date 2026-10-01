@@ -1,0 +1,32 @@
+Avro Linux
+Copyright (c) 2024-2026 Avro Linux Project Contributors.
+
+This software is licensed under the Mozilla Public License, Version 2.0 (MPL-2.0).
+A copy of the license is included in the LICENSE file.
+
+THIRD-PARTY COMPONENTS AND ATTRIBUTIONS:
+
+1. jsAvroPhonetic & OmicronLab Avro Dictionaries
+   Copyright (c) OmicronLab (http://www.omicronlab.com)
+   Initial Developers: Dr. Mehdi Hasan Khan <mhasan@omicronlab.com>, Rifat Nabi <to.rifat@gmail.com>
+   License: MPL-2.0
+   Components: Phonetic parser, regex definitions, dictionary tables, suffix rules, autocorrect database.
+
+2. ibus-avro
+   Copyright (c) Sarim Khan (http://www.sarimkhan.com, sarim2005@gmail.com)
+   Contributor(s): Dr. Mehdi Hasan Khan <mhasan@omicronlab.com>
+   License: MPL-2.0
+   Components: IBus engine integration, GJS engine lifecycle, component definitions.
+
+3. Debian ibus-avro Packaging
+   Copyright (c) 2019-2023 Gunnar Hjalmarsson <gunnarhj@debian.org>
+   Copyright (c) 2024 Boyuan Yang <byang@debian.org>
+   License: MPL-2.0
+
+4. Damerau-Levenshtein Algorithm Implementation
+   Algorithm based on open public implementations from Wikibooks and Wikipedia.
+   License: Public Domain / Permissive
+
+5. AppStream Metadata
+   Copyright (c) 2019 Sarim Khan, 2024-2026 Avro Linux Contributors
+   License: CC0-1.0 Universal
