@@ -120,6 +120,11 @@ if (bus.is_connected()) {
                     resetAll(engine);
                 }
                 updateEngineProperty(engine);
+                try {
+                    if (engine.setting) {
+                        engine.setting.set_boolean('mode-bangla', engine.mode_bangla);
+                    }
+                } catch (e) {}
             }
             return true;
         }
@@ -344,6 +349,14 @@ if (bus.is_connected()) {
             var dictPref = suggestionBuilder.getPref();
             dictPref.dictEnable = engine.setting_switch_dict;
             suggestionBuilder.setPref(dictPref);
+
+            try {
+                let m = engine.setting.get_boolean('mode-bangla');
+                if (engine.mode_bangla !== m) {
+                    engine.mode_bangla = m;
+                    updateEngineProperty(engine);
+                }
+            } catch (e) {}
         } catch (e) {}
     }
     

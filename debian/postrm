@@ -2,6 +2,12 @@
 set -e
 
 if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+    rm -f /etc/profile.d/avro-linux.sh
+    rm -f /etc/environment.d/99-avro-linux.conf
+    rm -f /etc/xdg/plasma-workspace/env/avro-linux.sh
+    rm -f /etc/xdg/autostart/avro-ibus-autostart.desktop
+    rm -f /usr/share/glib-2.0/schemas/99-avro-linux.gschema.override
+
     # Recompile GSettings schemas
     if command -v glib-compile-schemas >/dev/null 2>&1; then
         glib-compile-schemas /usr/share/glib-2.0/schemas || true

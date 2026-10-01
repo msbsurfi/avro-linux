@@ -26,6 +26,11 @@
       <summary>cboxorient</summary>
       <description>Orientation of Lookup Table</description>
     </key>    
+    <key type="b" name="mode-bangla">
+      <default>true</default>
+      <summary>Input Mode</summary>
+      <description>Whether Avro is currently in Bangla mode (true) or English passthrough (false)</description>
+    </key>
 
   </schema>
 </schemalist>

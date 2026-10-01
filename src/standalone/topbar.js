@@ -334,49 +334,41 @@ function runAvroTopBar() {
     let btnModeLabel = new Gtk.Label({ use_markup: true });
     btnMode.add(btnModeLabel);
 
-    /* ─── avro-daemon IPC helper ─── */
-    function daemonSend(msg) {
-        /* Send a message to avro-daemon via Unix socket and return the response */
+    /* ─── Mode Setting Sync via GSettings ─── */
+    let setting = null;
+    try {
+        setting = new Gio.Settings({ schema_id: "com.omicronlab.avro" });
+        if (setting && setting.list_keys().indexOf('mode-bangla') !== -1) {
+            isBangla = setting.get_boolean('mode-bangla');
+            setting.connect('changed::mode-bangla', () => {
+                isBangla = setting.get_boolean('mode-bangla');
+                updateModeUI();
+            });
+        }
+    } catch (e) {}
+
+    function ensureDaemonRunning() {
         try {
-            let [ok, out] = GLib.spawn_command_line_sync(
-                "python3 -c \"import socket,sys; s=socket.socket(socket.AF_UNIX); " +
-                "s.connect('" + (GLib.getenv('XDG_RUNTIME_DIR') || ('/run/user/' + GLib.getenv('UID') || '1000')) + "/avro-daemon.sock'); " +
-                "s.sendall(b'" + msg + "'); print(s.recv(256).decode()); s.close()\""
-            );
-            if (ok && out) {
-                let r = '';
-                for (let c of out) r += String.fromCharCode(c);
-                return r.trim();
+            let [ok, out] = GLib.spawn_command_line_sync("pgrep -x ibus-daemon");
+            if (!ok || !out || out.length === 0) {
+                GLib.spawn_command_line_async("ibus-daemon -drx");
+                GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1500, () => {
+                    GLib.spawn_command_line_async("ibus engine ibus-avro");
+                    return false;
+                });
+            } else {
+                GLib.spawn_command_line_async("ibus engine ibus-avro");
             }
         } catch (e) {}
-        return null;
     }
 
     function setSystemEngine(bangla) {
-        /* Tell avro-daemon to switch mode */
-        let resp = daemonSend(bangla ? 'ON' : 'OFF');
-        if (!resp) {
-            /* Daemon not running — start it */
+        if (setting) {
             try {
-                GLib.spawn_command_line_async('avro-daemon');
-            } catch (e) {}
-            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 800, () => {
-                daemonSend(bangla ? 'ON' : 'OFF');
-                return false;
-            });
-        }
-    }
-
-    function syncModeFromDaemon() {
-        /* Read current mode from avro-daemon */
-        let resp = daemonSend('GET');
-        if (resp) {
-            try {
-                let d = JSON.parse(resp);
-                isBangla = !!d.bangla;
-                updateModeUI();
+                setting.set_boolean('mode-bangla', bangla);
             } catch (e) {}
         }
+        ensureDaemonRunning();
     }
 
     function updateModeUI() {
@@ -385,20 +377,14 @@ function runAvroTopBar() {
         if (isBangla) {
             btnModeLabel.set_markup("<b>বাংলা  [F12]</b>");
             btnMode.get_style_context().add_class("avro-mode-bangla");
-            btnMode.set_tooltip_text("Mode: বাংলা — click or press F12 to switch to English");
+            btnMode.set_tooltip_text("Mode: বাংলা — click or press F12 anywhere to switch to English");
         } else {
             btnModeLabel.set_markup("<b>English  [F12]</b>");
             btnMode.get_style_context().add_class("avro-mode-english");
-            btnMode.set_tooltip_text("Mode: English — click or press F12 to switch to বাংলা");
+            btnMode.set_tooltip_text("Mode: English — click or press F12 anywhere to switch to বাংলা");
         }
     }
     updateModeUI();
-
-    /* Sync mode from daemon every 2s */
-    GLib.timeout_add(GLib.PRIORITY_LOW, 2000, () => {
-        syncModeFromDaemon();
-        return true;
-    });
 
     btnMode.connect("clicked", () => {
         isBangla = !isBangla;
@@ -524,24 +510,13 @@ function runAvroTopBar() {
     /* Position and show */
     window.show_all();
 
-    /* After show: snap to top, start daemon if needed, sync mode */
+    /* After show: snap to top, ensure background engine is active, sync mode */
     GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
         snapToTopCenter();
-
-        /* Ensure avro-daemon is running */
-        let runtimeDir = GLib.getenv('XDG_RUNTIME_DIR') || ('/run/user/1000');
-        let sockPath   = runtimeDir + '/avro-daemon.sock';
-        if (!GLib.file_test(sockPath, GLib.FileTest.EXISTS)) {
-            try {
-                GLib.spawn_command_line_async('avro-daemon');
-            } catch (e) {}
-            /* Give it a moment to start, then sync */
-            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1200, () => {
-                syncModeFromDaemon();
-                return false;
-            });
-        } else {
-            syncModeFromDaemon();
+        ensureDaemonRunning();
+        if (setting && setting.list_keys().indexOf('mode-bangla') !== -1) {
+            isBangla = setting.get_boolean('mode-bangla');
+            updateModeUI();
         }
         return false;
     });
