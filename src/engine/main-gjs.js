@@ -395,30 +395,54 @@ if (bus.is_connected()) {
     }
     
     function updateCurrentSuggestions(engine) {
-        var res = suggestionBuilder.suggest(engine.buffertext);
-        engine.currentSuggestions = res['words'].slice(0, engine.setting_lutable_size || 15);
-        engine.currentSelection = res['prevSelection'] || 0;
+        var res = null;
+        try {
+            res = suggestionBuilder.suggest(engine.buffertext);
+        } catch (e) {
+            // Never consume a key and leave the client with no visible preedit.
+            // The literal buffer is a privacy-safe, lossless fallback.
+            res = { words: [engine.buffertext], prevSelection: 0 };
+        }
+        let words = res && Array.isArray(res['words']) ? res['words'] : [];
+        engine.currentSuggestions = words.slice(0, engine.setting_lutable_size || 15);
+        if (engine.currentSuggestions.length === 0 && engine.buffertext.length > 0) {
+            engine.currentSuggestions = [engine.buffertext];
+        }
+        engine.currentSelection = Math.min(res && res['prevSelection'] || 0, engine.currentSuggestions.length - 1);
+        if (engine.currentSelection < 0) engine.currentSelection = 0;
         
         fillLookupTable(engine);
     }
     
     function fillLookupTable(engine) {
-        // Do NOT call engine.update_auxiliary_text - that was the second overlay window flashing wildly!
-        if (engine.setting_switch_preview && engine.setting_switch_dict && engine.currentSuggestions.length > 1) {
-            engine.lookuptable.clear();
-            engine.currentSuggestions.forEach(function(word, idx) {
-                let wtext = IBus.Text.new_from_string(word);
-                let wlabel = IBus.Text.new_from_string((idx + 1) + ". ");
-                engine.lookuptable.append_candidate(wtext);
-                engine.lookuptable.append_label(wlabel);
-            });
-            engine.lookuptable.set_cursor_pos(engine.currentSelection);
-            engine.update_lookup_table_fast(engine.lookuptable, true);
-        } else {
-            engine.hide_lookup_table();
-        }
-        
+        // Preedit is the primary composition channel. Update it first so a
+        // panel-specific lookup-table failure can never make typed text vanish.
         preeditCandidate(engine);
+
+        // The candidate popup is optional. Different IBus panels expose either
+        // update_lookup_table_fast() or the standard update_lookup_table().
+        // Do not allow an optional popup to affect normal typing.
+        if (engine.setting_switch_preview && engine.setting_switch_dict && engine.currentSuggestions.length > 1) {
+            try {
+                engine.lookuptable.clear();
+                engine.currentSuggestions.forEach(function(word, idx) {
+                    let wtext = IBus.Text.new_from_string(word);
+                    let wlabel = IBus.Text.new_from_string((idx + 1) + ". ");
+                    engine.lookuptable.append_candidate(wtext);
+                    engine.lookuptable.append_label(wlabel);
+                });
+                engine.lookuptable.set_cursor_pos(engine.currentSelection);
+                if (typeof engine.update_lookup_table_fast === 'function') {
+                    engine.update_lookup_table_fast(engine.lookuptable, true);
+                } else {
+                    engine.update_lookup_table(engine.lookuptable, true);
+                }
+            } catch (e) {
+                try { engine.hide_lookup_table(); } catch (ignored) {}
+            }
+        } else {
+            try { engine.hide_lookup_table(); } catch (e) {}
+        }
     }
     
     function preeditCandidate(engine) {
@@ -446,11 +470,14 @@ if (bus.is_connected()) {
 
     function commitCandidateWithSuffix(engine, suffix) {
         if (engine.buffertext.length > 0 && engine.currentSuggestions.length > 0) {
-            var selectedWord = engine.currentSuggestions[engine.currentSelection] || "";
+            var selectedWord = engine.currentSuggestions[engine.currentSelection] || engine.buffertext;
             var textToCommit = selectedWord + (suffix !== undefined ? suffix : "");
             var commitText = IBus.Text.new_from_string(textToCommit);
             engine.commit_text(commitText);
             suggestionBuilder.stringCommitted(engine.buffertext, selectedWord);
+        } else if (engine.buffertext.length > 0) {
+            // Preserve input even if an optional suggestion provider failed.
+            engine.commit_text(IBus.Text.new_from_string(engine.buffertext + (suffix || "")));
         } else if (suffix) {
             engine.commit_text(IBus.Text.new_from_string(suffix));
         }

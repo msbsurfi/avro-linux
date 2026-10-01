@@ -2,7 +2,7 @@
 <schemalist>
   <schema id="com.omicronlab.avro" path="/com/omicronlab/avro/">
     <key type="b" name="switch-preview">
-      <default>true</default>
+      <default>false</default>
       <summary>switch-preview</summary>
       <description>Whether Preview window (auxiliary text, suggestions) will be shown</description>
     </key>
