@@ -5,6 +5,24 @@
     SPDX-License-Identifier: MPL-2.0
     Developer & Maintainer: MD Shifat Bin Siddique Urfi
     =============================================================================
+
+    ARCHITECTURE NOTE — Preedit / Commit Model
+    ─────────────────────────────────────────────
+    We do NOT do inline TextBuffer mutation while the user is mid-word.
+    Instead we follow the same model as the IBus engine:
+
+      • Accumulate Latin keystrokes in `currentBuffer` (string).
+      • Show live candidates in the CANDIDATE BAR only (never in the TextBuffer).
+      • On a word separator (Space / Return / Tab / Punctuation) or on an
+        explicit candidate selection (1..9), commit the chosen Bengali word
+        to the TextBuffer and clear `currentBuffer`.
+      • On Backspace with an active currentBuffer, pop the last Latin char and
+        refresh the candidate bar.
+      • On Escape, cancel composition and clear currentBuffer.
+
+    This avoids every fragile delete-then-reinsert race condition and matches
+    the well-tested IBus engine behaviour exactly.
+    =============================================================================
 */
 
 imports.gi.versions.Gtk = '3.0';
@@ -13,11 +31,11 @@ const Gdk = imports.gi.Gdk;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 
-// Base paths
+/* ─── Search paths ──────────────────────────────────────────────────────── */
 let baseDir = '/usr/share/avro-linux';
 try {
     let scriptPath = (typeof ARGV !== 'undefined' && ARGV[0]) ? ARGV[0] : '.';
-    let scriptDir = GLib.path_get_dirname(scriptPath);
+    let scriptDir  = GLib.path_get_dirname(scriptPath);
     if (GLib.file_test(scriptDir + '/../avro-core/phonetic/avrolib.js', GLib.FileTest.EXISTS)) {
         baseDir = GLib.path_get_dirname(scriptDir);
     } else if (GLib.file_test(scriptDir + '/../src/avro-core/phonetic/avrolib.js', GLib.FileTest.EXISTS)) {
@@ -25,433 +43,649 @@ try {
     }
 } catch (e) {}
 
-imports.searchPath.unshift(baseDir + '/avro-core/phonetic');
-imports.searchPath.unshift(baseDir + '/avro-core/dictionary');
-imports.searchPath.unshift(baseDir + '/avro-core/autocorrect');
-imports.searchPath.unshift(baseDir + '/avro-core/suggestions');
-imports.searchPath.unshift(baseDir + '/standalone');
-imports.searchPath.unshift(baseDir + '/src/standalone');
-imports.searchPath.unshift('./src/standalone');
-imports.searchPath.unshift('./src/avro-core/phonetic');
-imports.searchPath.unshift('./src/avro-core/dictionary');
-imports.searchPath.unshift('./src/avro-core/autocorrect');
-imports.searchPath.unshift('./src/avro-core/suggestions');
+// Repository-local paths take priority over installed paths
+for (let p of [
+    './src/avro-core/phonetic',
+    './src/avro-core/dictionary',
+    './src/avro-core/autocorrect',
+    './src/avro-core/suggestions',
+    './src/standalone',
+    baseDir + '/avro-core/phonetic',
+    baseDir + '/avro-core/dictionary',
+    baseDir + '/avro-core/autocorrect',
+    baseDir + '/avro-core/suggestions',
+    baseDir + '/standalone',
+]) {
+    imports.searchPath.unshift(p);
+}
 
-const Avro = imports.avrolib;
+/* ─── Core modules ──────────────────────────────────────────────────────── */
+let Avro = null;
+try { Avro = imports.avrolib; } catch (e) {}
+
 let SuggestionBuilder = null;
-try {
-    SuggestionBuilder = imports.suggestionbuilder;
-} catch (e) {}
+try { SuggestionBuilder = imports.suggestionbuilder; } catch (e) {}
 
 let BijoyConverter = null;
-try {
-    BijoyConverter = imports.bijoyconverter;
-} catch (e) {}
+try { BijoyConverter = imports.bijoyconverter; } catch (e) {}
 
 let LayoutViewer = null;
-try {
-    LayoutViewer = imports.layoutviewer;
-} catch (e) {}
+try { LayoutViewer = imports.layoutviewer; } catch (e) {}
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   CSS — Royal Minimal Professional Dark Theme
+   ═══════════════════════════════════════════════════════════════════════════ */
+const APP_CSS = `
+* { outline: none; }
+
+window {
+    background-color: #1a1d23;
+    color: #e8eaf0;
+}
+
+/* ── Toolbar ── */
+toolbar {
+    background: linear-gradient(180deg, #23283a 0%, #1a1d23 100%);
+    border-bottom: 1px solid #2e3346;
+    padding: 4px 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+toolbar toolbutton button {
+    background: transparent;
+    color: #b0b8d0;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 4px 10px;
+    margin: 1px 2px;
+    font-size: 13px;
+    transition: all 120ms ease;
+}
+toolbar toolbutton button:hover {
+    background: rgba(255,255,255,0.08);
+    color: #e8eaf0;
+    border-color: rgba(255,255,255,0.12);
+}
+toolbar toolbutton button:active {
+    background: rgba(255,255,255,0.14);
+}
+
+/* ── Mode buttons ── */
+.btn-bangla {
+    background: linear-gradient(135deg, #00b09b, #75c941) !important;
+    color: #062b16 !important;
+    font-weight: 900 !important;
+    border-radius: 10px !important;
+    padding: 4px 18px !important;
+    border: 1px solid #75c941 !important;
+    box-shadow: 0 0 12px rgba(117,201,65,0.35) !important;
+}
+.btn-bangla:hover {
+    background: linear-gradient(135deg, #00c9b2, #8ee050) !important;
+}
+.btn-english {
+    background: linear-gradient(135deg, #3a3f52, #4a90d9) !important;
+    color: #ffffff !important;
+    font-weight: 900 !important;
+    border-radius: 10px !important;
+    padding: 4px 18px !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+}
+.btn-english:hover {
+    background: linear-gradient(135deg, #4a90d9, #5ea8f0) !important;
+}
+
+/* ── Candidate / Suggestion bar ── */
+.cand-bar {
+    background: linear-gradient(90deg, #1e2235, #23283a);
+    border-bottom: 1px solid #2e3346;
+    padding: 5px 14px;
+    min-height: 34px;
+}
+.cand-label-header {
+    color: #5b9bd5;
+    font-weight: bold;
+    font-size: 12px;
+}
+.cand-label-list {
+    color: #c0c8dc;
+    font-size: 14px;
+    font-family: 'Noto Sans Bengali', 'Kalpurush', 'SolaimanLipi', sans-serif;
+}
+.cand-label-hint {
+    color: #4e566e;
+    font-size: 12px;
+    font-style: italic;
+}
+.cand-active {
+    color: #00e5a0;
+    font-weight: bold;
+}
+
+/* ── Editor ── */
+textview {
+    background-color: #141720;
+    color: #dce3f5;
+    border: none;
+}
+textview text {
+    background-color: #141720;
+    color: #dce3f5;
+    font-size: 18pt;
+    font-family: 'Noto Sans Bengali', 'Kalpurush', 'Siyam Rupali', 'SolaimanLipi', sans-serif;
+    caret-color: #4a90d9;
+}
+
+/* ── Status bar ── */
+.status-bar {
+    background-color: #12151e;
+    border-top: 1px solid #2a2f40;
+    padding: 4px 14px;
+}
+.status-left {
+    color: #6879a0;
+    font-size: 11px;
+}
+.status-right {
+    color: #3d4a68;
+    font-size: 11px;
+}
+
+/* ── Scrollbar ── */
+scrollbar {
+    background-color: #1a1d23;
+    border: none;
+}
+scrollbar slider {
+    background-color: #2e3448;
+    border-radius: 6px;
+    border: 1px solid #3a4060;
+    min-width: 8px;
+    min-height: 8px;
+}
+scrollbar slider:hover {
+    background-color: #3d4a6a;
+}
+
+/* ── Scrolled window ── */
+scrolledwindow {
+    border: none;
+    background-color: #141720;
+}
+`;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   runAvroPad()
+   ═══════════════════════════════════════════════════════════════════════════ */
 function runAvroPad(initialText) {
+
+    /* Apply global CSS */
+    let cssProvider = new Gtk.CssProvider();
+    try {
+        cssProvider.load_from_data(APP_CSS);
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(),
+            cssProvider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        );
+    } catch (e) {}
+
+    /* Main window */
     let window = new Gtk.Window({
-        title: "Avro Pad — Bengali Text Editor (Remastered)",
-        default_width: 860,
-        default_height: 600,
+        title: "Avro Pad — Bengali Text Editor",
+        default_width: 920,
+        default_height: 660,
         window_position: Gtk.WindowPosition.CENTER
     });
+    window.set_icon_name("accessories-text-editor");
 
+    /* Suggestion builder */
     let sBuilder = null;
     if (SuggestionBuilder && SuggestionBuilder.SuggestionBuilder) {
-        try {
-            sBuilder = new SuggestionBuilder.SuggestionBuilder();
-        } catch (e) {}
+        try { sBuilder = new SuggestionBuilder.SuggestionBuilder(); } catch (e) {}
     }
 
+    /* State */
     let isBangla = true;
-    let currentBuffer = "";
-    let inlineBengali = "";
-    let fontSize = 16;
+    let currentBuffer = "";      // Accumulated Latin keystrokes (not in TextBuffer)
     let candidates = [];
-    let selectedCandidateIdx = 0;
+    let selectedIdx = 0;
+    let fontSize = 18;
 
+    /* ── Main vertical box ── */
     let mainBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 0 });
 
-    /* ========================================================================= */
-    /* TOOLBAR                                                                   */
-    /* ========================================================================= */
+    /* ═══════════════════════════════════════════════════════════════════════
+       TOOLBAR
+       ═══════════════════════════════════════════════════════════════════════ */
     let toolbar = new Gtk.Toolbar();
     toolbar.get_style_context().add_class("primary-toolbar");
 
-    // Mode Toggle Button [F12]
+    /* Mode toggle button */
     let btnMode = new Gtk.ToolButton();
-    function updateModeButtonUI() {
+    function updateModeBtn() {
+        btnMode.get_style_context().remove_class("btn-bangla");
+        btnMode.get_style_context().remove_class("btn-english");
         if (isBangla) {
-            btnMode.set_label("বাংলা [F12]");
-            btnMode.set_tooltip_text("Current Mode: বাংলা (Press F12 to switch to English)");
+            btnMode.set_label("বাংলা  [F12]");
+            btnMode.set_tooltip_text("Mode: বাংলা — Press F12 or click to switch to English");
+            btnMode.get_style_context().add_class("btn-bangla");
         } else {
-            btnMode.set_label("English [F12]");
-            btnMode.set_tooltip_text("Current Mode: English (Press F12 to switch to বাংলা)");
+            btnMode.set_label("English  [F12]");
+            btnMode.set_tooltip_text("Mode: English — Press F12 or click to switch to বাংলা");
+            btnMode.get_style_context().add_class("btn-english");
         }
     }
-    updateModeButtonUI();
+    updateModeBtn();
     btnMode.connect("clicked", () => {
         isBangla = !isBangla;
-        commitInlineComposition();
-        updateModeButtonUI();
+        cancelComposition();
+        updateModeBtn();
+        updateCandBar();
     });
     toolbar.insert(btnMode, -1);
 
     toolbar.insert(new Gtk.SeparatorToolItem(), -1);
 
-    // Copy Button
-    let btnCopy = new Gtk.ToolButton({ icon_name: "edit-copy", label: "Copy Text" });
+    /* Copy */
+    let btnCopy = new Gtk.ToolButton({ icon_name: "edit-copy", label: "Copy All" });
     btnCopy.set_is_important(true);
     btnCopy.set_tooltip_text("Copy entire document to clipboard");
     toolbar.insert(btnCopy, -1);
 
-    // Bijoy Converter Button
-    let btnBijoy = new Gtk.ToolButton({ icon_name: "document-properties", label: "Convert to Bijoy" });
-    btnBijoy.set_tooltip_text("Open Unicode <-> Bijoy (SutonnyMJ) Text Converter");
+    /* Font size */
+    let btnZoomIn  = new Gtk.ToolButton({ icon_name: "zoom-in",  label: "A+" });
+    let btnZoomOut = new Gtk.ToolButton({ icon_name: "zoom-out", label: "A−" });
+    btnZoomIn .set_tooltip_text("Increase font size");
+    btnZoomOut.set_tooltip_text("Decrease font size");
+    toolbar.insert(btnZoomIn,  -1);
+    toolbar.insert(btnZoomOut, -1);
+
+    toolbar.insert(new Gtk.SeparatorToolItem(), -1);
+
+    /* Bijoy converter */
+    let btnBijoy = new Gtk.ToolButton({ icon_name: "document-properties", label: "↔ Bijoy" });
+    btnBijoy.set_tooltip_text("Open Unicode ↔ Bijoy (SutonnyMJ) Converter");
     btnBijoy.connect("clicked", () => {
-        if (BijoyConverter && BijoyConverter.runConverterDialog) {
+        if (BijoyConverter && BijoyConverter.runConverterDialog)
             BijoyConverter.runConverterDialog(window);
-        }
     });
     toolbar.insert(btnBijoy, -1);
 
-    // Layout Guide Button
-    let btnLayout = new Gtk.ToolButton({ icon_name: "help-browser", label: "Layout Viewer" });
-    btnLayout.set_tooltip_text("Open visual Avro Phonetic keyboard layout viewer");
+    /* Layout viewer */
+    let btnLayout = new Gtk.ToolButton({ icon_name: "help-browser", label: "Layout" });
+    btnLayout.set_tooltip_text("Avro Phonetic Keyboard Layout Guide");
     btnLayout.connect("clicked", () => {
-        if (LayoutViewer && LayoutViewer.runLayoutViewerDialog) {
+        if (LayoutViewer && LayoutViewer.runLayoutViewerDialog)
             LayoutViewer.runLayoutViewerDialog(window);
-        }
     });
     toolbar.insert(btnLayout, -1);
 
     toolbar.insert(new Gtk.SeparatorToolItem(), -1);
 
-    // Font size controls
-    let btnZoomIn = new Gtk.ToolButton({ icon_name: "zoom-in", label: "A+" });
-    let btnZoomOut = new Gtk.ToolButton({ icon_name: "zoom-out", label: "A-" });
-    toolbar.insert(btnZoomIn, -1);
-    toolbar.insert(btnZoomOut, -1);
-
-    toolbar.insert(new Gtk.SeparatorToolItem(), -1);
-
-    // Clear Button
-    let btnClear = new Gtk.ToolButton({ icon_name: "edit-clear", label: "Clear" });
+    /* Clear */
+    let btnClear = new Gtk.ToolButton({ icon_name: "edit-clear-all", label: "Clear" });
     btnClear.set_tooltip_text("Clear document");
     toolbar.insert(btnClear, -1);
 
-    // About Button
+    /* About */
     let btnAbout = new Gtk.ToolButton({ icon_name: "help-about", label: "About" });
-    btnAbout.set_tooltip_text("About Avro Pad Remastered");
-    btnAbout.connect("clicked", () => {
-        let dialog = new Gtk.AboutDialog({
-            transient_for: window,
-            modal: true,
-            program_name: "Avro Pad (Remastered Edition)",
-            version: "1.0.0",
-            comments: "Full-featured standalone Bengali notepad with live phonetic typing.\n\nRemastered for Linux by MD Shifat Bin Siddique Urfi.",
-            website: "https://github.com/avro-linux/avro-linux",
-            authors: ["MD Shifat Bin Siddique Urfi (Remaster Developer)", "OmicronLab / Dr. Mehdi Hasan Khan"],
-            license_type: Gtk.License.MPL_2_0
-        });
-        dialog.run();
-        dialog.destroy();
-    });
+    btnAbout.set_tooltip_text("About Avro Pad");
+    btnAbout.connect("clicked", () => showAbout(window));
     toolbar.insert(btnAbout, -1);
 
     mainBox.pack_start(toolbar, false, false, 0);
 
-    /* ========================================================================= */
-    /* SUGGESTION / CANDIDATE BAR                                                */
-    /* ========================================================================= */
-    let candBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8, border_width: 6 });
-    let candLabel = new Gtk.Label({ label: "<b>Suggestions:</b>", use_markup: true });
-    let candListLabel = new Gtk.Label({ label: "Type phonetically in Latin characters (e.g. 'ami banglay gan gai')", xalign: 0 });
-    candListLabel.get_style_context().add_class("dim-label");
-    candBox.pack_start(candLabel, false, false, 4);
-    candBox.pack_start(candListLabel, true, true, 4);
-    mainBox.pack_start(candBox, false, false, 0);
+    /* ═══════════════════════════════════════════════════════════════════════
+       CANDIDATE / SUGGESTION BAR
+       ═══════════════════════════════════════════════════════════════════════ */
+    let candBarBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 0, border_width: 0 });
+    candBarBox.get_style_context().add_class("cand-bar");
 
-    /* ========================================================================= */
-    /* TEXT EDITOR AREA                                                          */
-    /* ========================================================================= */
-    let scrolled = new Gtk.ScrolledWindow({ shadow_type: Gtk.ShadowType.IN, hexpand: true, vexpand: true });
+    let candHdr = new Gtk.Label({ label: " SUGGESTIONS ", xalign: 0 });
+    candHdr.get_style_context().add_class("cand-label-header");
+
+    let candList = new Gtk.Label({ label: "", xalign: 0, use_markup: true });
+    candList.get_style_context().add_class("cand-label-list");
+    candList.set_ellipsize(3);  // PANGO_ELLIPSIZE_END
+
+    let candHint = new Gtk.Label({ label: "  [1-9]=select  Space=commit  Esc=cancel", xalign: 1 });
+    candHint.get_style_context().add_class("cand-label-hint");
+
+    candBarBox.pack_start(candHdr,  false, false, 4);
+    candBarBox.pack_start(candList, true,  true,  8);
+    candBarBox.pack_end  (candHint, false, false, 8);
+
+    mainBox.pack_start(candBarBox, false, false, 0);
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       TEXT EDITOR
+       ═══════════════════════════════════════════════════════════════════════ */
+    let scrolled = new Gtk.ScrolledWindow({
+        shadow_type: Gtk.ShadowType.NONE,
+        hexpand: true,
+        vexpand: true
+    });
     let textView = new Gtk.TextView({
         wrap_mode: Gtk.WrapMode.WORD,
-        left_margin: 18,
-        right_margin: 18,
-        top_margin: 18,
-        bottom_margin: 18
+        left_margin:   22,
+        right_margin:  22,
+        top_margin:    20,
+        bottom_margin: 20
     });
 
-    let cssProvider = new Gtk.CssProvider();
-    function updateFontCss() {
-        let css = "textview text { font-size: " + fontSize + "pt; font-family: 'Noto Sans Bengali', 'Kalpurush', 'Siyam Rupali', 'SolaimanLipi', sans-serif; }";
+    let textCss = new Gtk.CssProvider();
+    function applyFontCss() {
         try {
-            cssProvider.load_from_data(css);
-            textView.get_style_context().add_provider(cssProvider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
+            textCss.load_from_data(
+                "textview text { font-size: " + fontSize + "pt; }"
+            );
+            textView.get_style_context().add_provider(textCss, Gtk.STYLE_PROVIDER_PRIORITY_USER);
         } catch (e) {}
     }
-    updateFontCss();
-
-    btnZoomIn.connect("clicked", () => {
-        if (fontSize < 36) {
-            fontSize += 2;
-            updateFontCss();
-        }
-    });
-
-    btnZoomOut.connect("clicked", () => {
-        if (fontSize > 10) {
-            fontSize -= 2;
-            updateFontCss();
-        }
-    });
+    applyFontCss();
 
     let textBuffer = textView.get_buffer();
-    if (initialText) {
-        textBuffer.set_text(initialText, -1);
-    }
+    if (initialText) textBuffer.set_text(initialText, -1);
 
     scrolled.add(textView);
     mainBox.pack_start(scrolled, true, true, 0);
 
-    /* ========================================================================= */
-    /* STATUS BAR                                                                */
-    /* ========================================================================= */
-    let statusBar = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12, border_width: 6 });
-    let statusLeft = new Gtk.Label({ label: "Ready | Avro Phonetic Engine Active (Remastered by MD Shifat Bin Siddique Urfi)", xalign: 0 });
-    statusLeft.get_style_context().add_class("dim-label");
-    let statusRight = new Gtk.Label({ label: "Press F12 to toggle Bangla / English", xalign: 1 });
-    statusRight.get_style_context().add_class("dim-label");
-    statusBar.pack_start(statusLeft, true, true, 4);
-    statusBar.pack_end(statusRight, false, false, 4);
-    mainBox.pack_start(statusBar, false, false, 0);
+    /* ═══════════════════════════════════════════════════════════════════════
+       STATUS BAR
+       ═══════════════════════════════════════════════════════════════════════ */
+    let statusBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 0, border_width: 0 });
+    statusBox.get_style_context().add_class("status-bar");
 
-    /* ========================================================================= */
-    /* LIVE INLINE PHONETIC COMPOSITION LOGIC                                    */
-    /* ========================================================================= */
-    function computeCandidates() {
-        if (!currentBuffer) {
+    let statusLeft  = new Gtk.Label({ label: "Avro Pad • Remastered by MD Shifat Bin Siddique Urfi", xalign: 0 });
+    let statusRight = new Gtk.Label({ label: "F12 = Toggle Bangla/English", xalign: 1 });
+    statusLeft .get_style_context().add_class("status-left");
+    statusRight.get_style_context().add_class("status-right");
+
+    statusBox.pack_start(statusLeft,  true,  true,  8);
+    statusBox.pack_end  (statusRight, false, false, 8);
+
+    mainBox.pack_start(statusBox, false, false, 0);
+
+    /* ═══════════════════════════════════════════════════════════════════════
+       COMPOSITION ENGINE  (commit-on-separator model)
+       ═══════════════════════════════════════════════════════════════════════ */
+
+    /** Recompute candidates from currentBuffer and refresh the bar */
+    function updateCandBar() {
+        if (!currentBuffer || !isBangla) {
             candidates = [];
-            candListLabel.set_text("Type phonetically in Latin characters (e.g. 'ami banglay gan gai')");
-            candListLabel.get_style_context().add_class("dim-label");
+            selectedIdx = 0;
+            if (!isBangla) {
+                candList.set_markup("<i>English mode active — F12 to switch to Bangla</i>");
+            } else {
+                candList.set_markup(
+                    "<span foreground='#3d4a68'>Type phonetically, e.g.  ami  banglay  gan  gai</span>"
+                );
+            }
             return;
         }
 
+        /* Build candidate list */
         candidates = [];
-        if (sBuilder && typeof sBuilder.build === 'function') {
+
+        /* 1. Try SuggestionBuilder.suggest() */
+        if (sBuilder && typeof sBuilder.suggest === 'function') {
             try {
-                let res = sBuilder.build(currentBuffer);
+                let res = sBuilder.suggest(currentBuffer);
                 if (res && res.words && res.words.length > 0) {
                     candidates = res.words;
+                    selectedIdx = (res.prevSelection >= 0 && res.prevSelection < res.words.length)
+                                  ? res.prevSelection : 0;
                 }
             } catch (e) {}
         }
 
-        if (candidates.length === 0) {
-            candidates = [Avro.parse(currentBuffer)];
+        /* 2. Fallback: raw Avro.parse */
+        if (candidates.length === 0 && Avro) {
+            try {
+                let raw = Avro.parse(currentBuffer);
+                if (raw && raw.length > 0) candidates = [raw];
+            } catch (e) {}
         }
 
-        selectedCandidateIdx = 0;
+        /* 3. Ultimate fallback: original Latin */
+        if (candidates.length === 0) {
+            candidates = [currentBuffer];
+            selectedIdx = 0;
+        }
 
-        let display = "";
-        for (let i = 0; i < Math.min(candidates.length, 7); i++) {
-            let num = i + 1;
-            if (i === selectedCandidateIdx) {
-                display += "<b>[" + num + ". " + candidates[i] + "]</b>   ";
+        /* Render candidates with markup */
+        let parts = [];
+        for (let i = 0; i < Math.min(candidates.length, 9); i++) {
+            let num = (i + 1).toString();
+            let word = candidates[i].replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            if (i === selectedIdx) {
+                parts.push('<span class="cand-active"><b>[' + num + '. ' + word + ']</b></span>');
             } else {
-                display += num + ". " + candidates[i] + "   ";
+                parts.push('<span foreground="#8899cc">' + num + '. ' + word + '</span>');
             }
         }
-        candListLabel.set_markup(display);
+        candList.set_markup(parts.join('  '));
     }
 
-    function updateInlineText() {
-        computeCandidates();
-        let newBengali = (candidates.length > 0) ? candidates[selectedCandidateIdx] : Avro.parse(currentBuffer);
-
-        // Replace previous inline composition at cursor
-        if (inlineBengali.length > 0) {
-            let insertMark = textBuffer.get_insert();
-            let endIter = textBuffer.get_iter_at_mark(insertMark);
-            let startIter = endIter.copy();
-            startIter.backward_chars(inlineBengali.length);
-            textBuffer.delete(startIter, endIter);
+    /** Insert the committed Bengali word into TextBuffer and reset state */
+    function commitWord(extra) {
+        let word = (candidates.length > 0) ? candidates[selectedIdx] : (Avro ? Avro.parse(currentBuffer) : currentBuffer);
+        if (word && word.length > 0 && currentBuffer.length > 0) {
+            textBuffer.insert_at_cursor(word, -1);
         }
-
-        if (newBengali && currentBuffer.length > 0) {
-            textBuffer.insert_at_cursor(newBengali, -1);
-            inlineBengali = newBengali;
-        } else {
-            inlineBengali = "";
-        }
+        if (extra) textBuffer.insert_at_cursor(extra, -1);
+        cancelComposition();
     }
 
-    function commitInlineComposition() {
+    /** Fully cancel composition without committing */
+    function cancelComposition() {
         currentBuffer = "";
-        inlineBengali = "";
         candidates = [];
-        selectedCandidateIdx = 0;
-        candListLabel.set_text("Type phonetically in Latin characters (e.g. 'ami banglay gan gai')");
-        candListLabel.get_style_context().add_class("dim-label");
+        selectedIdx = 0;
+        updateCandBar();
     }
 
+    /* ═══════════════════════════════════════════════════════════════════════
+       KEY HANDLER
+       ═══════════════════════════════════════════════════════════════════════ */
     textView.connect("key-press-event", (widget, event) => {
         let [, keyval] = event.get_keyval();
         let state = event.get_state()[1];
 
-        // Check for F12 (Toggle mode)
+        /* ── F12: toggle Bangla / English ── */
         if (keyval === Gdk.KEY_F12) {
             isBangla = !isBangla;
-            commitInlineComposition();
-            updateModeButtonUI();
-            return true;
+            cancelComposition();
+            updateModeBtn();
+            updateCandBar();
+            return true;    // consume the event
         }
 
-        // If in English mode, standard text editor typing
-        if (!isBangla) {
+        /* ── English mode: pass everything through ── */
+        if (!isBangla) return false;
+
+        /* ── Ctrl / Alt / Super combos: commit then pass through ── */
+        let CTRL  = Gdk.ModifierType.CONTROL_MASK;
+        let ALT   = Gdk.ModifierType.MOD1_MASK;
+        let SUPER = Gdk.ModifierType.SUPER_MASK;
+        if ((state & (CTRL | ALT | SUPER)) !== 0) {
+            if (currentBuffer) cancelComposition();
             return false;
         }
 
-        // Ignore Ctrl, Alt, Super shortcuts (allow Ctrl+C, Ctrl+V, Ctrl+Z, etc.)
-        if ((state & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.MOD1_MASK | Gdk.ModifierType.SUPER_MASK)) !== 0) {
-            if (currentBuffer) {
-                commitInlineComposition();
-            }
-            return false;
-        }
-
-        // Handle Escape: cancel current composition
+        /* ── Escape: cancel composition ── */
         if (keyval === Gdk.KEY_Escape) {
             if (currentBuffer) {
-                // Delete inline text and reset
-                if (inlineBengali.length > 0) {
-                    let insertMark = textBuffer.get_insert();
-                    let endIter = textBuffer.get_iter_at_mark(insertMark);
-                    let startIter = endIter.copy();
-                    startIter.backward_chars(inlineBengali.length);
-                    textBuffer.delete(startIter, endIter);
-                }
-                commitInlineComposition();
+                cancelComposition();
                 return true;
             }
             return false;
         }
 
-        // Handle Backspace
+        /* ── Backspace: pop last Latin char ── */
         if (keyval === Gdk.KEY_BackSpace) {
             if (currentBuffer.length > 0) {
                 currentBuffer = currentBuffer.slice(0, -1);
-                updateInlineText();
-                return true;
+                updateCandBar();
+                return true;    // consumed — do NOT let Gtk delete from TextBuffer
             }
-            return false;
+            return false;       // let Gtk delete the previous char normally
         }
 
-        // Handle Number selection keys 1..9 if candidate list active
+        /* ── Candidate selection 1-9 ── */
         if (currentBuffer && keyval >= Gdk.KEY_1 && keyval <= Gdk.KEY_9) {
             let idx = keyval - Gdk.KEY_1;
             if (idx < candidates.length) {
-                selectedCandidateIdx = idx;
-                updateInlineText();
-                // Commit chosen word and insert space
-                commitInlineComposition();
-                textBuffer.insert_at_cursor(" ", -1);
+                selectedIdx = idx;
+                commitWord(" ");
                 return true;
             }
         }
 
-        // Handle Space
+        /* ── Space → commit + space ── */
         if (keyval === Gdk.KEY_space) {
             if (currentBuffer) {
-                commitInlineComposition();
-                textBuffer.insert_at_cursor(" ", -1);
+                commitWord(" ");
                 return true;
             }
-            return false;
+            return false;   // let GTK insert the space normally
         }
 
-        // Handle Return / Enter
+        /* ── Return / Enter → commit + newline ── */
         if (keyval === Gdk.KEY_Return || keyval === Gdk.KEY_KP_Enter) {
             if (currentBuffer) {
-                commitInlineComposition();
-                textBuffer.insert_at_cursor("\n", -1);
+                commitWord("\n");
                 return true;
             }
             return false;
         }
 
-        // Handle Punctuation (Dari '।')
-        if (keyval === Gdk.KEY_period) {
+        /* ── Tab → commit + tab ── */
+        if (keyval === Gdk.KEY_Tab || keyval === Gdk.KEY_ISO_Left_Tab) {
             if (currentBuffer) {
-                commitInlineComposition();
+                commitWord("\t");
+                return true;
             }
+            return false;
+        }
+
+        /* ── Bengali Dari '।' on period key ── */
+        if (keyval === Gdk.KEY_period) {
+            if (currentBuffer) commitWord("");
             textBuffer.insert_at_cursor("।", -1);
             return true;
         }
 
-        // Handle printable Latin characters for phonetic typing
-        let unicodeChar = Gdk.keyval_to_unicode(keyval);
-        if (unicodeChar > 0) {
-            let charStr = String.fromCharCode(unicodeChar);
-            if (/[A-Za-z0-9`~@#\$%\^&*\-_=+;:'",<>\/?]/.test(charStr)) {
-                currentBuffer += charStr;
-                updateInlineText();
-                return true;
+        /* ── Navigation keys: commit without extra char ── */
+        let navKeys = [
+            Gdk.KEY_Left, Gdk.KEY_Right, Gdk.KEY_Up, Gdk.KEY_Down,
+            Gdk.KEY_Home, Gdk.KEY_End, Gdk.KEY_Page_Up, Gdk.KEY_Page_Down,
+            Gdk.KEY_Delete
+        ];
+        if (navKeys.indexOf(keyval) !== -1) {
+            if (currentBuffer) cancelComposition();
+            return false;
+        }
+
+        /* ── Printable phonetic Latin characters ── */
+        let unicode = Gdk.keyval_to_unicode(keyval);
+        if (unicode > 0) {
+            let ch = String.fromCharCode(unicode);
+            // Accept printable ASCII used in Avro phonetic; reject Bengali/non-ASCII
+            if (/^[\x20-\x7E]$/.test(ch) && !/^[ ]$/.test(ch)) {
+                currentBuffer += ch;
+                updateCandBar();
+                return true;    // consume — do NOT let Gtk insert the Latin char
             } else {
-                if (currentBuffer) {
-                    commitInlineComposition();
-                }
+                /* Non-phonetic printable (e.g. emoji) → commit then pass through */
+                if (currentBuffer) cancelComposition();
+                return false;
             }
         }
 
         return false;
     });
 
+    /* ═══════════════════════════════════════════════════════════════════════
+       TOOLBAR BUTTON ACTIONS
+       ═══════════════════════════════════════════════════════════════════════ */
     btnCopy.connect("clicked", () => {
         let start = textBuffer.get_start_iter();
-        let end = textBuffer.get_end_iter();
-        let text = textBuffer.get_text(start, end, false);
-        let clipboard = Gtk.Clipboard.get_default(Gdk.Display.get_default());
-        clipboard.set_text(text, -1);
-        statusLeft.set_text("Text successfully copied to clipboard!");
-        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2000, () => {
-            statusLeft.set_text("Ready | Avro Phonetic Engine Active (Remastered by MD Shifat Bin Siddique Urfi)");
+        let end   = textBuffer.get_end_iter();
+        let text  = textBuffer.get_text(start, end, false);
+        let cb    = Gtk.Clipboard.get_default(Gdk.Display.get_default());
+        cb.set_text(text, -1);
+        statusLeft.set_text("✓ Text copied to clipboard!");
+        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2500, () => {
+            statusLeft.set_text("Avro Pad • Remastered by MD Shifat Bin Siddique Urfi");
             return GLib.SOURCE_REMOVE;
         });
     });
 
+    btnZoomIn.connect("clicked", () => {
+        if (fontSize < 48) { fontSize += 2; applyFontCss(); }
+    });
+    btnZoomOut.connect("clicked", () => {
+        if (fontSize > 10) { fontSize -= 2; applyFontCss(); }
+    });
+
     btnClear.connect("clicked", () => {
         textBuffer.set_text("", 0);
-        commitInlineComposition();
+        cancelComposition();
     });
 
+    /* ═══════════════════════════════════════════════════════════════════════
+       WINDOW SETUP
+       ═══════════════════════════════════════════════════════════════════════ */
     window.add(mainBox);
-    window.connect("destroy", () => {
-        Gtk.main_quit();
-    });
-
+    window.connect("destroy", () => Gtk.main_quit());
     window.show_all();
+
+    // Prime the candidate bar UI
+    updateCandBar();
+
     Gtk.main();
     return window;
 }
 
-// Standalone execution entrypoint
-let isMain = (typeof ARGV !== 'undefined' && ARGV.indexOf('--standalone') !== -1);
+/* ── About dialog ── */
+function showAbout(parent) {
+    let dialog = new Gtk.AboutDialog({
+        transient_for: parent,
+        modal: true,
+        program_name: "Avro Pad (Remastered Edition)",
+        version: "1.0.0",
+        comments: "A full-featured standalone Bengali text editor with live\nAvro Phonetic composition.\n\nRemastered for Linux by MD Shifat Bin Siddique Urfi.",
+        website: "https://github.com/avro-linux/avro-linux",
+        authors: [
+            "MD Shifat Bin Siddique Urfi — Remaster Developer",
+            "Dr. Mehdi Hasan Khan — Avro Keyboard / OmicronLab",
+            "Sarim Khan — ibus-avro",
+            "Rifat Nabi — jsAvroPhonetic"
+        ],
+        license_type: Gtk.License.MPL_2_0
+    });
+    dialog.run();
+    dialog.destroy();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Standalone entrypoint
+   ═══════════════════════════════════════════════════════════════════════════ */
+let _isMain = false;
 try {
-    let scriptPath = (typeof ARGV !== 'undefined' && ARGV[0]) ? ARGV[0] : '';
-    if (scriptPath.indexOf('avropad.js') !== -1) {
-        isMain = true;
+    if (typeof ARGV !== 'undefined') {
+        for (let a of ARGV) {
+            if (a === '--standalone' || a.indexOf('avropad.js') !== -1) {
+                _isMain = true;
+                break;
+            }
+        }
     }
 } catch (e) {}
 
-if (isMain) {
+if (_isMain) {
     Gtk.init(null);
     runAvroPad(null);
 }

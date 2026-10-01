@@ -19,11 +19,11 @@ try {
     IBus.init();
 } catch (e) {}
 
-// Base search paths
+/* ─── Search paths ──────────────────────────────────────────────────────── */
 let baseDir = '/usr/share/avro-linux';
 try {
     let scriptPath = (typeof ARGV !== 'undefined' && ARGV[0]) ? ARGV[0] : '.';
-    let scriptDir = GLib.path_get_dirname(scriptPath);
+    let scriptDir  = GLib.path_get_dirname(scriptPath);
     if (GLib.file_test(scriptDir + '/../avro-core/phonetic/avrolib.js', GLib.FileTest.EXISTS)) {
         baseDir = GLib.path_get_dirname(scriptDir);
     } else if (GLib.file_test(scriptDir + '/../src/avro-core/phonetic/avrolib.js', GLib.FileTest.EXISTS)) {
@@ -31,216 +31,246 @@ try {
     }
 } catch (e) {}
 
-imports.searchPath.unshift(baseDir + '/standalone');
-imports.searchPath.unshift(baseDir + '/src/standalone');
-imports.searchPath.unshift(baseDir + '/preferences');
-imports.searchPath.unshift(baseDir + '/src/preferences');
-imports.searchPath.unshift('./src/standalone');
-imports.searchPath.unshift('./src/preferences');
+for (let p of [
+    './src/standalone',
+    './src/preferences',
+    baseDir + '/standalone',
+    baseDir + '/preferences',
+]) {
+    imports.searchPath.unshift(p);
+}
 
-let AvroPad = null;
-try {
-    AvroPad = imports.avropad;
-} catch (e) {}
+let AvroPad       = null; try { AvroPad       = imports.avropad;       } catch (e) {}
+let LayoutViewer  = null; try { LayoutViewer  = imports.layoutviewer;  } catch (e) {}
+let BijoyConverter= null; try { BijoyConverter= imports.bijoyconverter;} catch (e) {}
+let PrefApp       = null; try { PrefApp       = imports.pref;          } catch (e) {}
 
-let LayoutViewer = null;
-try {
-    LayoutViewer = imports.layoutviewer;
-} catch (e) {}
+/* ═══════════════════════════════════════════════════════════════════════════
+   CSS — Royal Dark Floating Bar
+   ═══════════════════════════════════════════════════════════════════════════ */
+const BAR_CSS = `
+* { outline: none; }
 
-let BijoyConverter = null;
-try {
-    BijoyConverter = imports.bijoyconverter;
-} catch (e) {}
+.avro-topbar-window {
+    background: linear-gradient(180deg, #1f2433 0%, #161924 100%);
+    border: 1px solid rgba(74,144,217,0.25);
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.75), 0 0 16px rgba(74,144,217,0.15);
+}
 
-let PrefApp = null;
-try {
-    PrefApp = imports.pref;
-} catch (e) {}
+.avro-logo-btn {
+    background: linear-gradient(135deg, #1a3a6e, #2454a0);
+    color: #e8f0ff;
+    font-weight: 900;
+    font-size: 13px;
+    border-radius: 12px;
+    padding: 4px 12px;
+    border: 1px solid rgba(255,255,255,0.2);
+    margin: 0 2px;
+}
+.avro-logo-btn:hover {
+    background: linear-gradient(135deg, #2454a0, #3168c0);
+    color: #ffffff;
+}
 
+.avro-mode-bangla {
+    background: linear-gradient(135deg, #00a88a, #6bbf2e);
+    color: #041e0f;
+    font-weight: 900;
+    font-size: 13px;
+    border-radius: 12px;
+    padding: 5px 18px;
+    border: 1px solid #6bbf2e;
+    box-shadow: 0 0 10px rgba(107,191,46,0.4);
+    margin: 0 2px;
+}
+.avro-mode-bangla:hover {
+    background: linear-gradient(135deg, #00c0a0, #80d940);
+}
+
+.avro-mode-english {
+    background: linear-gradient(135deg, #2e3348, #3d6db0);
+    color: #e8f0ff;
+    font-weight: 900;
+    font-size: 13px;
+    border-radius: 12px;
+    padding: 5px 18px;
+    border: 1px solid rgba(255,255,255,0.18);
+    margin: 0 2px;
+}
+.avro-mode-english:hover {
+    background: linear-gradient(135deg, #3d6db0, #5286d0);
+}
+
+.avro-layout-btn {
+    background: rgba(255,255,255,0.07);
+    color: #a0aac0;
+    font-size: 12px;
+    border-radius: 10px;
+    padding: 4px 10px;
+    border: 1px solid rgba(255,255,255,0.08);
+    margin: 0 2px;
+}
+.avro-layout-btn:hover {
+    background: rgba(255,255,255,0.14);
+    color: #d0d8f0;
+    border-color: rgba(255,255,255,0.18);
+}
+
+.avro-tool-btn {
+    background: rgba(255,255,255,0.06);
+    color: #8899c0;
+    font-size: 14px;
+    border-radius: 10px;
+    padding: 4px 9px;
+    border: none;
+    margin: 0 1px;
+}
+.avro-tool-btn:hover {
+    background: rgba(255,255,255,0.16);
+    color: #d0d8f0;
+}
+
+.avro-pin-btn {
+    background: rgba(255,255,255,0.06);
+    color: #f39c12;
+    font-size: 13px;
+    border-radius: 10px;
+    padding: 4px 8px;
+    border: none;
+    margin: 0 1px;
+}
+.avro-pin-btn:hover {
+    background: rgba(243,156,18,0.25);
+}
+
+.avro-close-btn {
+    background: transparent;
+    color: #5a6580;
+    border-radius: 10px;
+    padding: 4px 9px;
+    border: none;
+    font-size: 14px;
+    margin: 0 1px;
+}
+.avro-close-btn:hover {
+    background: #c0392b;
+    color: #ffffff;
+}
+
+/* Tooltip overrides */
+tooltip {
+    background-color: #1a1d28;
+    color: #c0ccdd;
+    border: 1px solid #2a3350;
+    border-radius: 8px;
+}
+`;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   runAvroTopBar()
+   ═══════════════════════════════════════════════════════════════════════════ */
 function runAvroTopBar() {
-    let window = new Gtk.Window({
-        type: Gtk.WindowType.TOPLEVEL,
-        title: "Avro TopBar",
-        decorated: false,
-        skip_taskbar_hint: true,
-        skip_pager_hint: true,
-        accept_focus: false, // Critical: do NOT steal keyboard focus from active apps
-        role: "avro-topbar"
-    });
 
-    // Make window sticky (visible across all virtual desktops / workspaces)
+    /* Apply CSS globally */
+    let cssProvider = new Gtk.CssProvider();
+    try {
+        cssProvider.load_from_data(BAR_CSS);
+        Gtk.StyleContext.add_provider_for_screen(
+            Gdk.Screen.get_default(),
+            cssProvider,
+            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        );
+    } catch (e) {}
+
+    /* Window — undecorated, no taskbar, no pager, no focus steal */
+    let window = new Gtk.Window({
+        type:              Gtk.WindowType.TOPLEVEL,
+        title:             "Avro TopBar",
+        decorated:         false,
+        skip_taskbar_hint: true,
+        skip_pager_hint:   true,
+        accept_focus:      false,
+        role:              "avro-topbar"
+    });
+    window.get_style_context().add_class("avro-topbar-window");
+
+    /* Always-on-top + stick to all workspaces */
     window.stick();
-    // Keep window above all other windows (always-on-top like Windows Avro)
     window.set_keep_above(true);
     window.set_type_hint(Gdk.WindowTypeHint.UTILITY);
 
-    // Watchdog timer: ensure TopBar remains above all windows and sticky
-    GLib.timeout_add(GLib.PRIORITY_LOW, 2000, () => {
-        if (window.get_visible()) {
-            window.set_keep_above(true);
-            window.stick();
-        }
-        return true;
+    /* Watchdog: re-assert always-on-top every 1.5 s (some DEs override it) */
+    GLib.timeout_add(GLib.PRIORITY_LOW, 1500, () => {
+        try {
+            if (window.get_visible()) {
+                window.set_keep_above(true);
+                window.stick();
+            }
+        } catch (e) {}
+        return true;  // repeat
     });
 
-    let isPinned = true;
-    let isMini = false;
-    let isBangla = true;
-    let currentLayout = "Avro Phonetic";
+    /* State */
+    let isPinned       = true;
+    let isMini         = false;
+    let isBangla       = true;
+    let currentLayout  = "Avro Phonetic";
 
-    // Snapping logic: default to top center of primary display
+    /* Snap to top-center of primary monitor */
     function snapToTopCenter() {
-        let screen = Gdk.Screen.get_default();
-        if (screen) {
-            let monitor = 0;
-            if (typeof screen.get_primary_monitor === 'function') {
-                monitor = screen.get_primary_monitor();
-            }
-            let geom = screen.get_monitor_geometry(monitor);
-            let [w] = window.get_size();
-            let targetX = geom.x + Math.floor((geom.width - (w || 380)) / 2);
-            let targetY = geom.y + 10;
-            window.move(targetX, targetY);
-        }
+        try {
+            let screen  = Gdk.Screen.get_default();
+            let monitor = (typeof screen.get_primary_monitor === 'function')
+                          ? screen.get_primary_monitor() : 0;
+            let geom    = screen.get_monitor_geometry(monitor);
+            let [w]     = window.get_size();
+            let x = geom.x + Math.floor((geom.width - (w || 420)) / 2);
+            let y = geom.y + 6;
+            window.move(x, y);
+        } catch (e) {}
     }
 
-    // Windows Avro TopBar custom CSS styling
-    let cssProvider = new Gtk.CssProvider();
-    let css = `
-        window.avro-topbar-window {
-            background: linear-gradient(180deg, rgba(34, 40, 49, 0.98), rgba(20, 24, 33, 0.98));
-            border: 1px solid rgba(255, 255, 255, 0.22);
-            border-radius: 22px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.65), 0 0 12px rgba(66, 133, 244, 0.25);
-            padding: 4px 10px;
-        }
-        .avro-logo-btn {
-            background: linear-gradient(135deg, #1e3c72, #2a5298);
-            color: #ffffff;
-            font-weight: 900;
-            font-size: 13px;
-            border-radius: 14px;
-            padding: 3px 10px;
-            border: 1px solid rgba(255, 255, 255, 0.25);
-        }
-        .avro-logo-btn:hover {
-            background: linear-gradient(135deg, #2a5298, #3b7dd8);
-        }
-        .avro-mode-bangla {
-            background: linear-gradient(135deg, #00b09b, #96c93d);
-            color: #062b16;
-            font-weight: 900;
-            font-size: 13px;
-            border-radius: 14px;
-            padding: 4px 16px;
-            border: 1px solid #96c93d;
-            box-shadow: 0 0 10px rgba(150, 201, 61, 0.45);
-        }
-        .avro-mode-bangla:hover {
-            background: linear-gradient(135deg, #02c39a, #a8e063);
-        }
-        .avro-mode-english {
-            background: linear-gradient(135deg, #373b44, #4286f4);
-            color: #ffffff;
-            font-weight: 900;
-            font-size: 13px;
-            border-radius: 14px;
-            padding: 4px 16px;
-            border: 1px solid rgba(255, 255, 255, 0.25);
-        }
-        .avro-mode-english:hover {
-            background: linear-gradient(135deg, #4286f4, #5b9bf8);
-        }
-        .avro-layout-btn {
-            background: rgba(255, 255, 255, 0.08);
-            color: #d1d8e0;
-            font-size: 12px;
-            border-radius: 12px;
-            padding: 3px 8px;
-            border: none;
-        }
-        .avro-layout-btn:hover {
-            background: rgba(255, 255, 255, 0.18);
-            color: #ffffff;
-        }
-        .avro-tool-btn {
-            background: rgba(255, 255, 255, 0.07);
-            color: #e0e6ed;
-            font-size: 13px;
-            border-radius: 12px;
-            padding: 3px 8px;
-            border: none;
-        }
-        .avro-tool-btn:hover {
-            background: rgba(255, 255, 255, 0.22);
-            color: #ffffff;
-        }
-        .avro-pin-active {
-            color: #f39c12;
-            font-weight: bold;
-        }
-        .avro-close-btn {
-            background: transparent;
-            color: #95a5a6;
-            border-radius: 12px;
-            padding: 2px 7px;
-            border: none;
-        }
-        .avro-close-btn:hover {
-            background: #e74c3c;
-            color: #ffffff;
-        }
-    `;
-    try {
-        cssProvider.load_from_data(css);
-        let screen = Gdk.Screen.get_default();
-        if (screen) {
-            Gtk.StyleContext.add_provider_for_screen(
-                screen,
-                cssProvider,
-                Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
-            );
-        }
-    } catch (e) {}
-
-    window.get_style_context().add_class("avro-topbar-window");
-
-    // Enable smooth dragging of the floating bar across the desktop
-    window.connect("button-press-event", (widget, event) => {
+    /* Allow dragging the bar */
+    window.connect("button-press-event", (_w, event) => {
         let [, button] = event.get_button();
-        if (button === 1) { // Left click
+        if (button === 1) {
             isPinned = false;
-            let [, xRoot, yRoot] = event.get_root_coords();
-            window.begin_move_drag(button, xRoot, yRoot, event.get_time());
+            let [, xr, yr] = event.get_root_coords();
+            window.begin_move_drag(button, xr, yr, event.get_time());
             return true;
         }
         return false;
     });
 
-    let mainBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 6, margin: 3 });
+    /* ─── Main horizontal box ─── */
+    let mainBox = new Gtk.Box({
+        orientation: Gtk.Orientation.HORIZONTAL,
+        spacing: 4,
+        margin: 4
+    });
 
-    /* ------------------------------------------------------------------------- */
-    /* 1. Avro Logo & Full Windows Menu                                         */
-    /* ------------------------------------------------------------------------- */
+    /* ═══════════════════════════════════════════════════════════════════════
+       1. Logo + Full Windows Menu
+       ═══════════════════════════════════════════════════════════════════════ */
     let btnLogo = new Gtk.Button({ label: "অ Avro" });
     btnLogo.get_style_context().add_class("avro-logo-btn");
-    btnLogo.set_tooltip_text("Avro Keyboard Menu (Remastered for Linux)");
+    btnLogo.set_tooltip_text("Avro Keyboard Menu");
 
-    let menu = new Gtk.Menu();
+    let menu       = new Gtk.Menu();
+    let layouts    = ["Avro Phonetic (Default)", "Avro Easy", "Bornona", "National (Jatiya)", "Probhat"];
+    let btnLayoutLabel; // forward ref
 
-    // Layout submenu
-    let itemLayouts = new Gtk.MenuItem({ label: "⌨️  Select Keyboard Layout" });
-    let layoutSubMenu = new Gtk.Menu();
-    let layouts = ["Avro Phonetic (Default)", "Avro Easy", "Bornona", "National (Jatiya)", "Probhat"];
+    /* Layouts submenu */
+    let itemLayouts    = new Gtk.MenuItem({ label: "Select Keyboard Layout" });
+    let layoutSubMenu  = new Gtk.Menu();
     layouts.forEach(lName => {
-        let cleanName = lName.split(" ")[0];
-        let subItem = new Gtk.MenuItem({ label: (lName.includes("Phonetic") ? "✓ " : "   ") + lName });
-        subItem.connect("activate", () => {
-            currentLayout = cleanName;
-            btnLayoutLabel.set_text(cleanName + " ▼");
+        let sub = new Gtk.MenuItem({ label: lName });
+        sub.connect("activate", () => {
+            currentLayout = lName.split(" ")[0];
+            if (btnLayoutLabel) btnLayoutLabel.set_text(currentLayout + " ▼");
         });
-        layoutSubMenu.append(subItem);
+        layoutSubMenu.append(sub);
     });
     layoutSubMenu.show_all();
     itemLayouts.set_submenu(layoutSubMenu);
@@ -248,92 +278,46 @@ function runAvroTopBar() {
 
     menu.append(new Gtk.SeparatorMenuItem());
 
-    let itemPad = new Gtk.MenuItem({ label: "📝  Avro Pad (Text Editor)" });
+    let itemPad = new Gtk.MenuItem({ label: "Avro Pad — Bengali Text Editor" });
     itemPad.connect("activate", () => {
-        if (AvroPad && AvroPad.runAvroPad) {
-            AvroPad.runAvroPad(null);
-        } else {
-            GLib.spawn_command_line_async("avro-pad");
-        }
+        if (AvroPad && AvroPad.runAvroPad) AvroPad.runAvroPad(null);
+        else GLib.spawn_command_line_async("avro-pad");
     });
     menu.append(itemPad);
 
-    let itemBijoy = new Gtk.MenuItem({ label: "🔄  Unicode to Bijoy Converter" });
+    let itemBijoy = new Gtk.MenuItem({ label: "Unicode to Bijoy Converter" });
     itemBijoy.connect("activate", () => {
-        if (BijoyConverter && BijoyConverter.runConverterDialog) {
+        if (BijoyConverter && BijoyConverter.runConverterDialog)
             BijoyConverter.runConverterDialog(window);
-        } else {
-            GLib.spawn_command_line_async("avro-converter");
-        }
+        else GLib.spawn_command_line_async("avro-converter");
     });
     menu.append(itemBijoy);
 
-    let itemLayoutViewer = new Gtk.MenuItem({ label: "📖  Keyboard Layout Viewer" });
-    itemLayoutViewer.connect("activate", () => {
-        if (LayoutViewer && LayoutViewer.runLayoutViewerDialog) {
+    let itemLV = new Gtk.MenuItem({ label: "Keyboard Layout Viewer" });
+    itemLV.connect("activate", () => {
+        if (LayoutViewer && LayoutViewer.runLayoutViewerDialog)
             LayoutViewer.runLayoutViewerDialog(window);
-        } else {
-            GLib.spawn_command_line_async("avro-layout");
-        }
+        else GLib.spawn_command_line_async("avro-layout");
     });
-    menu.append(itemLayoutViewer);
-
-    let itemFontCheck = new Gtk.MenuItem({ label: "🔍  Bengali Font Check & Info" });
-    itemFontCheck.connect("activate", () => {
-        let msg = "Recommended Bengali Fonts:\n\n• Noto Sans Bengali (Installed by default)\n• Kalpurush / SolaimanLipi\n• Siyam Rupali\n\nAll Unicode Bengali fonts are fully supported.";
-        let dialog = new Gtk.MessageDialog({
-            transient_for: window,
-            modal: true,
-            message_type: Gtk.MessageType.INFO,
-            buttons: Gtk.ButtonsType.OK,
-            text: "Avro Bengali Font Checker",
-            secondary_text: msg
-        });
-        dialog.run();
-        dialog.destroy();
-    });
-    menu.append(itemFontCheck);
+    menu.append(itemLV);
 
     menu.append(new Gtk.SeparatorMenuItem());
 
-    let itemPref = new Gtk.MenuItem({ label: "⚙️  Preferences..." });
+    let itemPref = new Gtk.MenuItem({ label: "Preferences..." });
     itemPref.connect("activate", () => {
-        if (PrefApp && PrefApp.runpref) {
-            PrefApp.runpref();
-        } else {
-            GLib.spawn_command_line_async("avro-preferences");
-        }
+        if (PrefApp && PrefApp.runpref) PrefApp.runpref();
+        else GLib.spawn_command_line_async("avro-preferences");
     });
     menu.append(itemPref);
 
-    let itemAbout = new Gtk.MenuItem({ label: "ℹ️  About Avro Remastered..." });
-    itemAbout.connect("activate", () => {
-        let dialog = new Gtk.AboutDialog({
-            transient_for: window,
-            modal: true,
-            program_name: "Avro Linux (Remastered Edition)",
-            version: "1.0.0",
-            comments: "The popular Avro Phonetic Bengali input method remastered with a native Windows-style interface for Linux.\n\nRemastered for modern Linux by MD Shifat Bin Siddique Urfi.\n\nOriginal Avro by Dr. Mehdi Hasan Khan (OmicronLab).\nOriginal Linux IBus port by Sarim Khan.",
-            website: "https://github.com/avro-linux/avro-linux",
-            authors: [
-                "MD Shifat Bin Siddique Urfi (Remastered Edition Lead)",
-                "Sarim Khan (ibus-avro)",
-                "Dr. Mehdi Hasan Khan (Avro Keyboard / OmicronLab)",
-                "Rifat Nabi (jsAvroPhonetic)"
-            ],
-            license_type: Gtk.License.MPL_2_0
-        });
-        dialog.run();
-        dialog.destroy();
-    });
+    let itemAbout = new Gtk.MenuItem({ label: "About Avro Linux (Remastered)..." });
+    itemAbout.connect("activate", () => showAboutDialog(window));
     menu.append(itemAbout);
 
     menu.append(new Gtk.SeparatorMenuItem());
 
-    let itemQuit = new Gtk.MenuItem({ label: "✕  Exit Avro TopBar" });
-    itemQuit.connect("activate", () => {
-        window.destroy();
-    });
+    let itemQuit = new Gtk.MenuItem({ label: "Exit Avro TopBar" });
+    itemQuit.connect("activate", () => window.destroy());
     menu.append(itemQuit);
 
     menu.show_all();
@@ -341,28 +325,23 @@ function runAvroTopBar() {
     btnLogo.connect("clicked", () => {
         menu.popup_at_widget(btnLogo, Gdk.Gravity.SOUTH_WEST, Gdk.Gravity.NORTH_WEST, null);
     });
-
     mainBox.pack_start(btnLogo, false, false, 0);
 
-    /* ------------------------------------------------------------------------- */
-    /* 2. Language Mode Toggle Button [F12] (বাংলা / English)                    */
-    /* ------------------------------------------------------------------------- */
-    let btnMode = new Gtk.Button();
-    let btnModeLabel = new Gtk.Label({ label: "<b>[F12] বাংলা</b>", use_markup: true });
+    /* ═══════════════════════════════════════════════════════════════════════
+       2. Mode Toggle (বাংলা / English)  [F12]
+       ═══════════════════════════════════════════════════════════════════════ */
+    let btnMode      = new Gtk.Button();
+    let btnModeLabel = new Gtk.Label({ use_markup: true });
     btnMode.add(btnModeLabel);
 
+    /* IBus connection to auto-sync with ibus engine changes */
     let ibusBus = null;
     if (IBus) {
         try {
             ibusBus = new IBus.Bus();
             if (ibusBus.is_connected()) {
-                // Listen to global engine changes to automatically synchronize button state
-                ibusBus.connect("global-engine-changed", (b, engineName) => {
-                    if (engineName && engineName.includes("avro")) {
-                        isBangla = true;
-                    } else {
-                        isBangla = false;
-                    }
+                ibusBus.connect("global-engine-changed", (_b, engineName) => {
+                    isBangla = !!(engineName && engineName.includes("avro"));
                     updateModeUI();
                 });
             }
@@ -370,35 +349,27 @@ function runAvroTopBar() {
     }
 
     function setSystemEngine(bangla) {
-        if (bangla) {
-            try {
-                if (ibusBus && ibusBus.is_connected()) {
-                    ibusBus.set_global_engine_async("ibus-avro", -1, null, null);
-                }
-            } catch (e) {}
-            GLib.spawn_command_line_async("ibus engine ibus-avro");
-        } else {
-            try {
-                if (ibusBus && ibusBus.is_connected()) {
-                    ibusBus.set_global_engine_async("xkb:us::eng", -1, null, null);
-                }
-            } catch (e) {}
-            GLib.spawn_command_line_async("ibus engine xkb:us::eng");
-        }
+        let engineName = bangla ? "ibus-avro" : "xkb:us::eng";
+        try {
+            if (ibusBus && ibusBus.is_connected())
+                ibusBus.set_global_engine_async(engineName, -1, null, null);
+        } catch (e) {}
+        try {
+            GLib.spawn_command_line_async("ibus engine " + engineName);
+        } catch (e) {}
     }
 
     function updateModeUI() {
         btnMode.get_style_context().remove_class("avro-mode-bangla");
         btnMode.get_style_context().remove_class("avro-mode-english");
-
         if (isBangla) {
+            btnModeLabel.set_markup("<b>বাংলা  [F12]</b>");
             btnMode.get_style_context().add_class("avro-mode-bangla");
-            btnModeLabel.set_markup("<b>[F12] বাংলা</b>");
-            btnMode.set_tooltip_text("Active: বাংলা (Click or press F12 anywhere to switch to English)");
+            btnMode.set_tooltip_text("Mode: বাংলা — click or press F12 to switch to English");
         } else {
+            btnModeLabel.set_markup("<b>English  [F12]</b>");
             btnMode.get_style_context().add_class("avro-mode-english");
-            btnModeLabel.set_markup("<b>[F12] English</b>");
-            btnMode.set_tooltip_text("Active: English (Click or press F12 to switch to বাংলা)");
+            btnMode.set_tooltip_text("Mode: English — click or press F12 to switch to বাংলা");
         }
     }
     updateModeUI();
@@ -408,126 +379,101 @@ function runAvroTopBar() {
         setSystemEngine(isBangla);
         updateModeUI();
     });
-
     mainBox.pack_start(btnMode, false, false, 0);
 
-    /* ------------------------------------------------------------------------- */
-    /* 3. Layout Selector Button (Avro Phonetic ▼)                               */
-    /* ------------------------------------------------------------------------- */
+    /* ═══════════════════════════════════════════════════════════════════════
+       3. Layout Selector
+       ═══════════════════════════════════════════════════════════════════════ */
     let btnLayout = new Gtk.Button();
-    let btnLayoutLabel = new Gtk.Label({ label: "Phonetic ▼" });
+    btnLayoutLabel = new Gtk.Label({ label: "Phonetic ▼" });
     btnLayout.add(btnLayoutLabel);
     btnLayout.get_style_context().add_class("avro-layout-btn");
     btnLayout.set_tooltip_text("Switch Keyboard Layout");
 
     let layoutMenu = new Gtk.Menu();
     layouts.forEach(lName => {
-        let cleanName = lName.split(" ")[0];
-        let subItem = new Gtk.MenuItem({ label: lName });
-        subItem.connect("activate", () => {
-            currentLayout = cleanName;
-            btnLayoutLabel.set_text(cleanName + " ▼");
+        let sub = new Gtk.MenuItem({ label: lName });
+        sub.connect("activate", () => {
+            currentLayout = lName.split(" ")[0];
+            btnLayoutLabel.set_text(currentLayout + " ▼");
         });
-        layoutMenu.append(subItem);
+        layoutMenu.append(sub);
     });
     layoutMenu.show_all();
-
     btnLayout.connect("clicked", () => {
         layoutMenu.popup_at_widget(btnLayout, Gdk.Gravity.SOUTH_WEST, Gdk.Gravity.NORTH_WEST, null);
     });
+    mainBox.pack_start(btnLayout, false, false, 0);
 
-    mainBox.pack_start(btnLayout, false, false, 2);
+    /* ═══════════════════════════════════════════════════════════════════════
+       4. Quick-Tool Icon Buttons
+       ═══════════════════════════════════════════════════════════════════════ */
+    function makeToolBtn(label, tip, onClick) {
+        let b = new Gtk.Button({ label: label });
+        b.get_style_context().add_class("avro-tool-btn");
+        b.set_tooltip_text(tip);
+        b.connect("clicked", onClick);
+        return b;
+    }
 
-    /* ------------------------------------------------------------------------- */
-    /* 4. Quick Tools Menu (🛠️ Tools ▼)                                         */
-    /* ------------------------------------------------------------------------- */
-    let toolsBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 4 });
+    let toolsBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 2 });
 
-    let btnOpenPad = new Gtk.Button({ label: "📝" });
-    btnOpenPad.get_style_context().add_class("avro-tool-btn");
-    btnOpenPad.set_tooltip_text("Avro Pad — Bengali Notepad");
-    btnOpenPad.connect("clicked", () => {
-        if (AvroPad && AvroPad.runAvroPad) {
-            AvroPad.runAvroPad(null);
-        } else {
-            GLib.spawn_command_line_async("avro-pad");
-        }
-    });
-    toolsBox.pack_start(btnOpenPad, false, false, 0);
+    toolsBox.pack_start(makeToolBtn("📝", "Avro Pad — Bengali Notepad", () => {
+        if (AvroPad && AvroPad.runAvroPad) AvroPad.runAvroPad(null);
+        else GLib.spawn_command_line_async("avro-pad");
+    }), false, false, 0);
 
-    let btnOpenBijoy = new Gtk.Button({ label: "🔄" });
-    btnOpenBijoy.get_style_context().add_class("avro-tool-btn");
-    btnOpenBijoy.set_tooltip_text("Unicode to Bijoy (SutonnyMJ) Converter");
-    btnOpenBijoy.connect("clicked", () => {
-        if (BijoyConverter && BijoyConverter.runConverterDialog) {
+    toolsBox.pack_start(makeToolBtn("🔄", "Unicode ↔ Bijoy Converter", () => {
+        if (BijoyConverter && BijoyConverter.runConverterDialog)
             BijoyConverter.runConverterDialog(window);
-        } else {
-            GLib.spawn_command_line_async("avro-converter");
-        }
-    });
-    toolsBox.pack_start(btnOpenBijoy, false, false, 0);
+        else GLib.spawn_command_line_async("avro-converter");
+    }), false, false, 0);
 
-    let btnOpenLayout = new Gtk.Button({ label: "⌨️" });
-    btnOpenLayout.get_style_context().add_class("avro-tool-btn");
-    btnOpenLayout.set_tooltip_text("Keyboard Layout Viewer");
-    btnOpenLayout.connect("clicked", () => {
-        if (LayoutViewer && LayoutViewer.runLayoutViewerDialog) {
+    toolsBox.pack_start(makeToolBtn("⌨", "Keyboard Layout Viewer", () => {
+        if (LayoutViewer && LayoutViewer.runLayoutViewerDialog)
             LayoutViewer.runLayoutViewerDialog(window);
-        } else {
-            GLib.spawn_command_line_async("avro-layout");
-        }
-    });
-    toolsBox.pack_start(btnOpenLayout, false, false, 0);
+        else GLib.spawn_command_line_async("avro-layout");
+    }), false, false, 0);
 
-    let btnOpenPref = new Gtk.Button({ label: "⚙️" });
-    btnOpenPref.get_style_context().add_class("avro-tool-btn");
-    btnOpenPref.set_tooltip_text("Avro Settings & Preferences");
-    btnOpenPref.connect("clicked", () => {
-        if (PrefApp && PrefApp.runpref) {
-            PrefApp.runpref();
-        } else {
-            GLib.spawn_command_line_async("avro-preferences");
-        }
-    });
-    toolsBox.pack_start(btnOpenPref, false, false, 0);
+    toolsBox.pack_start(makeToolBtn("⚙", "Preferences", () => {
+        if (PrefApp && PrefApp.runpref) PrefApp.runpref();
+        else GLib.spawn_command_line_async("avro-preferences");
+    }), false, false, 0);
 
     mainBox.pack_start(toolsBox, false, false, 2);
 
-    /* ------------------------------------------------------------------------- */
-    /* 5. Window Controls: Pin, Mini/Full, Close                                */
-    /* ------------------------------------------------------------------------- */
+    /* ═══════════════════════════════════════════════════════════════════════
+       5. Window Controls: Pin / Mini / Close
+       ═══════════════════════════════════════════════════════════════════════ */
     let btnPin = new Gtk.Button({ label: "📌" });
-    btnPin.get_style_context().add_class("avro-tool-btn");
-    btnPin.get_style_context().add_class("avro-pin-active");
-    btnPin.set_tooltip_text("Pinned to Top Center (Click to unpin and float)");
+    btnPin.get_style_context().add_class("avro-pin-btn");
+    btnPin.set_tooltip_text("Pinned to top-center (click to unpin)");
     btnPin.connect("clicked", () => {
         isPinned = !isPinned;
         if (isPinned) {
-            btnPin.get_style_context().add_class("avro-pin-active");
-            btnPin.set_tooltip_text("Pinned to Top Center (Click to unpin and float)");
+            btnPin.set_tooltip_text("Pinned to top-center (click to unpin)");
             snapToTopCenter();
         } else {
-            btnPin.get_style_context().remove_class("avro-pin-active");
-            btnPin.set_tooltip_text("Floating freely (Click to snap and pin to top center)");
+            btnPin.set_tooltip_text("Floating (click to snap to top-center)");
         }
     });
     mainBox.pack_start(btnPin, false, false, 0);
 
     let btnMini = new Gtk.Button({ label: "▲" });
     btnMini.get_style_context().add_class("avro-tool-btn");
-    btnMini.set_tooltip_text("Collapse to compact mini bar");
+    btnMini.set_tooltip_text("Collapse to mini bar");
     btnMini.connect("clicked", () => {
         isMini = !isMini;
         if (isMini) {
             btnLayout.hide();
             toolsBox.hide();
             btnMini.set_label("▼");
-            btnMini.set_tooltip_text("Expand to full Avro bar");
+            btnMini.set_tooltip_text("Expand full bar");
         } else {
             btnLayout.show();
             toolsBox.show();
             btnMini.set_label("▲");
-            btnMini.set_tooltip_text("Collapse to compact mini bar");
+            btnMini.set_tooltip_text("Collapse to mini bar");
         }
         if (isPinned) {
             GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
@@ -541,45 +487,73 @@ function runAvroTopBar() {
     let btnClose = new Gtk.Button({ label: "✕" });
     btnClose.get_style_context().add_class("avro-close-btn");
     btnClose.set_tooltip_text("Close Avro TopBar");
-    btnClose.connect("clicked", () => {
-        window.destroy();
-    });
+    btnClose.connect("clicked", () => window.destroy());
     mainBox.pack_start(btnClose, false, false, 0);
 
+    /* ── Finish ── */
     window.add(mainBox);
-    window.connect("destroy", () => {
-        Gtk.main_quit();
-    });
+    window.connect("destroy", () => Gtk.main_quit());
 
-    // Check initial global IBus engine status
+    /* Position and show */
+    window.show_all();
+
+    /* After show: snap to top and sync IBus state */
     GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
         snapToTopCenter();
+        /* Read current IBus engine to sync button state */
         try {
-            let [res, stdout] = GLib.spawn_command_line_sync("ibus engine");
-            if (res) {
-                let out = String.fromCharCode.apply(null, stdout).trim();
-                isBangla = out.includes("avro");
+            let [ok, stdout] = GLib.spawn_command_line_sync("ibus engine");
+            if (ok && stdout) {
+                let out = "";
+                for (let c of stdout) out += String.fromCharCode(c);
+                isBangla = out.trim().includes("avro");
                 updateModeUI();
             }
         } catch (e) {}
         return false;
     });
 
-    window.show_all();
     Gtk.main();
     return window;
 }
 
-// Standalone execution entrypoint
-let isMain = (typeof ARGV !== 'undefined' && ARGV.indexOf('--standalone') !== -1);
+/* ── About dialog ── */
+function showAboutDialog(parent) {
+    let dialog = new Gtk.AboutDialog({
+        transient_for: parent,
+        modal:         true,
+        program_name:  "Avro Linux (Remastered Edition)",
+        version:       "1.0.0",
+        comments:      "The popular Avro Phonetic Bengali input method\nremastered with a native Windows-style interface for Linux.\n\nRemastered for modern Linux by MD Shifat Bin Siddique Urfi.\n\nOriginal Avro by Dr. Mehdi Hasan Khan (OmicronLab).\nOriginal Linux IBus port by Sarim Khan.",
+        website:       "https://github.com/avro-linux/avro-linux",
+        authors: [
+            "MD Shifat Bin Siddique Urfi — Remastered Edition Lead",
+            "Sarim Khan — ibus-avro",
+            "Dr. Mehdi Hasan Khan — Avro Keyboard / OmicronLab",
+            "Rifat Nabi — jsAvroPhonetic"
+        ],
+        license_type: Gtk.License.MPL_2_0
+    });
+    dialog.run();
+    dialog.destroy();
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Standalone entrypoint
+   ═══════════════════════════════════════════════════════════════════════════ */
+let _isMain = false;
 try {
-    let scriptPath = (typeof ARGV !== 'undefined' && ARGV[0]) ? ARGV[0] : '';
-    if (scriptPath.indexOf('topbar.js') !== -1) {
-        isMain = true;
+    if (typeof ARGV !== 'undefined') {
+        for (let a of ARGV) {
+            if (a === '--standalone' || a.indexOf('topbar.js') !== -1) {
+                _isMain = true;
+                break;
+            }
+        }
     }
 } catch (e) {}
 
-if (isMain) {
+if (_isMain) {
     Gtk.init(null);
     runAvroTopBar();
 }
