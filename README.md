@@ -115,8 +115,9 @@ ibus restart
 ### Launch Preferences
 Launch **Avro Bengali Input Preferences** from your application menu, or run:
 ```bash
-/usr/share/avro-linux/preferences/pref.js --standalone
+avro-preferences
 ```
+(or `/usr/share/avro-linux/preferences/pref.js --standalone`)
 
 ---
 
