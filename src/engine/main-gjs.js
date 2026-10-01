@@ -160,6 +160,88 @@ if (bus.is_connected()) {
             return false;
         }
 
+        // Candidate selection by number 1-9 while composing
+        if (engine.buffertext.length > 0 && keyval >= 49 && keyval <= 57) {
+            let idx = keyval - 49;
+            if (idx < engine.currentSuggestions.length) {
+                engine.currentSelection = idx;
+                commitCandidateWithSuffix(engine, " ");
+                return true;
+            }
+        }
+
+        // Word boundaries and separators
+        if (keyval === IBus.space || keyval === IBus.KEY_space) {
+            if (engine.buffertext.length > 0) {
+                commitCandidateWithSuffix(engine, " ");
+                return true;
+            }
+        } else if (keyval === IBus.Return || keyval === IBus.KEY_Return || keyval === IBus.KP_Enter) {
+            if (engine.buffertext.length > 0) {
+                let suffix = (engine.setting_switch_newline) ? "\n" : "";
+                commitCandidateWithSuffix(engine, suffix);
+                return true;
+            }
+        } else if (keyval === IBus.Tab || keyval === IBus.KEY_Tab) {
+            if (engine.buffertext.length > 0) {
+                commitCandidateWithSuffix(engine, "\t");
+                return true;
+            }
+        } else if (keyval === IBus.period || keyval === 46) {
+            // Bengali Dari '।'
+            if (engine.buffertext.length > 0) {
+                commitCandidateWithSuffix(engine, "।");
+                return true;
+            } else {
+                engine.commit_text(IBus.Text.new_from_string("।"));
+                return true;
+            }
+        } else if (keyval === IBus.comma || keyval === 44) {
+            if (engine.buffertext.length > 0) {
+                commitCandidateWithSuffix(engine, ",");
+                return true;
+            }
+        } else if (keyval === IBus.Escape || keyval === IBus.KEY_Escape) {
+            if (engine.buffertext.length > 0) {
+                resetAll(engine);
+                return true;
+            }
+        } else if (keyval === IBus.BackSpace || keyval === IBus.KEY_BackSpace) {
+            if (engine.buffertext.length > 0) {
+                engine.buffertext = engine.buffertext.substr(0, engine.buffertext.length - 1);
+                if (engine.buffertext.length <= 0) {
+                    resetAll(engine);
+                } else {
+                    updateCurrentSuggestions(engine);
+                }
+                return true;
+            }
+        } else if (keyval === IBus.Left || keyval === IBus.KP_Left || keyval === IBus.Right || keyval === IBus.KP_Right) {
+            if (engine.currentSuggestions.length > 1) {
+                if (keyval === IBus.Left || keyval === IBus.KP_Left) {
+                    decSelection(engine);
+                } else {
+                    incSelection(engine);
+                }
+                return true;
+            } else if (engine.buffertext.length > 0) {
+                commitCandidate(engine);
+                return false;
+            }
+        } else if (keyval === IBus.Up || keyval === IBus.KP_Up || keyval === IBus.Down || keyval === IBus.KP_Down) {
+            if (engine.currentSuggestions.length > 1) {
+                if (keyval === IBus.Up || keyval === IBus.KP_Up) {
+                    decSelection(engine);
+                } else {
+                    incSelection(engine);
+                }
+                return true;
+            } else if (engine.buffertext.length > 0) {
+                commitCandidate(engine);
+                return false;
+            }
+        }
+
         // Process alphanumeric and keypad characters
         if ((keyval >= 33 && keyval <= 126) ||
             (keyval >= IBus.KP_0 && keyval <= IBus.KP_9) ||
@@ -172,59 +254,6 @@ if (bus.is_connected()) {
             engine.buffertext += IBus.keyval_to_unicode(keyval);
             updateCurrentSuggestions(engine);
             return true;
-            
-        } else if (keyval == IBus.Escape) {
-            // Escape cancels active preedit buffer
-            if (engine.buffertext.length > 0) {
-                resetAll(engine);
-                return true;
-            }
-
-        } else if (keyval == IBus.Return || keyval == IBus.space || keyval == IBus.Tab) {
-            if (engine.buffertext.length > 0) {
-                if ((keyval == IBus.Return) && engine.setting_switch_newline && engine.setting_switch_preview && (engine.buffertext.length > 0)) {
-                    commitCandidate(engine);
-                    return true;
-                } else {
-                    commitCandidate(engine);
-                }
-            }
-
-        } else if (keyval == IBus.BackSpace) {
-            if (engine.buffertext.length > 0) {
-                engine.buffertext = engine.buffertext.substr(0, engine.buffertext.length - 1);
-                updateCurrentSuggestions(engine);
-                
-                if (engine.buffertext.length <= 0) {
-                    resetAll(engine);                  
-                }
-                return true;
-            } 
-
-        } else if (keyval == IBus.Left || keyval == IBus.KP_Left || keyval == IBus.Right || keyval == IBus.KP_Right) {
-            if (engine.currentSuggestions.length <= 0 || engine.lookuptable.get_orientation() == 1) {                    
-                commitCandidate(engine);
-            } else {
-                if (keyval == IBus.Left || keyval == IBus.KP_Left) {
-                    decSelection(engine);
-                } else if (keyval == IBus.Right || keyval == IBus.KP_Right) {
-                    incSelection(engine);
-                }
-                return true;
-            }
-            
-        } else if (keyval == IBus.Up || keyval == IBus.KP_Up || keyval == IBus.Down || keyval == IBus.KP_Down) {
-            if (engine.currentSuggestions.length <= 0 || engine.lookuptable.get_orientation() == 0) {                    
-                commitCandidate(engine);
-            } else {
-                if (keyval == IBus.Up) {
-                    decSelection(engine);
-                } else if (keyval == IBus.Down) {
-                    incSelection(engine);
-                }
-                return true;
-            }
-       
         } else if (keyval == IBus.Control_L || 
                    keyval == IBus.Control_R || 
                    keyval == IBus.Insert || 
@@ -380,46 +409,56 @@ if (bus.is_connected()) {
     }
     
     function fillLookupTable(engine) {
-        if (engine.setting_switch_preview) {
-            var auxiliaryText = IBus.Text.new_from_string(engine.buffertext);
-            engine.update_auxiliary_text(auxiliaryText, true);
-            
-            if (engine.setting_switch_dict) {
-                engine.lookuptable.clear();
-
-                engine.currentSuggestions.forEach(function(word) {
-                    let wtext = IBus.Text.new_from_string(word);
-                    let wlabel = IBus.Text.new_from_string('');
-                    engine.lookuptable.append_candidate(wtext);
-                    engine.lookuptable.append_label(wlabel);
-                });   
-            }
+        // Do NOT call engine.update_auxiliary_text - that was the second overlay window flashing wildly!
+        if (engine.setting_switch_preview && engine.setting_switch_dict && engine.currentSuggestions.length > 1) {
+            engine.lookuptable.clear();
+            engine.currentSuggestions.forEach(function(word, idx) {
+                let wtext = IBus.Text.new_from_string(word);
+                let wlabel = IBus.Text.new_from_string((idx + 1) + ". ");
+                engine.lookuptable.append_candidate(wtext);
+                engine.lookuptable.append_label(wlabel);
+            });
+            engine.lookuptable.set_cursor_pos(engine.currentSelection);
+            engine.update_lookup_table_fast(engine.lookuptable, true);
+        } else {
+            engine.hide_lookup_table();
         }
         
         preeditCandidate(engine);
     }
     
     function preeditCandidate(engine) {
-        if (engine.currentSuggestions.length <= 0) return;
-
-        if (engine.setting_switch_preview) {
-            if (engine.setting_switch_dict) {
-                engine.lookuptable.set_cursor_pos(engine.currentSelection);
-                engine.update_lookup_table_fast(engine.lookuptable, true);
-            }
+        if (engine.currentSuggestions.length <= 0) {
+            engine.hide_preedit_text();
+            return;
         }
-        
+
         var selectedWord = engine.currentSuggestions[engine.currentSelection] || "";
         var preeditText = IBus.Text.new_from_string(selectedWord);
+        var attrs = new IBus.AttrList();
+        attrs.append(IBus.Attribute.new(
+            IBus.AttrType.UNDERLINE,
+            IBus.AttrUnderline.SINGLE,
+            0,
+            selectedWord.length
+        ));
+        preeditText.set_attributes(attrs);
         engine.update_preedit_text(preeditText, selectedWord.length, true);
     }
     
     function commitCandidate(engine) {
+        commitCandidateWithSuffix(engine, "");
+    }
+
+    function commitCandidateWithSuffix(engine, suffix) {
         if (engine.buffertext.length > 0 && engine.currentSuggestions.length > 0) {
             var selectedWord = engine.currentSuggestions[engine.currentSelection] || "";
-            var commitText = IBus.Text.new_from_string(selectedWord);
+            var textToCommit = selectedWord + (suffix !== undefined ? suffix : "");
+            var commitText = IBus.Text.new_from_string(textToCommit);
             engine.commit_text(commitText);
             suggestionBuilder.stringCommitted(engine.buffertext, selectedWord);
+        } else if (suffix) {
+            engine.commit_text(IBus.Text.new_from_string(suffix));
         }
         
         resetAll(engine);
