@@ -11,7 +11,7 @@ datadir ?= $(prefix)/share
 
 all: build
 
-build: src/common/evars.js data/ibus/ibus-avro.xml
+build: src/common/evars.js data/ibus/ibus-avro.xml data/gsettings/gschemas.compiled
 
 src/common/evars.js: src/common/evars.js.in
 	@mkdir -p src/common
@@ -24,6 +24,10 @@ data/ibus/ibus-avro.xml: data/ibus/ibus-avro.xml.in
 	sed -e 's|@pkgdatadir@|$(pkgdatadir)|g' \
 	    -e 's|@libexecdir@|$(libexecdir)|g' \
 	    $< > $@
+
+data/gsettings/gschemas.compiled: data/gsettings/com.omicronlab.avro.gschema.xml
+	@mkdir -p data/gsettings
+	glib-compile-schemas data/gsettings/
 
 test: build
 	@chmod +x tests/run-tests.sh
@@ -99,3 +103,5 @@ clean:
 	rm -rf build/
 	rm -f *.deb
 	rm -f data/ibus/ibus-avro.xml
+	rm -f data/gsettings/gschemas.compiled
+	rm -f src/common/evars.js

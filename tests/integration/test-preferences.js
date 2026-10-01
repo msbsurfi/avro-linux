@@ -75,7 +75,7 @@ try {
         assert(schemaObj.has_key("lutable-size"), "Schema contains lutable-size");
         assert(schemaObj.has_key("cboxorient"), "Schema contains cboxorient");
 
-        let settings = new Gio.Settings({ schema_id: "com.omicronlab.avro" });
+        let settings = new Gio.Settings({ settings_schema: schemaObj });
         assert(typeof settings.get_boolean("switch-preview") === 'boolean', "switch-preview returns boolean");
         assert(typeof settings.get_boolean("switch-dict") === 'boolean', "switch-dict returns boolean");
         assert(typeof settings.get_boolean("switch-newline") === 'boolean', "switch-newline returns boolean");

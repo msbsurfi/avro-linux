@@ -11,6 +11,7 @@ build/
 # Generated build files
 src/common/evars.js
 data/ibus/ibus-avro.xml
+data/gsettings/gschemas.compiled
 
 # Runtime user caches
 .candidate-selections.json
