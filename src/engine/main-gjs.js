@@ -97,14 +97,48 @@ if (bus.is_connected()) {
         return engine;
     }
     
+    function updateEngineProperty(engine) {
+        if (!engine.mode_bangla) {
+            prop_mode.set_label(IBus.Text.new_from_string("English"));
+            prop_mode.set_symbol(IBus.Text.new_from_string("En"));
+        } else {
+            prop_mode.set_label(IBus.Text.new_from_string("বাংলা (Avro)"));
+            prop_mode.set_symbol(IBus.Text.new_from_string("বা"));
+        }
+        engine.update_property(prop_mode);
+    }
+
     function engine_process_key_event(engine, keyval, keycode, state) {
         // Privacy rule: Never log raw keyval, keycode, or user input text
 
-        // Sanitize state: filter out modifier masks
-        state = state & IBus.ModifierType.MODIFIER_MASK;
+        // Check for F12 (Toggle Bangla / English mode)
+        if (keyval === IBus.KEY_F12 || keyval === IBus.F12) {
+            let isRelease = (state & IBus.ModifierType.RELEASE_MASK) !== 0;
+            if (!isRelease) {
+                engine.mode_bangla = !engine.mode_bangla;
+                if (engine.buffertext && engine.buffertext.length > 0) {
+                    resetAll(engine);
+                }
+                updateEngineProperty(engine);
+            }
+            return true;
+        }
 
         // Ignore release events
-        if (!(state == 0 || state == 1 || state == 16 || state == 17)) {
+        let isRelease = (state & IBus.ModifierType.RELEASE_MASK) !== 0;
+        if (isRelease) {
+            return false;
+        }
+
+        // Pass through keyboard shortcuts with Ctrl, Alt, Super (Mod4)
+        let isControl = (state & IBus.ModifierType.CONTROL_MASK) !== 0;
+        let isAlt = (state & IBus.ModifierType.MOD1_MASK) !== 0;
+        let isSuper = (state & (IBus.ModifierType.SUPER_MASK | IBus.ModifierType.MOD4_MASK)) !== 0;
+
+        if (isControl || isAlt || isSuper) {
+            if (engine.buffertext && engine.buffertext.length > 0) {
+                commitCandidate(engine);
+            }
             return false;
         }
 
@@ -113,9 +147,12 @@ if (bus.is_connected()) {
             return false;
         }
 
-        // Capture Shift key press
-        if (keycode == 42 || keyval == IBus.Shift_L || keyval == IBus.Shift_R) {
-            return true;
+        // Pass modifier keys alone through (Shift, Control, Alt, CapsLock)
+        if (keycode == 42 || keyval == IBus.Shift_L || keyval == IBus.Shift_R ||
+            keyval == IBus.Control_L || keyval == IBus.Control_R ||
+            keyval == IBus.Alt_L || keyval == IBus.Alt_R ||
+            keyval == IBus.Caps_Lock) {
+            return false;
         }
 
         // Process alphanumeric and keypad characters
@@ -258,13 +295,10 @@ if (bus.is_connected()) {
             runPreferences();
         } else if (prop_name === 'mode') {
             engine.mode_bangla = !engine.mode_bangla;
-            if (!engine.mode_bangla) {
-                commitCandidate(engine);
-                prop_mode.set_label(IBus.Text.new_from_string("English"));
-            } else {
-                prop_mode.set_label(IBus.Text.new_from_string("বাংলা (Avro)"));
+            if (engine.buffertext && engine.buffertext.length > 0) {
+                resetAll(engine);
             }
-            engine.update_property(prop_mode);
+            updateEngineProperty(engine);
         }
     }
 
