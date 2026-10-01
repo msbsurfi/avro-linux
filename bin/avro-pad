@@ -1,0 +1,5 @@
+#!/bin/sh
+# Launcher script for Avro Pad Text Editor
+# SPDX-License-Identifier: MPL-2.0
+
+exec /usr/share/avro-linux/standalone/main.js --pad "$@"

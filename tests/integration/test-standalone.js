@@ -1,0 +1,133 @@
+#!/usr/bin/env gjs
+/*
+    =============================================================================
+    Test Suite: Avro Linux Standalone Suite & Windows-Style Interface Tests
+    Part of Avro Linux Test Suite
+    =============================================================================
+*/
+
+const GLib = imports.gi.GLib;
+const Gio = imports.gi.Gio;
+
+imports.searchPath.unshift('./src/standalone');
+imports.searchPath.unshift('./src/avro-core/phonetic');
+imports.searchPath.unshift('./src/avro-core/dictionary');
+imports.searchPath.unshift('./src/avro-core/autocorrect');
+imports.searchPath.unshift('./src/avro-core/suggestions');
+imports.searchPath.unshift('./src/preferences');
+
+let passedCount = 0;
+let failedCount = 0;
+
+function assert(condition, message) {
+    if (!condition) {
+        printerr("  FAIL: " + message);
+        failedCount++;
+    } else {
+        print("  PASS: " + message);
+        passedCount++;
+    }
+}
+
+print("Running Avro Standalone Suite Tests...");
+
+// 1. Test module imports
+try {
+    const bc = imports.bijoyconverter;
+    assert(bc && typeof bc.unicodeToBijoy === 'function', "bijoyconverter exports unicodeToBijoy");
+    assert(bc && typeof bc.bijoyToUnicode === 'function', "bijoyconverter exports bijoyToUnicode");
+} catch (e) {
+    assert(false, "Failed to load bijoyconverter module: " + e.message);
+}
+
+try {
+    const lv = imports.layoutviewer;
+    assert(lv && typeof lv.runLayoutViewerDialog === 'function', "layoutviewer exports runLayoutViewerDialog");
+} catch (e) {
+    assert(false, "Failed to load layoutviewer module: " + e.message);
+}
+
+try {
+    const ap = imports.avropad;
+    assert(ap && typeof ap.runAvroPad === 'function', "avropad exports runAvroPad");
+} catch (e) {
+    assert(false, "Failed to load avropad module: " + e.message);
+}
+
+try {
+    const tb = imports.topbar;
+    assert(tb && typeof tb.runAvroTopBar === 'function', "topbar exports runAvroTopBar");
+} catch (e) {
+    assert(false, "Failed to load topbar module: " + e.message);
+}
+
+// 2. Test Unicode <-> Bijoy conversions
+const bc = imports.bijoyconverter;
+if (bc && bc.unicodeToBijoy && bc.bijoyToUnicode) {
+    // Basic sentence
+    let u1 = "আমার সোনার বাংলা";
+    let b1 = bc.unicodeToBijoy(u1);
+    let r1 = bc.bijoyToUnicode(b1);
+    assert(b1 === "Avgvi †mvbvi evsjv", "Unicode to Bijoy: 'আমার সোনার বাংলা' -> 'Avgvi †mvbvi evsjv'");
+    assert(r1 === u1, "Bijoy to Unicode roundtrip: '" + r1 + "' === '" + u1 + "'");
+
+    // Digits
+    let uDigits = "০১২৩৪৫৬৭৮৯";
+    let bDigits = bc.unicodeToBijoy(uDigits);
+    let rDigits = bc.bijoyToUnicode(bDigits);
+    assert(bDigits === "0123456789", "Digits conversion: '০১২৩৪৫৬৭৮৯' -> '0123456789'");
+    assert(rDigits === uDigits, "Digits roundtrip: '" + rDigits + "' === '" + uDigits + "'");
+
+    // Word with conjunct
+    let uConj = "বাংলাদেশ";
+    let bConj = bc.unicodeToBijoy(uConj);
+    let rConj = bc.bijoyToUnicode(bConj);
+    assert(rConj === uConj, "Conjunct roundtrip: '" + rConj + "' === '" + uConj + "'");
+}
+
+// 3. Test binary launchers in bin/
+const BIN_FILES = [
+    "bin/avro",
+    "bin/avro-topbar",
+    "bin/avro-pad",
+    "bin/avro-converter",
+    "bin/avro-layout",
+    "bin/avro-preferences"
+];
+
+for (let i = 0; i < BIN_FILES.length; i++) {
+    let path = BIN_FILES[i];
+    let file = Gio.File.new_for_path(path);
+    assert(file.query_exists(null), "Launcher exists: " + path);
+    if (file.query_exists(null)) {
+        let info = file.query_info("unix::mode", Gio.FileQueryInfoFlags.NONE, null);
+        let mode = info.get_attribute_uint32("unix::mode");
+        let isExecutable = (mode & 0o111) !== 0;
+        assert(isExecutable, "Launcher is executable: " + path);
+    }
+}
+
+// 4. Test desktop entry files in data/applications/
+const DESKTOP_FILES = [
+    "data/applications/avro-topbar.desktop",
+    "data/applications/avro-pad.desktop",
+    "data/applications/avro-converter.desktop",
+    "data/applications/avro-layout.desktop",
+    "data/applications/avro-preferences.desktop"
+];
+
+for (let i = 0; i < DESKTOP_FILES.length; i++) {
+    let path = DESKTOP_FILES[i];
+    let file = Gio.File.new_for_path(path);
+    assert(file.query_exists(null), "Desktop file exists: " + path);
+}
+
+print("\nStandalone Suite Test Summary:");
+print("  Total Passed: " + passedCount);
+print("  Total Failed: " + failedCount);
+
+if (failedCount > 0) {
+    imports.system.exit(1);
+} else {
+    imports.system.exit(0);
+}

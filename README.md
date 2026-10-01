@@ -9,13 +9,17 @@
 
 ## Features
 
+* **Windows-Style Floating Avro TopBar:** Sleek floating toolbar dock with instant English/Bangla mode toggle, layout selector, and tool shortcuts matching the iconic Windows Avro interface.
+* **Avro Pad (Standalone Bengali Editor):** Full-featured standalone word processor with real-time phonetic transliteration, candidate suggestions, font size controls, and one-click copy to clipboard.
+* **Unicode ↔ Bijoy (ANSI) Converter:** Instant bi-directional conversion between modern Unicode Bengali and legacy Bijoy/SutonnyMJ font format.
+* **Visual Keyboard Layout Viewer:** Interactive on-screen keyboard showing phonetic key mapping for normal keys, Shift combinations, vowels, consonants, and complex conjuncts (যুক্তবর্ণ).
 * **Authentic Avro Phonetic Transliteration:** Full support for vowels, consonants, vowel signs (*kar*), conjuncts (*যুক্তবর্ণ*), and *hasanta* rules based on OmicronLab's standard algorithm.
 * **Smart Dictionary & Suffix Suggestions:** In-memory dictionary suggestions with grammatical inflection expansion.
 * **Autocorrect & Learning:** Built-in autocorrect database and automatic candidate selection memory.
 * **Linux-Native IBus Integration:** Clean IBus engine lifecycle without global hooks, background daemons, or X11 hacks.
 * **Native GTK Preferences:** Discoverable preferences application featuring General, Typing, Dictionary & Autocorrect, Shortcuts, Privacy-safe Diagnostics, and About tabs.
 * **Strict Privacy:** Zero telemetry, zero analytics, zero network transmission, and zero keystroke logging.
-* **Debian Packaging:** Reproducible Debian packaging producing a clean `.deb` package.
+* **Debian Packaging:** Reproducible Debian packaging producing a clean `.deb` package compatible with Debian 12, Debian 13, Ubuntu 24.04 LTS, Ubuntu 26.04, and derivatives.
 
 ---
 
@@ -23,8 +27,10 @@
 
 ```text
 avro-linux/
+├── bin/                     # Command-line binary launchers (avro, avro-topbar, avro-pad, etc.)
 ├── src/
 │   ├── engine/              # IBus-facing engine lifecycle & key event processing
+│   ├── standalone/          # Windows-style TopBar, Avro Pad, Layout Viewer, & Bijoy Converter
 │   ├── avro-core/
 │   │   ├── phonetic/        # Core transliteration & regex rules
 │   │   ├── dictionary/      # In-memory dictionary search & suffix rules
@@ -118,6 +124,38 @@ Launch **Avro Bengali Input Preferences** from your application menu, or run:
 avro-preferences
 ```
 (or `/usr/share/avro-linux/preferences/pref.js --standalone`)
+
+### Standalone Windows-Style Applications
+
+Avro Linux includes a complete standalone input suite with a full Windows-like interface that works out-of-the-box on any Debian/Ubuntu release (Debian 12, Debian 13, Ubuntu 22.04, Ubuntu 24.04, Ubuntu 26.04) regardless of desktop environment or whether IBus is active:
+
+* **Floating Avro TopBar (Windows Style):**
+  ```bash
+  avro-topbar
+  # or: avro --topbar
+  ```
+  Floats smoothly on top of your desktop with the iconic Avro logo menu, large Bangla/English mode toggle (green/blue indicator), layout selector, and tool shortcuts.
+
+* **Avro Pad (Standalone Bengali Editor):**
+  ```bash
+  avro-pad
+  # or: avro --pad
+  ```
+  Type phonetically in Latin script (`ami banglay gan gai`), see live Bengali transliteration (`আমি বাংলায় গান গাই`), and copy to clipboard with a single click.
+
+* **Unicode to Bijoy (SutonnyMJ) Converter:**
+  ```bash
+  avro-converter
+  # or: avro --converter
+  ```
+  Convert Bengali text bi-directionally between Unicode and legacy ANSI / Bijoy format.
+
+* **Keyboard Layout Viewer:**
+  ```bash
+  avro-layout
+  # or: avro --layout
+  ```
+  Interactive visual reference for phonetic keys, vowels, consonants, and complex conjuncts (যুক্তবর্ণ).
 
 ---
 

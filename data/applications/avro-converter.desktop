@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Avro Unicode to Bijoy Converter
+Name[bn]=অভ্র ইউনিকোড টু বিজয় কনভার্টার
+Comment=Convert Bengali text between Unicode and Bijoy (SutonnyMJ)
+Comment[bn]=ইউনিকোড ও বিজয় (সুতোন্মীএমজে) বাংলা রূপান্তরকারী
+Type=Application
+Exec=avro-converter
+Icon=avro-bangla
+Terminal=false
+Categories=Utility;TextTools;
+Keywords=avro;bengali;bangla;bijoy;sutonnymj;converter;unicode;
+StartupNotify=true

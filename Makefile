@@ -44,6 +44,7 @@ install: build
 	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/avro-core/autocorrect
 	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/avro-core/suggestions
 	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/preferences
+	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/standalone
 	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/icons
 
 	# System integration directories
@@ -56,12 +57,24 @@ install: build
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/48x48/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/doc/avro-linux
 
-	# Command-line binary launcher
+	# Command-line binary launchers
+	install -m 0755 bin/avro $(DESTDIR)$(prefix)/bin/avro
+	install -m 0755 bin/avro-topbar $(DESTDIR)$(prefix)/bin/avro-topbar
+	install -m 0755 bin/avro-pad $(DESTDIR)$(prefix)/bin/avro-pad
+	install -m 0755 bin/avro-converter $(DESTDIR)$(prefix)/bin/avro-converter
+	install -m 0755 bin/avro-layout $(DESTDIR)$(prefix)/bin/avro-layout
 	install -m 0755 bin/avro-preferences $(DESTDIR)$(prefix)/bin/avro-preferences
 
 	# Common & Engine scripts
 	install -m 0644 src/common/evars.js $(DESTDIR)$(pkgdatadir)/common/evars.js
 	install -m 0755 src/engine/main-gjs.js $(DESTDIR)$(pkgdatadir)/engine/main-gjs.js
+
+	# Standalone application suite
+	install -m 0755 src/standalone/main.js $(DESTDIR)$(pkgdatadir)/standalone/main.js
+	install -m 0755 src/standalone/topbar.js $(DESTDIR)$(pkgdatadir)/standalone/topbar.js
+	install -m 0755 src/standalone/avropad.js $(DESTDIR)$(pkgdatadir)/standalone/avropad.js
+	install -m 0755 src/standalone/bijoyconverter.js $(DESTDIR)$(pkgdatadir)/standalone/bijoyconverter.js
+	install -m 0755 src/standalone/layoutviewer.js $(DESTDIR)$(pkgdatadir)/standalone/layoutviewer.js
 
 	# Avro Core components
 	install -m 0644 src/avro-core/phonetic/avrolib.js $(DESTDIR)$(pkgdatadir)/avro-core/phonetic/avrolib.js
@@ -82,6 +95,10 @@ install: build
 	install -m 0644 data/ibus/ibus-avro.xml $(DESTDIR)$(datadir)/ibus/component/ibus-avro.xml
 	install -m 0644 data/gsettings/com.omicronlab.avro.gschema.xml $(DESTDIR)$(datadir)/glib-2.0/schemas/com.omicronlab.avro.gschema.xml
 	install -m 0644 data/applications/avro-preferences.desktop $(DESTDIR)$(datadir)/applications/avro-preferences.desktop
+	install -m 0644 data/applications/avro-topbar.desktop $(DESTDIR)$(datadir)/applications/avro-topbar.desktop
+	install -m 0644 data/applications/avro-pad.desktop $(DESTDIR)$(datadir)/applications/avro-pad.desktop
+	install -m 0644 data/applications/avro-converter.desktop $(DESTDIR)$(datadir)/applications/avro-converter.desktop
+	install -m 0644 data/applications/avro-layout.desktop $(DESTDIR)$(datadir)/applications/avro-layout.desktop
 	install -m 0644 data/applications/ibus-setup-avro.desktop $(DESTDIR)$(datadir)/applications/ibus-setup-avro.desktop
 	install -m 0644 data/metainfo/com.github.sarim.ibus.avro.metainfo.xml $(DESTDIR)$(datadir)/metainfo/com.github.sarim.ibus.avro.metainfo.xml
 

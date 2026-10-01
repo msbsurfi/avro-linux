@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Avro Keyboard Layout Viewer
+Name[bn]=অভ্র কিবোর্ড লেআউট ভিউয়ার
+Comment=Visual keyboard layout and phonetic rules guide
+Comment[bn]=ভিজ্যুয়াল কিবোর্ড লেআউট ও ফোনেটিক নিয়ম নির্দেশিকা
+Type=Application
+Exec=avro-layout
+Icon=avro-bangla
+Terminal=false
+Categories=Utility;Documentation;
+Keywords=avro;bengali;bangla;keyboard;layout;phonetic;rules;
+StartupNotify=true

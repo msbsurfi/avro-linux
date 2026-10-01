@@ -44,6 +44,9 @@ run_test "IBus Engine Live Integration" "gjs ${ROOT_DIR}/tests/engine/test-ibus-
 # 6. Preferences & GSettings integration test
 run_test "Preferences & GSettings Integration" "gjs ${ROOT_DIR}/tests/integration/test-preferences.js"
 
+# 7. Standalone Suite & Windows-Style UI test
+run_test "Standalone Suite & Windows UI Integration" "gjs ${ROOT_DIR}/tests/integration/test-standalone.js"
+
 # 4. Desktop and metadata validation
 run_test "Metadata & Schema Validation" "${ROOT_DIR}/tests/integration/test-metadata.sh"
 

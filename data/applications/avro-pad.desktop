@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Avro Pad
+Name[bn]=অভ্র প্যাড
+Comment=Standalone Bengali text editor with live Avro Phonetic transliteration
+Comment[bn]=লাইভ অভ্র ফোনেটিক বাংলা টেক্সট এডিটর
+Type=Application
+Exec=avro-pad
+Icon=avro-bangla
+Terminal=false
+Categories=Utility;TextEditor;
+Keywords=avro;bengali;bangla;keyboard;input;pad;editor;
+StartupNotify=true

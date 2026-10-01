@@ -1,0 +1,12 @@
+[Desktop Entry]
+Name=Avro TopBar
+Name[bn]=অভ্র টপবার
+Comment=Floating Windows-style Avro Bengali Keyboard TopBar
+Comment[bn]=উইন্ডোজ স্টাইল ভাসমান অভ্র বাংলা কিবোর্ড টপবার
+Type=Application
+Exec=avro-topbar
+Icon=avro-bangla
+Terminal=false
+Categories=Settings;DesktopSettings;
+Keywords=avro;bengali;bangla;keyboard;input;ime;topbar;
+StartupNotify=true

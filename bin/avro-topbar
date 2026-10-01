@@ -1,0 +1,5 @@
+#!/bin/sh
+# Launcher script for Avro TopBar
+# SPDX-License-Identifier: MPL-2.0
+
+exec /usr/share/avro-linux/standalone/main.js --topbar "$@"
