@@ -27,8 +27,11 @@ Remastered by **MD Shifat Bin Siddique Urfi**, this release delivers full Window
   * `Space` / `Enter` / `।`: Automatic suffix commits on word boundaries.
 * **Comprehensive Standalone Application Suite**:
   * **Avro Pad (`avro-pad`)**: Dedicated Bengali text editor with Unicode and Bijoy copy support, word counts, and Bangla font styling.
+  * **Avro Mouse (`avro-mouse`)**: On-screen click-and-type virtual Bengali keyboard for typing vowels, consonants, numbers, and conjuncts with the mouse.
   * **Bijoy ↔ Unicode Converter (`avro-converter`)**: Two-way bulk text conversion between legacy Bijoy (ANSI) and Unicode.
   * **Keyboard Layout Viewer (`avro-layout`)**: Interactive keyboard layout visualizer for Avro Phonetic, National (Jatiya), Bornona, and more.
+  * **TopBar Themes & Skins**: Switch between Royal Dark, Classic Windows Avro, Obsidian Black, and Paper Light themes.
+  * **Auto-Start on Login**: One-click autostart configuration from the TopBar menu.
   * **Avro Preferences (`avro-preferences`)**: Full GSettings configuration UI for candidate counts, auto-correction, and personal dictionary management.
   * **Avro Doctor (`avro-doctor` / `avro-linux-doctor`)**: Comprehensive diagnostic self-test utility for system readiness, fonts, IBus health, and instant one-click auto-fix.
 * **100% Privacy & Offline Guarantee**:

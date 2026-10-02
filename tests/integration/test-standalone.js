@@ -55,6 +55,13 @@ try {
 }
 
 try {
+    const am = imports.avromouse;
+    assert(am && typeof am.runAvroMouse === 'function', "avromouse exports runAvroMouse");
+} catch (e) {
+    assert(false, "Failed to load avromouse module: " + e.message);
+}
+
+try {
     const tb = imports.topbar;
     assert(tb && typeof tb.runAvroTopBar === 'function', "topbar exports runAvroTopBar");
 } catch (e) {
@@ -101,6 +108,7 @@ const BIN_FILES = [
     "bin/avro-pad",
     "bin/avro-converter",
     "bin/avro-layout",
+    "bin/avro-mouse",
     "bin/avro-preferences",
     "bin/avro-doctor",
     "bin/avro-linux-doctor",
@@ -125,6 +133,7 @@ const DESKTOP_FILES = [
     "data/applications/avro-pad.desktop",
     "data/applications/avro-converter.desktop",
     "data/applications/avro-layout.desktop",
+    "data/applications/avro-mouse.desktop",
     "data/applications/avro-preferences.desktop",
     "data/applications/avro-doctor.desktop",
     "data/applications/avro-preview.desktop"

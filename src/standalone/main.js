@@ -34,12 +34,14 @@ let TopBar = null;
 let AvroPad = null;
 let BijoyConverter = null;
 let LayoutViewer = null;
+let AvroMouse = null;
 let PrefApp = null;
 
 try { TopBar = imports.topbar; } catch (e) {}
 try { AvroPad = imports.avropad; } catch (e) {}
 try { BijoyConverter = imports.bijoyconverter; } catch (e) {}
 try { LayoutViewer = imports.layoutviewer; } catch (e) {}
+try { AvroMouse = imports.avromouse; } catch (e) {}
 try { PrefApp = imports.pref; } catch (e) {}
 
 function printHelp() {
@@ -54,6 +56,7 @@ function printHelp() {
     print("  --pad           Launch Avro Pad (standalone Bengali text editor)");
     print("  --converter     Launch Unicode to Bijoy (SutonnyMJ) Converter");
     print("  --layout        Launch Visual Keyboard Layout Viewer & Rules Guide");
+    print("  --mouse         Launch Avro Mouse (on-screen click-and-type keyboard)");
     print("  --preferences   Launch Avro Preferences configuration dialog");
     print("  --version, -v   Display version and maintainer information");
     print("  --help, -h      Display this help message");
@@ -90,6 +93,11 @@ function main() {
     } else if (args.indexOf('--layout') !== -1) {
         if (LayoutViewer && LayoutViewer.runLayoutViewerDialog) {
             LayoutViewer.runLayoutViewerDialog(null);
+            return;
+        }
+    } else if (args.indexOf('--mouse') !== -1 || args.indexOf('-m') !== -1) {
+        if (AvroMouse && AvroMouse.runAvroMouse) {
+            AvroMouse.runAvroMouse(null);
             return;
         }
     } else if (args.indexOf('--preferences') !== -1) {

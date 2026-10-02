@@ -16,28 +16,30 @@
 
 | File | Size | MD5 Checksum | SHA256 Checksum |
 | :--- | :--- | :--- | :--- |
-| `avro-linux_1.0.0-1_all.deb` | 586 KB | `e52cfba8148f9b0b34d8bc9693dbaf2b` | `d23363a28a0f9dd2087fa430eb27d6789ef4e66fbc736c4ae07360ecd54090e5` |
+| `avro-linux_1.0.0-1_all.deb` | 589 KB | `6d319d1574f180992e49cab3e8aa8fbd` | `25c7629d67eccfc280ff93db0c1ddf6374d30e474d7898f2579d9de4e6ba39a0` |
 
 The package contains:
 1. **Core Engine**: `/usr/share/avro-linux/engine/main-gjs.js`
 2. **Phonetic Core & Dictionaries**: `/usr/share/avro-linux/avro-core/`
 3. **Decoupled Floating Preview & Candidate UI**: `/usr/share/avro-linux/ui/floating-preview.js`
-4. **Sticky Floating TopBar**: `/usr/share/avro-linux/standalone/topbar.js`
+4. **Sticky Floating TopBar**: `/usr/share/avro-linux/standalone/topbar.js` (with 4 themes & autostart)
 5. **Avro Pad Text Editor**: `/usr/share/avro-linux/standalone/avropad.js`
-6. **Bijoy ↔ Unicode Converter**: `/usr/share/avro-linux/standalone/bijoyconverter.js`
-7. **Keyboard Layout Viewer**: `/usr/share/avro-linux/standalone/layoutviewer.js`
-8. **Avro Doctor Diagnostics**: `/usr/share/avro-linux/standalone/doctor.js`
-9. **Preferences UI**: `/usr/share/avro-linux/preferences/pref.js`
-10. **Command Line & Desktop Launchers**:
+6. **Avro Mouse On-Screen Keyboard**: `/usr/share/avro-linux/standalone/avromouse.js`
+7. **Bijoy ↔ Unicode Converter**: `/usr/share/avro-linux/standalone/bijoyconverter.js`
+8. **Keyboard Layout Viewer**: `/usr/share/avro-linux/standalone/layoutviewer.js`
+9. **Avro Doctor Diagnostics**: `/usr/share/avro-linux/standalone/doctor.js`
+10. **Preferences UI**: `/usr/share/avro-linux/preferences/pref.js`
+11. **Command Line & Desktop Launchers**:
     - `/usr/bin/avro`
     - `/usr/bin/avro-topbar`
     - `/usr/bin/avro-preview`
     - `/usr/bin/avro-pad`
+    - `/usr/bin/avro-mouse`
     - `/usr/bin/avro-converter`
     - `/usr/bin/avro-layout`
     - `/usr/bin/avro-preferences`
     - `/usr/bin/avro-doctor` / `/usr/bin/avro-linux-doctor`
-11. **Desktop Entries**: 7 `.desktop` files in `/usr/share/applications/`
+12. **Desktop Entries**: 8 `.desktop` files in `/usr/share/applications/`
 12. **System Integration**: IBus component XML, GSettings schema, AppStream metainfo, hicolor icon hierarchy (16x16 up to 256x256 + SVG).
 
 ---

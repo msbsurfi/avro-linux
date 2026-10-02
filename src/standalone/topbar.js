@@ -43,21 +43,22 @@ for (let p of [
 let AvroPad       = null; try { AvroPad       = imports.avropad;       } catch (e) {}
 let LayoutViewer  = null; try { LayoutViewer  = imports.layoutviewer;  } catch (e) {}
 let BijoyConverter= null; try { BijoyConverter= imports.bijoyconverter;} catch (e) {}
+let AvroMouse     = null; try { AvroMouse     = imports.avromouse;     } catch (e) {}
 let PrefApp       = null; try { PrefApp       = imports.pref;          } catch (e) {}
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   CSS — Royal Dark Floating Bar
+/* ═══════════════════════════════════════════════════════════════════════════
+   Themes & TopBar Skins
    ═══════════════════════════════════════════════════════════════════════════ */
-const BAR_CSS = `
+const THEMES = {
+    "Royal Dark": `
 * { outline: none; }
-
 .avro-topbar-window {
     background: linear-gradient(180deg, #1f2433 0%, #161924 100%);
-    border: 1px solid rgba(74,144,217,0.25);
+    border: 1px solid rgba(74,144,217,0.35);
     border-radius: 18px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.75), 0 0 16px rgba(74,144,217,0.15);
 }
-
 .avro-logo-btn {
     background: linear-gradient(135deg, #1a3a6e, #2454a0);
     color: #e8f0ff;
@@ -72,7 +73,6 @@ const BAR_CSS = `
     background: linear-gradient(135deg, #2454a0, #3168c0);
     color: #ffffff;
 }
-
 .avro-mode-bangla {
     background: linear-gradient(135deg, #00a88a, #6bbf2e);
     color: #041e0f;
@@ -87,7 +87,6 @@ const BAR_CSS = `
 .avro-mode-bangla:hover {
     background: linear-gradient(135deg, #00c0a0, #80d940);
 }
-
 .avro-mode-english {
     background: linear-gradient(135deg, #2e3348, #3d6db0);
     color: #e8f0ff;
@@ -101,7 +100,6 @@ const BAR_CSS = `
 .avro-mode-english:hover {
     background: linear-gradient(135deg, #3d6db0, #5286d0);
 }
-
 .avro-layout-btn {
     background: rgba(255,255,255,0.07);
     color: #a0aac0;
@@ -116,7 +114,6 @@ const BAR_CSS = `
     color: #d0d8f0;
     border-color: rgba(255,255,255,0.18);
 }
-
 .avro-tool-btn {
     background: rgba(255,255,255,0.06);
     color: #8899c0;
@@ -130,7 +127,6 @@ const BAR_CSS = `
     background: rgba(255,255,255,0.16);
     color: #d0d8f0;
 }
-
 .avro-pin-btn {
     background: rgba(255,255,255,0.06);
     color: #f39c12;
@@ -143,7 +139,6 @@ const BAR_CSS = `
 .avro-pin-btn:hover {
     background: rgba(243,156,18,0.25);
 }
-
 .avro-close-btn {
     background: transparent;
     color: #5a6580;
@@ -157,25 +152,370 @@ const BAR_CSS = `
     background: #c0392b;
     color: #ffffff;
 }
-
-/* Tooltip overrides */
 tooltip {
     background-color: #1a1d28;
     color: #c0ccdd;
     border: 1px solid #2a3350;
     border-radius: 8px;
 }
-`;
+`,
+    "Classic Windows Avro": `
+* { outline: none; }
+.avro-topbar-window {
+    background: linear-gradient(180deg, #2b5c8f 0%, #17385c 100%);
+    border: 1px solid #4a8cd4;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6), 0 0 12px rgba(74,140,212,0.3);
+}
+.avro-logo-btn {
+    background: linear-gradient(135deg, #10447a, #1b6cb8);
+    color: #ffffff;
+    font-weight: 900;
+    font-size: 13px;
+    border-radius: 10px;
+    padding: 4px 12px;
+    border: 1px solid #6cb5ff;
+    margin: 0 2px;
+}
+.avro-logo-btn:hover {
+    background: linear-gradient(135deg, #1b6cb8, #2e88de);
+}
+.avro-mode-bangla {
+    background: linear-gradient(135deg, #137736, #2bb656);
+    color: #ffffff;
+    font-weight: 900;
+    font-size: 13px;
+    border-radius: 10px;
+    padding: 5px 18px;
+    border: 1px solid #73e895;
+    box-shadow: 0 0 8px rgba(43,182,86,0.5);
+    margin: 0 2px;
+}
+.avro-mode-bangla:hover {
+    background: linear-gradient(135deg, #1c9b47, #3ed66e);
+}
+.avro-mode-english {
+    background: linear-gradient(135deg, #30445c, #48688a);
+    color: #ffffff;
+    font-weight: 900;
+    font-size: 13px;
+    border-radius: 10px;
+    padding: 5px 18px;
+    border: 1px solid #7c9ebf;
+    margin: 0 2px;
+}
+.avro-mode-english:hover {
+    background: linear-gradient(135deg, #48688a, #5f88b3);
+}
+.avro-layout-btn {
+    background: rgba(255,255,255,0.15);
+    color: #ffffff;
+    font-size: 12px;
+    border-radius: 8px;
+    padding: 4px 10px;
+    border: 1px solid rgba(255,255,255,0.25);
+    margin: 0 2px;
+}
+.avro-layout-btn:hover {
+    background: rgba(255,255,255,0.28);
+}
+.avro-tool-btn {
+    background: rgba(255,255,255,0.12);
+    color: #ffffff;
+    font-size: 14px;
+    border-radius: 8px;
+    padding: 4px 9px;
+    border: none;
+    margin: 0 1px;
+}
+.avro-tool-btn:hover {
+    background: rgba(255,255,255,0.26);
+}
+.avro-pin-btn {
+    background: rgba(255,255,255,0.12);
+    color: #ffd166;
+    font-size: 13px;
+    border-radius: 8px;
+    padding: 4px 8px;
+    border: none;
+    margin: 0 1px;
+}
+.avro-pin-btn:hover {
+    background: rgba(255,209,102,0.3);
+}
+.avro-close-btn {
+    background: transparent;
+    color: #cad8e6;
+    border-radius: 8px;
+    padding: 4px 9px;
+    border: none;
+    font-size: 14px;
+    margin: 0 1px;
+}
+.avro-close-btn:hover {
+    background: #d9383a;
+    color: #ffffff;
+}
+`,
+    "Obsidian Black": `
+* { outline: none; }
+.avro-topbar-window {
+    background: #090d16;
+    border: 1px solid #00e5a0;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.9), 0 0 12px rgba(0,229,160,0.25);
+}
+.avro-logo-btn {
+    background: #111a28;
+    color: #00e5a0;
+    font-weight: 900;
+    font-size: 13px;
+    border-radius: 10px;
+    padding: 4px 12px;
+    border: 1px solid #00e5a0;
+    margin: 0 2px;
+}
+.avro-logo-btn:hover {
+    background: #00e5a0;
+    color: #090d16;
+}
+.avro-mode-bangla {
+    background: #00e5a0;
+    color: #090d16;
+    font-weight: 900;
+    font-size: 13px;
+    border-radius: 10px;
+    padding: 5px 18px;
+    border: 1px solid #00e5a0;
+    margin: 0 2px;
+}
+.avro-mode-bangla:hover {
+    background: #33eab3;
+}
+.avro-mode-english {
+    background: #1a2230;
+    color: #8b9bb4;
+    font-weight: 900;
+    font-size: 13px;
+    border-radius: 10px;
+    padding: 5px 18px;
+    border: 1px solid #2d384e;
+    margin: 0 2px;
+}
+.avro-mode-english:hover {
+    background: #253147;
+    color: #ffffff;
+}
+.avro-layout-btn {
+    background: #141c2b;
+    color: #8b9bb4;
+    font-size: 12px;
+    border-radius: 8px;
+    padding: 4px 10px;
+    border: 1px solid #283650;
+    margin: 0 2px;
+}
+.avro-layout-btn:hover {
+    color: #ffffff;
+    border-color: #00e5a0;
+}
+.avro-tool-btn {
+    background: #141c2b;
+    color: #8b9bb4;
+    font-size: 14px;
+    border-radius: 8px;
+    padding: 4px 9px;
+    border: none;
+    margin: 0 1px;
+}
+.avro-tool-btn:hover {
+    background: #222f46;
+    color: #00e5a0;
+}
+.avro-pin-btn {
+    background: #141c2b;
+    color: #f39c12;
+    font-size: 13px;
+    border-radius: 8px;
+    padding: 4px 8px;
+    border: none;
+    margin: 0 1px;
+}
+.avro-close-btn {
+    background: transparent;
+    color: #6e7681;
+    border-radius: 8px;
+    padding: 4px 9px;
+    border: none;
+    font-size: 14px;
+    margin: 0 1px;
+}
+.avro-close-btn:hover {
+    background: #e63946;
+    color: #ffffff;
+}
+`,
+    "Paper Light": `
+* { outline: none; }
+.avro-topbar-window {
+    background: #ffffff;
+    border: 1px solid #d0d7de;
+    border-radius: 16px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+}
+.avro-logo-btn {
+    background: #0969da;
+    color: #ffffff;
+    font-weight: 900;
+    font-size: 13px;
+    border-radius: 10px;
+    padding: 4px 12px;
+    border: 1px solid #0550ae;
+    margin: 0 2px;
+}
+.avro-logo-btn:hover {
+    background: #1177ee;
+}
+.avro-mode-bangla {
+    background: #1f883d;
+    color: #ffffff;
+    font-weight: 900;
+    font-size: 13px;
+    border-radius: 10px;
+    padding: 5px 18px;
+    border: 1px solid #1a7f37;
+    margin: 0 2px;
+}
+.avro-mode-bangla:hover {
+    background: #269b46;
+}
+.avro-mode-english {
+    background: #f6f8fa;
+    color: #24292f;
+    font-weight: 900;
+    font-size: 13px;
+    border-radius: 10px;
+    padding: 5px 18px;
+    border: 1px solid #d0d7de;
+    margin: 0 2px;
+}
+.avro-mode-english:hover {
+    background: #eaeef2;
+}
+.avro-layout-btn {
+    background: #f6f8fa;
+    color: #24292f;
+    font-size: 12px;
+    border-radius: 8px;
+    padding: 4px 10px;
+    border: 1px solid #d0d7de;
+    margin: 0 2px;
+}
+.avro-layout-btn:hover {
+    background: #eaeef2;
+}
+.avro-tool-btn {
+    background: #f6f8fa;
+    color: #57606a;
+    font-size: 14px;
+    border-radius: 8px;
+    padding: 4px 9px;
+    border: 1px solid #d0d7de;
+    margin: 0 1px;
+}
+.avro-tool-btn:hover {
+    background: #eaeef2;
+    color: #0969da;
+}
+.avro-pin-btn {
+    background: #f6f8fa;
+    color: #b08800;
+    font-size: 13px;
+    border-radius: 8px;
+    padding: 4px 8px;
+    border: 1px solid #d0d7de;
+    margin: 0 1px;
+}
+.avro-close-btn {
+    background: transparent;
+    color: #57606a;
+    border-radius: 8px;
+    padding: 4px 9px;
+    border: none;
+    font-size: 14px;
+    margin: 0 1px;
+}
+.avro-close-btn:hover {
+    background: #cf222e;
+    color: #ffffff;
+}
+`
+};
+
+function getSavedTheme() {
+    let cfgFile = Gio.File.new_for_path(GLib.get_user_config_dir() + "/avro/topbar-theme.txt");
+    try {
+        if (cfgFile.query_exists(null)) {
+            let [, contents] = cfgFile.load_contents(null);
+            let t = String.fromCharCode.apply(null, contents).trim();
+            if (THEMES[t]) return t;
+        }
+    } catch (e) {}
+    return "Royal Dark";
+}
+
+function saveTheme(themeName) {
+    try {
+        let dir = GLib.get_user_config_dir() + "/avro";
+        GLib.mkdir_with_parents(dir, 0o755);
+        let cfgFile = Gio.File.new_for_path(dir + "/topbar-theme.txt");
+        let stream = cfgFile.replace(null, false, Gio.FileCreateFlags.NONE, null);
+        stream.write_all(themeName, null);
+        stream.close(null);
+    } catch (e) {}
+}
+
+function isAutostartEnabled() {
+    let autostartDir = GLib.get_user_config_dir() + "/autostart";
+    let autostartFile = Gio.File.new_for_path(autostartDir + "/avro-topbar.desktop");
+    return autostartFile.query_exists(null);
+}
+
+function setAutostartEnabled(enable) {
+    let autostartDir = GLib.get_user_config_dir() + "/autostart";
+    let autostartFile = Gio.File.new_for_path(autostartDir + "/avro-topbar.desktop");
+    try {
+        if (enable) {
+            GLib.mkdir_with_parents(autostartDir, 0o755);
+            let content = "[Desktop Entry]\nName=Avro TopBar\nComment=Sticky floating toolbar for Avro Keyboard\nExec=avro-topbar\nIcon=avro-bangla\nTerminal=false\nType=Application\nCategories=Utility;\nX-GNOME-Autostart-enabled=true\n";
+            let stream = autostartFile.replace(null, false, Gio.FileCreateFlags.NONE, null);
+            stream.write_all(content, null);
+            stream.close(null);
+        } else {
+            if (autostartFile.query_exists(null)) {
+                autostartFile.delete(null);
+            }
+        }
+    } catch (e) {}
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    runAvroTopBar()
    ═══════════════════════════════════════════════════════════════════════════ */
 function runAvroTopBar() {
 
-    /* Apply CSS globally */
+    /* Apply initial theme */
+    let currentThemeName = getSavedTheme();
     let cssProvider = new Gtk.CssProvider();
+    function applyTheme(name) {
+        if (!THEMES[name]) name = "Royal Dark";
+        try {
+            cssProvider.load_from_data(THEMES[name]);
+        } catch (e) {}
+    }
+    applyTheme(currentThemeName);
+
     try {
-        cssProvider.load_from_data(BAR_CSS);
         Gtk.StyleContext.add_provider_for_screen(
             Gdk.Screen.get_default(),
             cssProvider,
@@ -304,6 +644,14 @@ function runAvroTopBar() {
     });
     menu.append(itemLV);
 
+    let itemMouse = new Gtk.MenuItem({ label: "Avro Mouse — On-Screen Click & Type Keyboard" });
+    itemMouse.connect("activate", () => {
+        if (AvroMouse && AvroMouse.runAvroMouse)
+            AvroMouse.runAvroMouse(window);
+        else GLib.spawn_command_line_async("avro-mouse");
+    });
+    menu.append(itemMouse);
+
     let itemPreview = new Gtk.MenuItem({ label: "Floating Candidate Preview Window" });
     itemPreview.connect("activate", () => {
         GLib.spawn_command_line_async("avro-preview");
@@ -315,6 +663,29 @@ function runAvroTopBar() {
         GLib.spawn_command_line_async("avro-doctor");
     });
     menu.append(itemDoctor);
+
+    menu.append(new Gtk.SeparatorMenuItem());
+
+    let itemThemes = new Gtk.MenuItem({ label: "TopBar Skin & Theme" });
+    let themeSubMenu = new Gtk.Menu();
+    Object.keys(THEMES).forEach(tName => {
+        let tItem = new Gtk.MenuItem({ label: tName });
+        tItem.connect("activate", () => {
+            applyTheme(tName);
+            saveTheme(tName);
+        });
+        themeSubMenu.append(tItem);
+    });
+    themeSubMenu.show_all();
+    itemThemes.set_submenu(themeSubMenu);
+    menu.append(itemThemes);
+
+    let itemAutostart = new Gtk.CheckMenuItem({ label: "Start Avro TopBar automatically on login" });
+    itemAutostart.set_active(isAutostartEnabled());
+    itemAutostart.connect("toggled", () => {
+        setAutostartEnabled(itemAutostart.get_active());
+    });
+    menu.append(itemAutostart);
 
     menu.append(new Gtk.SeparatorMenuItem());
 
@@ -467,6 +838,12 @@ function runAvroTopBar() {
         if (LayoutViewer && LayoutViewer.runLayoutViewerDialog)
             LayoutViewer.runLayoutViewerDialog(window);
         else GLib.spawn_command_line_async("avro-layout");
+    }), false, false, 0);
+
+    toolsBox.pack_start(makeToolBtn("🖱️", "Avro Mouse — On-Screen Click & Type Keyboard", () => {
+        if (AvroMouse && AvroMouse.runAvroMouse)
+            AvroMouse.runAvroMouse(window);
+        else GLib.spawn_command_line_async("avro-mouse");
     }), false, false, 0);
 
     toolsBox.pack_start(makeToolBtn("👁", "Toggle Floating Candidate Preview Window", () => {

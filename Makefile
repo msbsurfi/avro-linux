@@ -74,6 +74,7 @@ install: build
 	install -m 0755 bin/avro-doctor $(DESTDIR)$(prefix)/bin/avro-doctor
 	install -m 0755 bin/avro-linux-doctor $(DESTDIR)$(prefix)/bin/avro-linux-doctor
 	install -m 0755 bin/avro-preview $(DESTDIR)$(prefix)/bin/avro-preview
+	install -m 0755 bin/avro-mouse $(DESTDIR)$(prefix)/bin/avro-mouse
 
 	# Common & Engine scripts
 	install -m 0644 src/common/evars.js $(DESTDIR)$(pkgdatadir)/common/evars.js
@@ -85,6 +86,7 @@ install: build
 	install -m 0755 src/standalone/avropad.js $(DESTDIR)$(pkgdatadir)/standalone/avropad.js
 	install -m 0755 src/standalone/bijoyconverter.js $(DESTDIR)$(pkgdatadir)/standalone/bijoyconverter.js
 	install -m 0755 src/standalone/layoutviewer.js $(DESTDIR)$(pkgdatadir)/standalone/layoutviewer.js
+	install -m 0755 src/standalone/avromouse.js $(DESTDIR)$(pkgdatadir)/standalone/avromouse.js
 	install -m 0755 src/standalone/doctor.js $(DESTDIR)$(pkgdatadir)/standalone/doctor.js
 	install -m 0755 src/ui/floating-preview.js $(DESTDIR)$(pkgdatadir)/ui/floating-preview.js
 
@@ -112,6 +114,7 @@ install: build
 	install -m 0644 data/applications/avro-pad.desktop $(DESTDIR)$(datadir)/applications/avro-pad.desktop
 	install -m 0644 data/applications/avro-converter.desktop $(DESTDIR)$(datadir)/applications/avro-converter.desktop
 	install -m 0644 data/applications/avro-layout.desktop $(DESTDIR)$(datadir)/applications/avro-layout.desktop
+	install -m 0644 data/applications/avro-mouse.desktop $(DESTDIR)$(datadir)/applications/avro-mouse.desktop
 	install -m 0644 data/applications/avro-doctor.desktop $(DESTDIR)$(datadir)/applications/avro-doctor.desktop
 	install -m 0644 data/applications/avro-preview.desktop $(DESTDIR)$(datadir)/applications/avro-preview.desktop
 	install -m 0644 data/applications/ibus-setup-avro.desktop $(DESTDIR)$(datadir)/applications/ibus-setup-avro.desktop
