@@ -1,9 +1,9 @@
 [Desktop Entry]
-Name=Avro Floating Preview
-GenericName=Floating Candidate Preview
-Comment=Non-intrusive floating candidate & preview window for Avro Linux
+Name=Avro Preview Window
+GenericName=Preview Window On/Off
+Comment=Turn the Windows-style Avro Preview Window on or off
 Exec=avro-preview
-Icon=ibus-avro
+Icon=avro-bangla
 Terminal=false
 Type=Application
 Categories=Utility;

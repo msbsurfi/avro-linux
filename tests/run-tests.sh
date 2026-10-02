@@ -12,6 +12,10 @@ FAILED=0
 USER_DICT_TMP="$(mktemp -d)"
 trap 'rm -rf "${USER_DICT_TMP}"' EXIT
 
+# Keep the developer's real Avro configuration (learned word choices, personal
+# dictionary, dconf settings) out of the tests, in both directions.
+export XDG_CONFIG_HOME="${USER_DICT_TMP}"
+
 run_test() {
     local name="$1"
     local cmd="$2"
@@ -46,7 +50,10 @@ run_test "Engine Buffer & Lifecycle Logic" "gjs ${ROOT_DIR}/tests/engine/test-en
 # 5. Live IBus Engine Integration test
 run_test "IBus Engine Live Integration" "gjs ${ROOT_DIR}/tests/engine/test-ibus-engine-integration.js"
 
-# 6. Preferences & GSettings integration test
+# 6. Windows-style Preview Window (placement; live window when DISPLAY is set)
+run_test "Preview Window" "gjs ${ROOT_DIR}/tests/ui/test-preview-window.js"
+
+# 7. Preferences & GSettings integration test
 run_test "Preferences & GSettings Integration" "gjs ${ROOT_DIR}/tests/integration/test-preferences.js"
 
 # 7. Standalone Suite & Windows-Style UI test

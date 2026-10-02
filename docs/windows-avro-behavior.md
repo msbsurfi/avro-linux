@@ -50,17 +50,20 @@ Key characteristics:
 
 ## 3. Dedicated Floating Candidate & Preview Window
 
-### 3.1 Non-Intrusive Floating Window
-Unlike generic IME frameworks that rely on OS popups which steal window focus or compete with Wayland compositors, Avro utilizes a dedicated, lightweight preview overlay.
+### 3.1 The Preview Window
+Avro Keyboard on Windows shows a small "Preview Window" next to the caret while you type. Avro Linux draws the same window from inside the IBus engine.
 
 Key behaviors:
-* **Zero Focus Grab**: Constructed with `type_hint = TOOLTIP` or `POPUP_MENU`, `accept_focus = false`, and `focus_on_map = false`.
-* **Visual Presentation**:
-  - Shows the raw phonetic buffer (e.g. `ami`).
-  - Shows the primary transliteration preview (e.g. `আমি`).
-  - Shows candidate badges with numbered accelerators (e.g. `[1. আমি]  [2. আমী]`).
-  - Displays navigation hints (`[Tab] Next  [Space] Commit  [1-9] Select`).
-* **Placement**: Follows the active cursor position or floats unobtrusively near the caret without obscuring adjacent text.
+* **Zero Focus Grab**: an X11 override-redirect popup (`Gtk.WindowType.POPUP`), never managed or focused by the window manager.
+* **Visual Presentation** (classic theme):
+  - Title bar with the Avro logo, "Preview Window" and a pin button.
+  - A light-yellow row with the English (roman) text typed so far, in bold (e.g. `ami`).
+  - The Bangla suggestions below, one per row; the selected word is highlighted in blue and is also shown inline in the editor.
+* **Placement**: just below the caret, flipped above it near the bottom of the screen, always kept on the monitor that holds the caret.
+* **Mouse**: clicking a suggestion inserts it; dragging the title bar moves the window and pins it there; the pin button toggles between "pinned" and "follow the caret". The pinned position is remembered.
+* **Themes**: classic (Windows look) and dark.
+* **Fallback**: on GNOME Wayland the desktop's IBus candidate panel shows the typed text above a vertical list instead.
+* Nothing is shown in password fields: Avro passes keys through there.
 
 ---
 
@@ -78,11 +81,13 @@ Key behaviors:
 ### 4.2 Candidate Navigation Keys
 * `Tab`: Advances selection to the next candidate word (`index + 1`). Wraps around.
 * `Shift + Tab`: Moves selection to the previous candidate word (`index - 1`).
-* `Left / Right Arrow`: Navigates candidate list when multiple suggestions exist.
-* `Up / Down Arrow`: Navigates candidate list (vertical mode) or cycles candidates.
-* `Number Keys 1 to 9`: Instantly commits the candidate at index `N-1`.
+* `Up / Down Arrow`: Moves the selection while the suggestion list is on screen; otherwise commits the word and moves the caret.
+* `Left / Right Arrow`: Moves the selection only in a horizontal desktop panel list; otherwise commits the word and moves the caret, as on Windows.
+* `Number Keys 1 to 9`: While the suggestion list is on screen, instantly commits the candidate at index `N-1`.
 * `Space`: Commits the currently selected candidate followed by a space.
-* `Enter / Return`: Commits the currently selected candidate. If `switch-newline` is enabled, also emits a newline.
+* `Enter / Return`: Commits the currently selected candidate. If `switch-newline` is enabled, the application then also receives the Enter key (new line, form submit).
+* `Tab` with a single suggestion, `Home`, `End`, `Delete`, `Page Up/Down` and other non-text keys: commit the word, then reach the application.
+* `F12` / mode switch / switching keyboards: keep the word being typed, then switch.
 * `Period (.)`: Commits the currently selected candidate followed by the Bengali Dari (`।`).
 * `Escape`: Cancels composition, dismisses candidate preview, and resets the input buffer.
 * `Backspace`: Removes the last typed Latin character from the buffer and recomputes suggestions in real time. If the buffer is empty, deletes the preceding character in the editor.

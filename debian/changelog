@@ -1,3 +1,29 @@
+avro-linux (1.1.0-1) unstable; urgency=medium
+
+  * Added the Windows-style Avro Preview Window: a floating window at the text
+    cursor with the typed English text (yellow row) and the Bangla suggestions
+    (selected word in blue). Drawn in-process by the engine as a focus-less
+    X11 popup, so it updates on every key and never steals focus.
+  * Preview Window: click a word to insert it, drag the title bar or click the
+    pin to keep it in place, classic (Windows) and dark themes.
+  * The preview is now on by default; the desktop IBus candidate panel is used
+    on GNOME Wayland (with the typed text shown above a vertical list).
+  * Fixed Bangla rendering: ship a fontconfig rule that prefers Noto Sans/Serif
+    Bengali over Lohit Bengali and Mukti, whose headline (matra) breaks over
+    letters such as আ and ম. Recommends fonts-noto-core.
+  * Fixed Shift+Tab (ISO_Left_Tab) not cycling suggestions backwards.
+  * F12, the mode switch and switching keyboards now keep the word being typed
+    instead of discarding it.
+  * Tab, arrows and Enter (with "Enter inserts new line") finish the word and
+    then reach the application, instead of inserting literal tab/newline text.
+  * Never compose in password fields, so typed text is not shown in the preview.
+  * Fixed lookup-table labels repeating ("1." after "3.") as words got longer.
+  * Removed the per-keystroke Unix socket IPC to the separate avro-preview
+    process; avro-preview is now a helper to turn the preview on/off or show
+    a demo (avro-preview --demo).
+
+ -- MD Shifat Bin Siddique Urfi <msbsu@github.com>  Sat, 03 Oct 2026 12:00:00 +0600
+
 avro-linux (1.0.0-1) unstable; urgency=medium
 
   * Remastered release of Avro Linux by MD Shifat Bin Siddique Urfi.

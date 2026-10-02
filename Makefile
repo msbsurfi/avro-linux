@@ -6,6 +6,7 @@ prefix ?= /usr
 pkgdatadir ?= $(prefix)/share/avro-linux
 libexecdir ?= $(prefix)/libexec/avro-linux
 datadir ?= $(prefix)/share
+sysconfdir ?= /etc
 
 .PHONY: all build test package install clean
 
@@ -63,6 +64,8 @@ install: build
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/128x128/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/256x256/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/doc/avro-linux
+	install -d -m 0755 $(DESTDIR)$(datadir)/fontconfig/conf.avail
+	install -d -m 0755 $(DESTDIR)$(sysconfdir)/fonts/conf.d
 
 	# Command-line binary launchers
 	install -m 0755 bin/avro $(DESTDIR)$(prefix)/bin/avro
@@ -105,6 +108,11 @@ install: build
 	# Preferences application
 	install -m 0755 src/preferences/pref.js $(DESTDIR)$(pkgdatadir)/preferences/pref.js
 	install -m 0644 src/preferences/avropref.ui $(DESTDIR)$(pkgdatadir)/preferences/avropref.ui
+
+	# Bangla font preference: Noto Bengali instead of Lohit/Mukti, whose
+	# headline (matra) breaks over letters such as আ and ম
+	install -m 0644 data/fontconfig/64-avro-bengali.conf $(DESTDIR)$(datadir)/fontconfig/conf.avail/64-avro-bengali.conf
+	ln -sf $(datadir)/fontconfig/conf.avail/64-avro-bengali.conf $(DESTDIR)$(sysconfdir)/fonts/conf.d/64-avro-bengali.conf
 
 	# Integration files
 	install -m 0644 data/ibus/ibus-avro.xml $(DESTDIR)$(datadir)/ibus/component/ibus-avro.xml

@@ -26,6 +26,7 @@ grep -q "Architecture: all" "${TMP_DIR}/info.txt"
 grep -q "Maintainer: MD Shifat Bin Siddique Urfi" "${TMP_DIR}/info.txt"
 grep -q "Depends:.*gjs" "${TMP_DIR}/info.txt"
 grep -q "Depends:.*ibus" "${TMP_DIR}/info.txt"
+grep -q "Recommends:.*fonts-noto-core" "${TMP_DIR}/info.txt"
 echo "  ✓ Package control fields verified."
 
 # 2. Check essential file locations
@@ -64,6 +65,8 @@ grep -q "\./usr/share/metainfo/com.github.sarim.ibus.avro.metainfo.xml" "${TMP_D
 grep -q "\./usr/share/icons/hicolor/48x48/apps/avro-bangla.png" "${TMP_DIR}/contents.txt"
 grep -q "\./usr/share/icons/hicolor/scalable/apps/avro-bangla.svg" "${TMP_DIR}/contents.txt"
 grep -q "\./usr/share/pixmaps/avro-bangla.png" "${TMP_DIR}/contents.txt"
+grep -q "\./usr/share/fontconfig/conf.avail/64-avro-bengali.conf" "${TMP_DIR}/contents.txt"
+grep "\./etc/fonts/conf.d/64-avro-bengali.conf" "${TMP_DIR}/contents.txt" | grep -q -- "-> /usr/share/fontconfig/conf.avail/64-avro-bengali.conf"
 echo "  ✓ Critical file locations present."
 
 # The package must not claim ownership of desktop-wide IM configuration.
