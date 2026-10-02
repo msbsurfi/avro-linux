@@ -61,6 +61,15 @@ try {
     assert(false, "Failed to load topbar module: " + e.message);
 }
 
+try {
+    imports.searchPath.unshift('./src/ui');
+    const fp = imports["floating-preview"];
+    assert(fp && typeof fp.runFloatingPreview === 'function', "floating-preview exports runFloatingPreview");
+    assert(fp && typeof fp.FloatingPreviewUI === 'function', "floating-preview exports FloatingPreviewUI");
+} catch (e) {
+    assert(false, "Failed to load floating-preview module: " + e.message);
+}
+
 // 2. Test Unicode <-> Bijoy conversions
 const bc = imports.bijoyconverter;
 if (bc && bc.unicodeToBijoy && bc.bijoyToUnicode) {

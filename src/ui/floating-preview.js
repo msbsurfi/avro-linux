@@ -84,7 +84,7 @@ function getSocketPath() {
     return runtimeDir + "/avro-ui.sock";
 }
 
-class FloatingPreviewUI {
+var FloatingPreviewUI = class FloatingPreviewUI {
     constructor() {
         this.window = null;
         this.labelLatin = null;
@@ -297,24 +297,28 @@ class FloatingPreviewUI {
     }
 }
 
-function runFloatingPreview() {
+var runFloatingPreview = function runFloatingPreview() {
     Gtk.init(null);
     let ui = new FloatingPreviewUI();
     Gtk.main();
-}
+};
 
 let _isMain = false;
 try {
-    if (typeof ARGV !== 'undefined') {
-        for (let a of ARGV) {
-            if (a === '--standalone' || a.indexOf('floating-preview.js') !== -1) {
-                _isMain = true;
-                break;
-            }
-        }
+    let prog = imports.system.programInvocationName || "";
+    if (prog.indexOf("floating-preview") !== -1 || prog.indexOf("avro-preview") !== -1) {
+        _isMain = true;
+    }
+    if (typeof ARGV !== 'undefined' && (ARGV.indexOf('--standalone') !== -1 || ARGV.indexOf('--run') !== -1)) {
+        _isMain = true;
+    }
+    if (typeof ARGV !== 'undefined' && ARGV.indexOf('--no-exec') !== -1) {
+        _isMain = false;
     }
 } catch (e) {}
 
 if (_isMain) {
     runFloatingPreview();
 }
+
+
