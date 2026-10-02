@@ -83,6 +83,16 @@ if (bus.is_connected()) {
         return runtimeDir + "/avro-ui.sock";
     }
 
+    function ensurePreviewDaemon() {
+        try {
+            let sockPath = getSocketPath();
+            let f = Gio.File.new_for_path(sockPath);
+            if (!f.query_exists(null)) {
+                GLib.spawn_command_line_async("avro-preview");
+            }
+        } catch (e) {}
+    }
+
     function broadcastUI(msgObj) {
         try {
             let sockPath = getSocketPath();
@@ -129,6 +139,7 @@ if (bus.is_connected()) {
         engine.lookuptable = IBus.LookupTable.new(16, 0, true, true);        
         resetAll(engine);
         initSetting(engine);
+        ensurePreviewDaemon();
         return engine;
     }
     
@@ -339,13 +350,31 @@ if (bus.is_connected()) {
         }
     }
 
+    var focusOutTimeoutId = 0;
+
     function engine_focus_out(engine) {
-        if (engine.buffertext.length > 0) {
-            commitCandidate(engine);
+        if (engine.buffertext && engine.buffertext.length > 0) {
+            if (focusOutTimeoutId !== 0) {
+                GLib.source_remove(focusOutTimeoutId);
+                focusOutTimeoutId = 0;
+            }
+            // Debounce by 80ms: in Wayland/KWin environments where a window maps or
+            // focus momentarily bounces, focus_in cancels this timer before composition is aborted.
+            focusOutTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 80, () => {
+                focusOutTimeoutId = 0;
+                if (engine.buffertext && engine.buffertext.length > 0) {
+                    commitCandidate(engine);
+                }
+                return GLib.SOURCE_REMOVE;
+            });
         }
     }
 
     function engine_reset(engine) {
+        if (focusOutTimeoutId !== 0) {
+            GLib.source_remove(focusOutTimeoutId);
+            focusOutTimeoutId = 0;
+        }
         resetAll(engine);
     }
 
@@ -377,6 +406,10 @@ if (bus.is_connected()) {
     proplist.append(propp);
 
     function engine_focus_in(engine) {    
+        if (focusOutTimeoutId !== 0) {
+            GLib.source_remove(focusOutTimeoutId);
+            focusOutTimeoutId = 0;
+        }
         engine.register_properties(proplist);
     }
 
@@ -487,10 +520,17 @@ if (bus.is_connected()) {
         // panel-specific lookup-table failure can never make typed text vanish.
         preeditCandidate(engine);
 
-        // The candidate popup is optional. Different IBus panels expose either
-        // update_lookup_table_fast() or the standard update_lookup_table().
-        // Do not allow an optional popup to affect normal typing.
-        if (engine.setting_switch_preview && engine.setting_switch_dict && engine.currentSuggestions.length > 1) {
+        // Check if desktop environment is Wayland non-GNOME (e.g. KDE Plasma Wayland).
+        // On KDE Wayland, ibus-ui-gtk3 candidate window mappings trigger focus-out
+        // on active text editors. In such environments, our dedicated non-focus-stealing
+        // avro-preview and inline preedit provide candidate presentation cleanly.
+        let sessionType = (GLib.getenv("XDG_SESSION_TYPE") || "").toLowerCase();
+        let currentDesktop = (GLib.getenv("XDG_CURRENT_DESKTOP") || "").toUpperCase();
+        let isWayland = sessionType === "wayland";
+        let isGnome = currentDesktop.indexOf("GNOME") !== -1;
+        let bypassDesktopPopup = isWayland && !isGnome;
+
+        if (!bypassDesktopPopup && engine.setting_switch_preview && engine.setting_switch_dict && engine.currentSuggestions.length > 1) {
             try {
                 engine.lookuptable.clear();
                 engine.currentSuggestions.forEach(function(word, idx) {

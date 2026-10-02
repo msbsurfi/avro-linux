@@ -30,6 +30,7 @@ const Gtk = imports.gi.Gtk;
 const Gdk = imports.gi.Gdk;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
+const Pango = imports.gi.Pango;
 
 /* ─── Search paths ──────────────────────────────────────────────────────── */
 let baseDir = '/usr/share/avro-linux';
@@ -387,6 +388,67 @@ function runAvroPad(initialText) {
     let textBuffer = textView.get_buffer();
     if (initialText) textBuffer.set_text(initialText, -1);
 
+    /* TextTag for live inline preedit highlighting */
+    let preeditTag = new Gtk.TextTag({
+        name: "avro-preedit",
+        underline: Pango.Underline.SINGLE,
+        foreground: "#00e5a0"
+    });
+    textBuffer.get_tag_table().add(preeditTag);
+
+    function updatePreeditText(word) {
+        let m1 = textBuffer.get_mark("avro_preedit_start");
+        let m2 = textBuffer.get_mark("avro_preedit_end");
+        if (m1 && m2) {
+            let s_iter = textBuffer.get_iter_at_mark(m1);
+            let e_iter = textBuffer.get_iter_at_mark(m2);
+            textBuffer.delete(s_iter, e_iter);
+        }
+        if (word && word.length > 0) {
+            let insertMark = textBuffer.get_insert();
+            let cur_iter = textBuffer.get_iter_at_mark(insertMark);
+            let offset = cur_iter.get_offset();
+            textBuffer.insert(cur_iter, word, -1);
+            let s = textBuffer.get_iter_at_offset(offset);
+            let e = textBuffer.get_iter_at_offset(offset + Array.from(word).length);
+            if (!m1 || !m2) {
+                textBuffer.create_mark("avro_preedit_start", s, true);
+                textBuffer.create_mark("avro_preedit_end", e, false);
+            } else {
+                textBuffer.move_mark(m1, s);
+                textBuffer.move_mark(m2, e);
+            }
+            textBuffer.apply_tag(preeditTag, s, e);
+        } else if (m1 && m2) {
+            textBuffer.delete_mark(m1);
+            textBuffer.delete_mark(m2);
+        }
+    }
+
+    function clearPreeditTagOnly() {
+        let m1 = textBuffer.get_mark("avro_preedit_start");
+        let m2 = textBuffer.get_mark("avro_preedit_end");
+        if (m1 && m2) {
+            let s = textBuffer.get_iter_at_mark(m1);
+            let e = textBuffer.get_iter_at_mark(m2);
+            textBuffer.remove_tag(preeditTag, s, e);
+            textBuffer.delete_mark(m1);
+            textBuffer.delete_mark(m2);
+        }
+    }
+
+    function removePreeditChars() {
+        let m1 = textBuffer.get_mark("avro_preedit_start");
+        let m2 = textBuffer.get_mark("avro_preedit_end");
+        if (m1 && m2) {
+            let s = textBuffer.get_iter_at_mark(m1);
+            let e = textBuffer.get_iter_at_mark(m2);
+            textBuffer.delete(s, e);
+            textBuffer.delete_mark(m1);
+            textBuffer.delete_mark(m2);
+        }
+    }
+
     scrolled.add(textView);
     mainBox.pack_start(scrolled, true, true, 0);
 
@@ -422,6 +484,7 @@ function runAvroPad(initialText) {
                     "<span foreground='#3d4a68'>Type phonetically, e.g.  ami  banglay  gan  gai</span>"
                 );
             }
+            updatePreeditText("");
             return;
         }
 
@@ -466,20 +529,27 @@ function runAvroPad(initialText) {
             }
         }
         candList.set_markup(parts.join('   '));
+
+        /* Update live inline preedit text inside editor */
+        let activeWord = (candidates.length > 0) ? candidates[selectedIdx] : "";
+        updatePreeditText(activeWord);
     }
 
     /** Insert the committed Bengali word into TextBuffer and reset state */
     function commitWord(extra) {
-        let word = (candidates.length > 0) ? candidates[selectedIdx] : (Avro ? Avro.parse(currentBuffer) : currentBuffer);
-        if (word && word.length > 0 && currentBuffer.length > 0) {
-            textBuffer.insert_at_cursor(word, -1);
+        clearPreeditTagOnly();
+        if (extra) {
+            textBuffer.insert_at_cursor(extra, -1);
         }
-        if (extra) textBuffer.insert_at_cursor(extra, -1);
-        cancelComposition();
+        currentBuffer = "";
+        candidates = [];
+        selectedIdx = 0;
+        updateCandBar();
     }
 
     /** Fully cancel composition without committing */
     function cancelComposition() {
+        removePreeditChars();
         currentBuffer = "";
         candidates = [];
         selectedIdx = 0;
@@ -527,7 +597,11 @@ function runAvroPad(initialText) {
         if (keyval === Gdk.KEY_BackSpace) {
             if (currentBuffer.length > 0) {
                 currentBuffer = currentBuffer.slice(0, -1);
-                updateCandBar();
+                if (currentBuffer.length === 0) {
+                    cancelComposition();
+                } else {
+                    updateCandBar();
+                }
                 return true;    // consumed — do NOT let Gtk delete from TextBuffer
             }
             return false;       // let Gtk delete the previous char normally
@@ -538,7 +612,21 @@ function runAvroPad(initialText) {
             let idx = keyval - Gdk.KEY_1;
             if (idx < candidates.length) {
                 selectedIdx = idx;
+                updatePreeditText(candidates[selectedIdx]);
                 commitWord(" ");
+                return true;
+            }
+        }
+
+        /* ── Arrow keys Up / Down: cycle suggestions if active ── */
+        if (currentBuffer && candidates.length > 1) {
+            if (keyval === Gdk.KEY_Down || keyval === Gdk.KEY_KP_Down) {
+                selectedIdx = (selectedIdx + 1) % candidates.length;
+                updateCandBar();
+                return true;
+            } else if (keyval === Gdk.KEY_Up || keyval === Gdk.KEY_KP_Up) {
+                selectedIdx = (selectedIdx - 1 + candidates.length) % candidates.length;
+                updateCandBar();
                 return true;
             }
         }
@@ -561,9 +649,18 @@ function runAvroPad(initialText) {
             return false;
         }
 
-        /* ── Tab → commit + tab ── */
+        /* ── Tab → cycle suggestions ── */
         if (keyval === Gdk.KEY_Tab || keyval === Gdk.KEY_ISO_Left_Tab) {
-            if (currentBuffer) {
+            if (currentBuffer && candidates.length > 1) {
+                let isShift = (state & Gdk.ModifierType.SHIFT_MASK) !== 0;
+                if (isShift) {
+                    selectedIdx = (selectedIdx - 1 + candidates.length) % candidates.length;
+                } else {
+                    selectedIdx = (selectedIdx + 1) % candidates.length;
+                }
+                updateCandBar();
+                return true;
+            } else if (currentBuffer) {
                 commitWord("\t");
                 return true;
             }

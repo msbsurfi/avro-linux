@@ -13,7 +13,7 @@ echo "  ✓ Desktop entries valid."
 
 # 2. AppStream metadata validation
 echo "[2/4] Validating AppStream metadata..."
-appstreamcli validate "${ROOT_DIR}/data/metainfo/com.github.sarim.ibus.avro.metainfo.xml"
+appstreamcli validate --no-net "${ROOT_DIR}/data/metainfo/com.github.sarim.ibus.avro.metainfo.xml"
 echo "  ✓ AppStream metadata valid."
 
 # 3. GSettings schema validation
