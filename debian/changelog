@@ -8,6 +8,12 @@ avro-linux (1.0.0-1) unstable; urgency=medium
   * Fixed F12 key handling to toggle between Bangla and English mode.
   * Modernized IBus engine key event processing for Wayland and modern Linux distributions (Ubuntu 24.04/26.04, Debian 12/13).
   * Automated IBus cache registration in postinst/postrm.
-  * Full deterministic regression test suites.
+  * Added Avro Doctor diagnostic health check and interactive live self-test tool (avro-doctor CLI and GUI).
+  * Added dedicated non-focus-stealing floating candidate & preview window (avro-preview).
+  * Implemented decoupled local Unix socket IPC between engine and UI without Wayland focus theft.
+  * Added Tab / Shift+Tab candidate cycling and 1-9 direct candidate numeric accelerators.
+  * Enhanced Avro TopBar with Dock type hint and non-focus-stealing buttons to stay sticky and upper than all windows.
+  * Comprehensive developer and architecture documentation (windows-avro-behavior.md, linux-input-architecture.md, desktop-integration.md, compatibility-matrix.md).
+  * Expanded automated test suite with 11 passing suites and 0 failures.
 
- -- MD Shifat Bin Siddique Urfi <msbsu@github.com>  Thu, 01 Oct 2026 22:50:00 +0600
+ -- MD Shifat Bin Siddique Urfi <msbsu@github.com>  Fri, 02 Oct 2026 12:40:00 +0600

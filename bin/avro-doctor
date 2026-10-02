@@ -1,0 +1,2 @@
+#!/bin/sh
+exec gjs /usr/share/avro-linux/standalone/doctor.js "$@"

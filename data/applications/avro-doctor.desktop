@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Avro Doctor
+GenericName=Input Method Diagnostic Tool
+Comment=Diagnostic health check and interactive test tool for Avro Linux
+Exec=avro-doctor
+Icon=ibus-avro
+Terminal=false
+Type=Application
+Categories=Utility;
+Keywords=avro;bangla;bengali;keyboard;ibus;doctor;diagnostics;
+StartupNotify=true

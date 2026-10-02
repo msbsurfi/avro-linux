@@ -165,8 +165,25 @@ function runpref() {
     orientBox.pack_end(cboxOrient, false, false, 0);
     generalBox.pack_start(orientBox, false, false, 0);
 
+    // Desktop Tools Row
+    let toolsFrame = new Gtk.Frame({ label: " Avro Desktop Tools " });
+    let toolsBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8, margin: 10 });
+    let btnLaunchTopbar = new Gtk.Button({ label: "🚀 Avro TopBar" });
+    let btnLaunchPreview = new Gtk.Button({ label: "👁 Candidate Preview" });
+    let btnLaunchDoctor = new Gtk.Button({ label: "🩺 Avro Doctor" });
+
+    btnLaunchTopbar.connect("clicked", () => GLib.spawn_command_line_async("avro-topbar"));
+    btnLaunchPreview.connect("clicked", () => GLib.spawn_command_line_async("avro-preview"));
+    btnLaunchDoctor.connect("clicked", () => GLib.spawn_command_line_async("avro-doctor"));
+
+    toolsBox.pack_start(btnLaunchTopbar, true, true, 0);
+    toolsBox.pack_start(btnLaunchPreview, true, true, 0);
+    toolsBox.pack_start(btnLaunchDoctor, true, true, 0);
+    toolsFrame.add(toolsBox);
+    generalBox.pack_start(toolsFrame, false, false, 4);
+
     // Reset settings
-    let resetBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12, margin_top: 24 });
+    let resetBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12, margin_top: 16 });
     let resetLabel = new Gtk.Label({ label: "Restore all preferences to their factory defaults", xalign: 0 });
     let btnReset = new Gtk.Button({ label: "Reset to Defaults", valign: Gtk.Align.CENTER });
     btnReset.connect("clicked", function() {
@@ -380,7 +397,8 @@ function runpref() {
     diagScrolled.add(diagTextView);
     diagBox.pack_start(diagScrolled, true, true, 0);
 
-    let btnCopyDiag = new Gtk.Button({ label: "Copy Diagnostics to Clipboard", halign: Gtk.Align.START });
+    let diagActionBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 10 });
+    let btnCopyDiag = new Gtk.Button({ label: "Copy Diagnostics to Clipboard" });
     btnCopyDiag.connect("clicked", function() {
         let clipboard = Gtk.Clipboard.get_default(Gdk.Display.get_default());
         clipboard.set_text(diagText, -1);
@@ -390,7 +408,15 @@ function runpref() {
             return GLib.SOURCE_REMOVE;
         });
     });
-    diagBox.pack_start(btnCopyDiag, false, false, 0);
+
+    let btnDoctor = new Gtk.Button({ label: "🩺 Open Avro Doctor Interactive Tool" });
+    btnDoctor.connect("clicked", () => {
+        GLib.spawn_command_line_async("avro-doctor");
+    });
+
+    diagActionBox.pack_start(btnCopyDiag, false, false, 0);
+    diagActionBox.pack_start(btnDoctor, false, false, 0);
+    diagBox.pack_start(diagActionBox, false, false, 0);
 
     notebook.append_page(diagBox, new Gtk.Label({ label: "Diagnostics" }));
 

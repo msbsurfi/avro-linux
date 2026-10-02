@@ -52,7 +52,10 @@ run_test "Preferences & GSettings Integration" "gjs ${ROOT_DIR}/tests/integratio
 # 7. Standalone Suite & Windows-Style UI test
 run_test "Standalone Suite & Windows UI Integration" "gjs ${ROOT_DIR}/tests/integration/test-standalone.js"
 
-# 4. Desktop and metadata validation
+# 8. Avro Doctor Diagnostic Health Check test
+run_test "Avro Doctor Diagnostics" "gjs ${ROOT_DIR}/tests/integration/test-doctor.js"
+
+# 9. Desktop and metadata validation
 run_test "Metadata & Schema Validation" "${ROOT_DIR}/tests/integration/test-metadata.sh"
 
 echo ""

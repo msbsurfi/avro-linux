@@ -92,7 +92,10 @@ const BIN_FILES = [
     "bin/avro-pad",
     "bin/avro-converter",
     "bin/avro-layout",
-    "bin/avro-preferences"
+    "bin/avro-preferences",
+    "bin/avro-doctor",
+    "bin/avro-linux-doctor",
+    "bin/avro-preview"
 ];
 
 for (let i = 0; i < BIN_FILES.length; i++) {
@@ -113,7 +116,9 @@ const DESKTOP_FILES = [
     "data/applications/avro-pad.desktop",
     "data/applications/avro-converter.desktop",
     "data/applications/avro-layout.desktop",
-    "data/applications/avro-preferences.desktop"
+    "data/applications/avro-preferences.desktop",
+    "data/applications/avro-doctor.desktop",
+    "data/applications/avro-preview.desktop"
 ];
 
 for (let i = 0; i < DESKTOP_FILES.length; i++) {

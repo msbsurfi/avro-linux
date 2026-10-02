@@ -191,6 +191,7 @@ function runAvroTopBar() {
         skip_taskbar_hint: true,
         skip_pager_hint:   true,
         accept_focus:      false,
+        focus_on_map:      false,
         role:              "avro-topbar"
     });
     window.get_style_context().add_class("avro-topbar-window");
@@ -198,10 +199,10 @@ function runAvroTopBar() {
     /* Always-on-top + stick to all workspaces */
     window.stick();
     window.set_keep_above(true);
-    window.set_type_hint(Gdk.WindowTypeHint.UTILITY);
+    window.set_type_hint(Gdk.WindowTypeHint.DOCK);
 
-    /* Watchdog: re-assert always-on-top every 1.5 s (some DEs override it) */
-    GLib.timeout_add(GLib.PRIORITY_LOW, 1500, () => {
+    /* Watchdog: re-assert always-on-top every 1.0 s */
+    GLib.timeout_add(GLib.PRIORITY_LOW, 1000, () => {
         try {
             if (window.get_visible()) {
                 window.set_keep_above(true);
@@ -254,6 +255,8 @@ function runAvroTopBar() {
        1. Logo + Full Windows Menu
        ═══════════════════════════════════════════════════════════════════════ */
     let btnLogo = new Gtk.Button({ label: "অ Avro" });
+    btnLogo.set_can_focus(false);
+    btnLogo.set_focus_on_click(false);
     btnLogo.get_style_context().add_class("avro-logo-btn");
     btnLogo.set_tooltip_text("Avro Keyboard Menu");
 
@@ -301,6 +304,18 @@ function runAvroTopBar() {
     });
     menu.append(itemLV);
 
+    let itemPreview = new Gtk.MenuItem({ label: "Floating Candidate Preview Window" });
+    itemPreview.connect("activate", () => {
+        GLib.spawn_command_line_async("avro-preview");
+    });
+    menu.append(itemPreview);
+
+    let itemDoctor = new Gtk.MenuItem({ label: "Avro Doctor — Diagnostics & Health Check" });
+    itemDoctor.connect("activate", () => {
+        GLib.spawn_command_line_async("avro-doctor");
+    });
+    menu.append(itemDoctor);
+
     menu.append(new Gtk.SeparatorMenuItem());
 
     let itemPref = new Gtk.MenuItem({ label: "Preferences..." });
@@ -331,6 +346,8 @@ function runAvroTopBar() {
        2. Mode Toggle (বাংলা / English)  [F12]
        ═══════════════════════════════════════════════════════════════════════ */
     let btnMode      = new Gtk.Button();
+    btnMode.set_can_focus(false);
+    btnMode.set_focus_on_click(false);
     let btnModeLabel = new Gtk.Label({ use_markup: true });
     btnMode.add(btnModeLabel);
 
@@ -398,6 +415,8 @@ function runAvroTopBar() {
        3. Layout Selector
        ═══════════════════════════════════════════════════════════════════════ */
     let btnLayout = new Gtk.Button();
+    btnLayout.set_can_focus(false);
+    btnLayout.set_focus_on_click(false);
     btnLayoutLabel = new Gtk.Label({ label: "Phonetic ▼" });
     btnLayout.add(btnLayoutLabel);
     btnLayout.get_style_context().add_class("avro-layout-btn");
@@ -423,6 +442,8 @@ function runAvroTopBar() {
        ═══════════════════════════════════════════════════════════════════════ */
     function makeToolBtn(label, tip, onClick) {
         let b = new Gtk.Button({ label: label });
+        b.set_can_focus(false);
+        b.set_focus_on_click(false);
         b.get_style_context().add_class("avro-tool-btn");
         b.set_tooltip_text(tip);
         b.connect("clicked", onClick);
@@ -448,6 +469,14 @@ function runAvroTopBar() {
         else GLib.spawn_command_line_async("avro-layout");
     }), false, false, 0);
 
+    toolsBox.pack_start(makeToolBtn("👁", "Toggle Floating Candidate Preview Window", () => {
+        GLib.spawn_command_line_async("avro-preview");
+    }), false, false, 0);
+
+    toolsBox.pack_start(makeToolBtn("🩺", "Avro Doctor — Diagnostics & Health Check", () => {
+        GLib.spawn_command_line_async("avro-doctor");
+    }), false, false, 0);
+
     toolsBox.pack_start(makeToolBtn("⚙", "Preferences", () => {
         if (PrefApp && PrefApp.runpref) PrefApp.runpref();
         else GLib.spawn_command_line_async("avro-preferences");
@@ -459,6 +488,8 @@ function runAvroTopBar() {
        5. Window Controls: Pin / Mini / Close
        ═══════════════════════════════════════════════════════════════════════ */
     let btnPin = new Gtk.Button({ label: "📌" });
+    btnPin.set_can_focus(false);
+    btnPin.set_focus_on_click(false);
     btnPin.get_style_context().add_class("avro-pin-btn");
     btnPin.set_tooltip_text("Pinned to top-center (click to unpin)");
     btnPin.connect("clicked", () => {
@@ -473,6 +504,8 @@ function runAvroTopBar() {
     mainBox.pack_start(btnPin, false, false, 0);
 
     let btnMini = new Gtk.Button({ label: "▲" });
+    btnMini.set_can_focus(false);
+    btnMini.set_focus_on_click(false);
     btnMini.get_style_context().add_class("avro-tool-btn");
     btnMini.set_tooltip_text("Collapse to mini bar");
     btnMini.connect("clicked", () => {
@@ -498,6 +531,8 @@ function runAvroTopBar() {
     mainBox.pack_start(btnMini, false, false, 0);
 
     let btnClose = new Gtk.Button({ label: "✕" });
+    btnClose.set_can_focus(false);
+    btnClose.set_focus_on_click(false);
     btnClose.get_style_context().add_class("avro-close-btn");
     btnClose.set_tooltip_text("Close Avro TopBar");
     btnClose.connect("clicked", () => window.destroy());

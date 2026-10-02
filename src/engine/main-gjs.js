@@ -75,6 +75,37 @@ if (bus.is_connected()) {
     
     var id = 0;
 
+    function getSocketPath() {
+        let runtimeDir = GLib.getenv("XDG_RUNTIME_DIR");
+        if (!runtimeDir || runtimeDir.length === 0) {
+            runtimeDir = "/tmp";
+        }
+        return runtimeDir + "/avro-ui.sock";
+    }
+
+    function broadcastUI(msgObj) {
+        try {
+            let sockPath = getSocketPath();
+            let client = new Gio.SocketClient();
+            let addr = Gio.UnixSocketAddress.new(sockPath);
+            client.connect_async(addr, null, (c, res) => {
+                try {
+                    let conn = client.connect_finish(res);
+                    if (conn) {
+                        let outStream = conn.get_output_stream();
+                        let payload = JSON.stringify(msgObj) + "\n";
+                        outStream.write_bytes_async(new GLib.Bytes(payload), GLib.PRIORITY_DEFAULT, null, (s, r) => {
+                            try {
+                                s.write_bytes_finish(r);
+                                conn.close(null);
+                            } catch (e) {}
+                        });
+                    }
+                } catch (e) {}
+            });
+        } catch (e) {}
+    }
+
     function _create_engine_cb(factory, engine_name) {
         id += 1;
         var engine = new IBus.Engine({
@@ -91,6 +122,9 @@ if (bus.is_connected()) {
         engine.connect('focus-in', engine_focus_in);
         engine.connect('reset', engine_reset);
         engine.connect('property-activate', engine_property_activate);
+        engine.connect('set-cursor-location', function(eng, x, y, w, h) {
+            broadcastUI({ type: "cursor", x: x, y: y, w: w, h: h });
+        });
 
         engine.lookuptable = IBus.LookupTable.new(16, 0, true, true);        
         resetAll(engine);
@@ -113,7 +147,7 @@ if (bus.is_connected()) {
         // Privacy rule: Never log raw keyval, keycode, or user input text
 
         // Check for F12 (Toggle Bangla / English mode)
-        if (keyval === IBus.KEY_F12 || keyval === IBus.F12) {
+        if (keyval === IBus.KEY_F12 || keyval === IBus.F12 || keyval === 0xffc9 || keyval === 65481) {
             let isRelease = (state & IBus.ModifierType.RELEASE_MASK) !== 0;
             if (!isRelease) {
                 engine.mode_bangla = !engine.mode_bangla;
@@ -126,6 +160,7 @@ if (bus.is_connected()) {
                         engine.setting.set_boolean('mode-bangla', engine.mode_bangla);
                     }
                 } catch (e) {}
+                broadcastUI({ type: "mode", bangla: engine.mode_bangla });
             }
             return true;
         }
@@ -175,8 +210,18 @@ if (bus.is_connected()) {
             }
         } else if (keyval === IBus.Tab || keyval === IBus.KEY_Tab) {
             if (engine.buffertext.length > 0) {
-                commitCandidateWithSuffix(engine, "\t");
-                return true;
+                if (engine.currentSuggestions.length > 1) {
+                    let isShift = (state & IBus.ModifierType.SHIFT_MASK) !== 0;
+                    if (isShift) {
+                        decSelection(engine);
+                    } else {
+                        incSelection(engine);
+                    }
+                    return true;
+                } else {
+                    commitCandidateWithSuffix(engine, "\t");
+                    return true;
+                }
             }
         } else if (keyval === IBus.period || keyval === 46) {
             // Bengali Dari '।'
@@ -231,6 +276,21 @@ if (bus.is_connected()) {
             } else if (engine.buffertext.length > 0) {
                 commitCandidate(engine);
                 return false;
+            }
+        }
+
+        // Number keys 1-9: when suggestions exist, select and commit candidate
+        if (engine.buffertext.length > 0 && engine.currentSuggestions.length > 1) {
+            let numIdx = -1;
+            if (keyval >= 49 && keyval <= 57) { // '1'..'9'
+                numIdx = keyval - 49;
+            } else if (keyval >= IBus.KP_1 && keyval <= IBus.KP_9) {
+                numIdx = keyval - IBus.KP_1;
+            }
+            if (numIdx >= 0 && numIdx < engine.currentSuggestions.length) {
+                engine.currentSelection = numIdx;
+                commitCandidate(engine);
+                return true;
             }
         }
 
@@ -332,6 +392,7 @@ if (bus.is_connected()) {
             try {
                 if (engine.setting) engine.setting.set_boolean('mode-bangla', engine.mode_bangla);
             } catch (e) {}
+            broadcastUI({ type: "mode", bangla: engine.mode_bangla });
         }
     }
 
@@ -392,6 +453,7 @@ if (bus.is_connected()) {
         engine.hide_preedit_text();
         engine.hide_auxiliary_text();
         engine.hide_lookup_table();
+        broadcastUI({ type: "hide" });
     }
     
     function updateCurrentSuggestions(engine) {
@@ -412,6 +474,12 @@ if (bus.is_connected()) {
         if (engine.currentSelection < 0) engine.currentSelection = 0;
         
         fillLookupTable(engine);
+        broadcastUI({
+            type: "composition",
+            raw: engine.buffertext,
+            candidates: engine.currentSuggestions,
+            selected: engine.currentSelection
+        });
     }
     
     function fillLookupTable(engine) {
@@ -496,6 +564,12 @@ if (bus.is_connected()) {
         preeditCandidate(engine);
         
         suggestionBuilder.updateCandidateSelection(engine.buffertext, engine.currentSuggestions[engine.currentSelection]);
+        broadcastUI({
+            type: "composition",
+            raw: engine.buffertext,
+            candidates: engine.currentSuggestions,
+            selected: engine.currentSelection
+        });
     }
     
     function decSelection(engine) {
@@ -507,6 +581,12 @@ if (bus.is_connected()) {
         preeditCandidate(engine);
         
         suggestionBuilder.updateCandidateSelection(engine.buffertext, engine.currentSuggestions[engine.currentSelection]);
+        broadcastUI({
+            type: "composition",
+            raw: engine.buffertext,
+            candidates: engine.currentSuggestions,
+            selected: engine.currentSelection
+        });
     }
     
     function runPreferences() {

@@ -45,6 +45,7 @@ install: build
 	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/avro-core/suggestions
 	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/preferences
 	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/standalone
+	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/ui
 	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/icons
 
 	# System integration directories
@@ -70,6 +71,9 @@ install: build
 	install -m 0755 bin/avro-converter $(DESTDIR)$(prefix)/bin/avro-converter
 	install -m 0755 bin/avro-layout $(DESTDIR)$(prefix)/bin/avro-layout
 	install -m 0755 bin/avro-preferences $(DESTDIR)$(prefix)/bin/avro-preferences
+	install -m 0755 bin/avro-doctor $(DESTDIR)$(prefix)/bin/avro-doctor
+	install -m 0755 bin/avro-linux-doctor $(DESTDIR)$(prefix)/bin/avro-linux-doctor
+	install -m 0755 bin/avro-preview $(DESTDIR)$(prefix)/bin/avro-preview
 
 	# Common & Engine scripts
 	install -m 0644 src/common/evars.js $(DESTDIR)$(pkgdatadir)/common/evars.js
@@ -81,6 +85,8 @@ install: build
 	install -m 0755 src/standalone/avropad.js $(DESTDIR)$(pkgdatadir)/standalone/avropad.js
 	install -m 0755 src/standalone/bijoyconverter.js $(DESTDIR)$(pkgdatadir)/standalone/bijoyconverter.js
 	install -m 0755 src/standalone/layoutviewer.js $(DESTDIR)$(pkgdatadir)/standalone/layoutviewer.js
+	install -m 0755 src/standalone/doctor.js $(DESTDIR)$(pkgdatadir)/standalone/doctor.js
+	install -m 0755 src/ui/floating-preview.js $(DESTDIR)$(pkgdatadir)/ui/floating-preview.js
 
 	# Avro Core components
 	install -m 0644 src/avro-core/phonetic/avrolib.js $(DESTDIR)$(pkgdatadir)/avro-core/phonetic/avrolib.js
@@ -106,6 +112,8 @@ install: build
 	install -m 0644 data/applications/avro-pad.desktop $(DESTDIR)$(datadir)/applications/avro-pad.desktop
 	install -m 0644 data/applications/avro-converter.desktop $(DESTDIR)$(datadir)/applications/avro-converter.desktop
 	install -m 0644 data/applications/avro-layout.desktop $(DESTDIR)$(datadir)/applications/avro-layout.desktop
+	install -m 0644 data/applications/avro-doctor.desktop $(DESTDIR)$(datadir)/applications/avro-doctor.desktop
+	install -m 0644 data/applications/avro-preview.desktop $(DESTDIR)$(datadir)/applications/avro-preview.desktop
 	install -m 0644 data/applications/ibus-setup-avro.desktop $(DESTDIR)$(datadir)/applications/ibus-setup-avro.desktop
 	install -m 0644 data/metainfo/com.github.sarim.ibus.avro.metainfo.xml $(DESTDIR)$(datadir)/metainfo/com.github.sarim.ibus.avro.metainfo.xml
 
@@ -126,6 +134,10 @@ install: build
 	install -m 0644 NOTICE $(DESTDIR)$(datadir)/doc/avro-linux/NOTICE
 	install -m 0644 debian/changelog $(DESTDIR)$(datadir)/doc/avro-linux/changelog.Debian
 	install -m 0644 docs/compatibility.md $(DESTDIR)$(datadir)/doc/avro-linux/compatibility.md
+	install -m 0644 docs/compatibility-matrix.md $(DESTDIR)$(datadir)/doc/avro-linux/compatibility-matrix.md
+	install -m 0644 docs/windows-avro-behavior.md $(DESTDIR)$(datadir)/doc/avro-linux/windows-avro-behavior.md
+	install -m 0644 docs/linux-input-architecture.md $(DESTDIR)$(datadir)/doc/avro-linux/linux-input-architecture.md
+	install -m 0644 docs/desktop-integration.md $(DESTDIR)$(datadir)/doc/avro-linux/desktop-integration.md
 	install -m 0644 docs/licensing-notes.md $(DESTDIR)$(datadir)/doc/avro-linux/licensing-notes.md
 	install -m 0644 docs/FINAL_RELEASE_REPORT.md $(DESTDIR)$(datadir)/doc/avro-linux/FINAL_RELEASE_REPORT.md
 
