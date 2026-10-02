@@ -475,6 +475,16 @@ function saveTheme(themeName) {
     } catch (e) {}
 }
 
+/* Turn the engine's Windows-style Preview Window on or off. */
+function togglePreviewWindow() {
+    try {
+        let s = new Gio.Settings({ schema_id: "com.omicronlab.avro" });
+        s.set_boolean("switch-preview", !s.get_boolean("switch-preview"));
+    } catch (e) {
+        GLib.spawn_command_line_async("avro-preview");
+    }
+}
+
 function isAutostartEnabled() {
     let autostartDir = GLib.get_user_config_dir() + "/autostart";
     let autostartFile = Gio.File.new_for_path(autostartDir + "/avro-topbar.desktop");
@@ -652,10 +662,8 @@ function runAvroTopBar() {
     });
     menu.append(itemMouse);
 
-    let itemPreview = new Gtk.MenuItem({ label: "Floating Candidate Preview Window" });
-    itemPreview.connect("activate", () => {
-        GLib.spawn_command_line_async("avro-preview");
-    });
+    let itemPreview = new Gtk.MenuItem({ label: "Show / Hide Preview Window" });
+    itemPreview.connect("activate", () => togglePreviewWindow());
     menu.append(itemPreview);
 
     let itemDoctor = new Gtk.MenuItem({ label: "Avro Doctor — Diagnostics & Health Check" });
@@ -846,8 +854,8 @@ function runAvroTopBar() {
         else GLib.spawn_command_line_async("avro-mouse");
     }), false, false, 0);
 
-    toolsBox.pack_start(makeToolBtn("👁", "Toggle Floating Candidate Preview Window", () => {
-        GLib.spawn_command_line_async("avro-preview");
+    toolsBox.pack_start(makeToolBtn("👁", "Show / Hide Preview Window", () => {
+        togglePreviewWindow();
     }), false, false, 0);
 
     toolsBox.pack_start(makeToolBtn("🩺", "Avro Doctor — Diagnostics & Health Check", () => {

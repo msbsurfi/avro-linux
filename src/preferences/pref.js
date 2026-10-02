@@ -136,9 +136,9 @@ function runpref() {
     // Preview Window Toggle
     let previewBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12 });
     let previewLabelBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
-    let previewTitle = new Gtk.Label({ label: "<b>Show Preview / Candidate Window</b>", use_markup: true, xalign: 0 });
+    let previewTitle = new Gtk.Label({ label: "<b>Show Preview Window</b>", use_markup: true, xalign: 0 });
     let previewSubtitle = new Gtk.Label({
-        label: "Displays auxiliary Latin text and Bengali candidates while typing",
+        label: "Shows the English text you type and the Bangla suggestions next to the cursor",
         xalign: 0
     });
     previewSubtitle.get_style_context().add_class("dim-label");
@@ -149,11 +149,42 @@ function runpref() {
     previewBox.pack_end(switchPreview, false, false, 0);
     generalBox.pack_start(previewBox, false, false, 0);
 
+    // Preview window style
+    let styleBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12 });
+    let styleLabelBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
+    let styleTitle = new Gtk.Label({ label: "<b>Preview Window Style</b>", use_markup: true, xalign: 0 });
+    let styleSubtitle = new Gtk.Label({ label: "Avro's Windows-style window, or your desktop's candidate panel", xalign: 0 });
+    styleSubtitle.get_style_context().add_class("dim-label");
+    styleLabelBox.pack_start(styleTitle, false, false, 0);
+    styleLabelBox.pack_start(styleSubtitle, false, false, 0);
+    let cboxStyle = new Gtk.ComboBoxText({ valign: Gtk.Align.CENTER });
+    cboxStyle.append("auto", "Automatic");
+    cboxStyle.append("classic", "Avro (Windows style)");
+    cboxStyle.append("system", "Desktop panel (IBus)");
+    styleBox.pack_start(styleLabelBox, true, true, 0);
+    styleBox.pack_end(cboxStyle, false, false, 0);
+    generalBox.pack_start(styleBox, false, false, 0);
+
+    // Preview window theme
+    let themeBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12 });
+    let themeLabelBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
+    let themeTitle = new Gtk.Label({ label: "<b>Preview Window Theme</b>", use_markup: true, xalign: 0 });
+    let themeSubtitle = new Gtk.Label({ label: "Colours of the Windows-style Preview Window", xalign: 0 });
+    themeSubtitle.get_style_context().add_class("dim-label");
+    themeLabelBox.pack_start(themeTitle, false, false, 0);
+    themeLabelBox.pack_start(themeSubtitle, false, false, 0);
+    let cboxTheme = new Gtk.ComboBoxText({ valign: Gtk.Align.CENTER });
+    cboxTheme.append("classic", "Classic (light)");
+    cboxTheme.append("dark", "Dark");
+    themeBox.pack_start(themeLabelBox, true, true, 0);
+    themeBox.pack_end(cboxTheme, false, false, 0);
+    generalBox.pack_start(themeBox, false, false, 0);
+
     // Orientation selector
     let orientBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12 });
     let orientLabelBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
     let orientTitle = new Gtk.Label({ label: "<b>Candidate List Orientation</b>", use_markup: true, xalign: 0 });
-    let orientSubtitle = new Gtk.Label({ label: "Display suggestion candidates horizontally or vertically", xalign: 0 });
+    let orientSubtitle = new Gtk.Label({ label: "Direction of the list in the desktop (IBus) candidate panel", xalign: 0 });
     orientSubtitle.get_style_context().add_class("dim-label");
     orientLabelBox.pack_start(orientTitle, false, false, 0);
     orientLabelBox.pack_start(orientSubtitle, false, false, 0);
@@ -169,11 +200,14 @@ function runpref() {
     let toolsFrame = new Gtk.Frame({ label: " Avro Desktop Tools " });
     let toolsBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8, margin: 10 });
     let btnLaunchTopbar = new Gtk.Button({ label: "🚀 Avro TopBar" });
-    let btnLaunchPreview = new Gtk.Button({ label: "👁 Candidate Preview" });
+    let btnLaunchPreview = new Gtk.Button({ label: "👁 Preview Demo" });
     let btnLaunchDoctor = new Gtk.Button({ label: "🩺 Avro Doctor" });
 
     btnLaunchTopbar.connect("clicked", () => GLib.spawn_command_line_async("avro-topbar"));
-    btnLaunchPreview.connect("clicked", () => GLib.spawn_command_line_async("avro-preview"));
+    btnLaunchPreview.connect("clicked", () => {
+        let theme = cboxTheme.get_active_id() || "classic";
+        GLib.spawn_command_line_async("avro-preview --demo amader --theme " + theme + " --timeout 8");
+    });
     btnLaunchDoctor.connect("clicked", () => GLib.spawn_command_line_async("avro-doctor"));
 
     toolsBox.pack_start(btnLaunchTopbar, true, true, 0);
@@ -199,6 +233,11 @@ function runpref() {
         dialog.destroy();
         if (res === Gtk.ResponseType.OK && setting) {
             setting.reset("switch-preview");
+            setting.reset("preview-style");
+            setting.reset("preview-theme");
+            setting.reset("preview-pinned");
+            setting.reset("preview-pin-x");
+            setting.reset("preview-pin-y");
             setting.reset("switch-dict");
             setting.reset("switch-newline");
             setting.reset("lutable-size");
@@ -480,6 +519,8 @@ function runpref() {
             switchNewline.set_active(setting.get_boolean("switch-newline"));
             spinSize.set_value(setting.get_int("lutable-size"));
             cboxOrient.set_active(setting.get_int("cboxorient"));
+            cboxStyle.set_active_id(setting.get_string("preview-style"));
+            cboxTheme.set_active_id(setting.get_string("preview-theme"));
             updateSensitivities();
         } catch (e) {}
     }
@@ -490,6 +531,8 @@ function runpref() {
         switchNewline.set_sensitive(previewActive);
         spinSize.set_sensitive(previewActive);
         cboxOrient.set_sensitive(previewActive);
+        cboxStyle.set_sensitive(previewActive);
+        cboxTheme.set_sensitive(previewActive);
     }
 
     if (setting) {
@@ -498,7 +541,9 @@ function runpref() {
         setting.bind("switch-newline", switchNewline, "active", Gio.SettingsBindFlags.DEFAULT);
         setting.bind("lutable-size", spinSize, "value", Gio.SettingsBindFlags.DEFAULT);
         setting.bind("cboxorient", cboxOrient, "active", Gio.SettingsBindFlags.DEFAULT);
-        
+        setting.bind("preview-style", cboxStyle, "active-id", Gio.SettingsBindFlags.DEFAULT);
+        setting.bind("preview-theme", cboxTheme, "active-id", Gio.SettingsBindFlags.DEFAULT);
+
         switchPreview.connect("notify::active", function() {
             updateSensitivities();
         });

@@ -32,6 +32,7 @@ function init_search_paths(baseDir) {
         dir + "/avro-core/autocorrect",
         dir + "/avro-core/suggestions",
         dir + "/preferences",
+        dir + "/ui",
         // Source tree fallback layout
         dir + "/src",
         dir + "/src/common",
@@ -41,7 +42,8 @@ function init_search_paths(baseDir) {
         dir + "/src/avro-core/dictionary",
         dir + "/src/avro-core/autocorrect",
         dir + "/src/avro-core/suggestions",
-        dir + "/src/preferences"
+        dir + "/src/preferences",
+        dir + "/src/ui"
     ];
 
     for (let i = 0; i < paths.length; i++) {

@@ -2,7 +2,7 @@
 <schemalist>
   <schema id="com.omicronlab.avro" path="/com/omicronlab/avro/">
     <key type="b" name="switch-preview">
-      <default>false</default>
+      <default>true</default>
       <summary>switch-preview</summary>
       <description>Whether Preview window (auxiliary text, suggestions) will be shown</description>
     </key>
@@ -21,13 +21,47 @@
       <range min="5" max="15"/>
       <summary>lutable-size</summary>
       <description>Dictionary suggestion lookup table size</description>
-    </key>    
+    </key>
     <key type="i" name="cboxorient">
-      <default>0</default>
+      <default>1</default>
       <range min="0" max="1"/>
       <summary>cboxorient</summary>
-      <description>Orientation of Lookup Table</description>
-    </key>    
+      <description>Orientation of the desktop (IBus) candidate list: 0 = horizontal, 1 = vertical</description>
+    </key>
+    <key type="s" name="preview-style">
+      <choices>
+        <choice value="auto"/>
+        <choice value="classic"/>
+        <choice value="system"/>
+      </choices>
+      <default>'auto'</default>
+      <summary>Preview window style</summary>
+      <description>'classic' shows Avro's own Windows-style Preview Window, 'system' uses the desktop's IBus candidate panel, 'auto' picks classic wherever it can be positioned (X11/XWayland) and the desktop panel on GNOME Wayland</description>
+    </key>
+    <key type="s" name="preview-theme">
+      <choices>
+        <choice value="classic"/>
+        <choice value="dark"/>
+      </choices>
+      <default>'classic'</default>
+      <summary>Preview window theme</summary>
+      <description>Colour theme of the Windows-style Preview Window</description>
+    </key>
+    <key type="b" name="preview-pinned">
+      <default>false</default>
+      <summary>Preview window pinned</summary>
+      <description>Whether the Preview Window stays at a fixed position instead of following the text cursor</description>
+    </key>
+    <key type="i" name="preview-pin-x">
+      <default>-1</default>
+      <summary>Pinned preview window X position</summary>
+      <description>Screen X position of the pinned Preview Window (-1 = not set)</description>
+    </key>
+    <key type="i" name="preview-pin-y">
+      <default>-1</default>
+      <summary>Pinned preview window Y position</summary>
+      <description>Screen Y position of the pinned Preview Window (-1 = not set)</description>
+    </key>
     <key type="b" name="mode-bangla">
       <default>true</default>
       <summary>Input Mode</summary>
