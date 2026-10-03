@@ -26,13 +26,13 @@
     =============================================================================
 */
 
+const GLib = imports.gi.GLib;
+if (GLib.getenv("DISPLAY")) {
+    GLib.setenv("GDK_BACKEND", "x11", true);
+}
+
 const IBus = imports.gi.IBus;
 const Gio = imports.gi.Gio;
-const GLib = imports.gi.GLib;
-
-if (GLib.getenv("DISPLAY")) {
-    GLib.setenv("GDK_BACKEND", "x11", false);
-}
 
 // Determine base directory and configure module search paths
 let baseDir = '/usr/share/avro-linux';
@@ -150,7 +150,7 @@ if (bus.is_connected()) {
         engine.connect('set-content-type', engine_set_content_type);
         engine.connect('set-cursor-location', function(eng, x, y, w, h) {
             eng.cursorRect = { x: x, y: y, w: w, h: h };
-            if (previewUI && previewOwner === eng) {
+            if (previewUI) {
                 previewUI.setCursorLocation(eng.cursorRect);
             }
         });
@@ -576,6 +576,7 @@ if (bus.is_connected()) {
             focusOutTimeoutId = 0;
         }
         engine.altGrDown = false;
+        engine.cursorRect = null;
         if ((engine.buffertext && engine.buffertext.length > 0) || (engine.typer && !engine.typer.isEmpty())) {
             // Debounce by 80ms: in Wayland/KWin environments where a window maps or
             // focus momentarily bounces, focus_in cancels this timer before composition is aborted.
@@ -1099,7 +1100,7 @@ if (bus.is_connected()) {
             license: "MPL-2.0",
             author: "Sarim Khan <sarim2005@gmail.com>",
             homepage: "https://github.com/msbsurfi/avro-linux",
-            exec: eevars.get_pkgdatadir() + "/engine/main-gjs.js --ibus",
+            exec: eevars.get_pkgdatadir() + "/engine/avro-engine --ibus",
             textdomain: "avro-linux"
         });
     }

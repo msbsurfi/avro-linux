@@ -19,12 +19,19 @@
     =============================================================================
 */
 
+const GLib = imports.gi.GLib;
+if (GLib.getenv("DISPLAY")) {
+    GLib.setenv("GDK_BACKEND", "x11", true);
+}
+
 imports.gi.versions.Gtk = '3.0';
 imports.gi.versions.Gdk = '3.0';
 const Gtk = imports.gi.Gtk;
 const Gdk = imports.gi.Gdk;
+try {
+    Gdk.set_allowed_backends("x11");
+} catch (e) {}
 const GdkPixbuf = imports.gi.GdkPixbuf;
-const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 
 const SCHEMA_ID = "com.omicronlab.avro";

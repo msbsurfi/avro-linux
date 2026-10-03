@@ -3,7 +3,7 @@
 <component>
 	<name>org.freedesktop.IBus.Avro</name>
 	<description>Avro Phonetic Bengali Input Method</description>
-	<exec>@pkgdatadir@/engine/main-gjs.js --ibus</exec>
+	<exec>@pkgdatadir@/engine/avro-engine --ibus</exec>
 	<version>@version@</version>
 	<author>Sarim Khan &lt;sarim2005@gmail.com&gt;</author>
 	<license>MPL-2.0</license>

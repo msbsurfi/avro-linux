@@ -1,0 +1,16 @@
+#!/bin/sh
+# Launcher for Avro Linux IBus Engine with X11/XWayland display backend
+# SPDX-License-Identifier: MPL-2.0
+# Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)
+
+# Enforce X11/XWayland backend so the preview window can be placed at caret coordinates
+if [ -n "$DISPLAY" ]; then
+    export GDK_BACKEND=x11
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -f "${SCRIPT_DIR}/src/engine/main-gjs.js" ]; then
+    exec /usr/bin/env gjs "${SCRIPT_DIR}/src/engine/main-gjs.js" "$@"
+else
+    exec /usr/bin/env gjs /usr/share/avro-linux/engine/main-gjs.js "$@"
+fi

@@ -94,11 +94,13 @@ install: build
 	install -m 0755 bin/avro-preview $(DESTDIR)$(prefix)/bin/avro-preview
 	install -m 0755 bin/avro-mouse $(DESTDIR)$(prefix)/bin/avro-mouse
 	install -m 0755 bin/avro-splash $(DESTDIR)$(prefix)/bin/avro-splash
+	install -m 0755 bin/avro-engine $(DESTDIR)$(prefix)/bin/avro-engine
 
 	# Common & Engine scripts
 	install -m 0644 src/common/evars.js $(DESTDIR)$(pkgdatadir)/common/evars.js
 	install -m 0644 src/common/autostart.js $(DESTDIR)$(pkgdatadir)/common/autostart.js
 	install -m 0644 src/common/avrotheme.js $(DESTDIR)$(pkgdatadir)/common/avrotheme.js
+	install -m 0755 src/engine/avro-engine $(DESTDIR)$(pkgdatadir)/engine/avro-engine
 	install -m 0755 src/engine/main-gjs.js $(DESTDIR)$(pkgdatadir)/engine/main-gjs.js
 
 	# Standalone application suite
