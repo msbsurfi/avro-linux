@@ -65,11 +65,14 @@ install: build
 	install -d -m 0755 $(DESTDIR)$(datadir)/pixmaps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/16x16/apps
+	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/22x22/apps
+	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/24x24/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/32x32/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/48x48/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/64x64/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/128x128/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/256x256/apps
+	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/images
 	install -d -m 0755 $(DESTDIR)$(datadir)/doc/avro-linux
 	install -d -m 0755 $(DESTDIR)$(datadir)/fontconfig/conf.avail
 	install -d -m 0755 $(DESTDIR)$(sysconfdir)/fonts/conf.d
@@ -142,11 +145,16 @@ install: build
 	install -m 0644 data/icons/avro-bangla.png $(DESTDIR)$(datadir)/pixmaps/avro-bangla.png
 	install -m 0644 data/icons/avro-bangla.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps/avro-bangla.svg
 	install -m 0644 data/icons/16x16/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/16x16/apps/avro-bangla.png
+	install -m 0644 data/icons/22x22/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/22x22/apps/avro-bangla.png
+	install -m 0644 data/icons/24x24/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/24x24/apps/avro-bangla.png
 	install -m 0644 data/icons/32x32/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/32x32/apps/avro-bangla.png
-	install -m 0644 data/icons/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/48x48/apps/avro-bangla.png
+	install -m 0644 data/icons/48x48/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/48x48/apps/avro-bangla.png
 	install -m 0644 data/icons/64x64/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/64x64/apps/avro-bangla.png
 	install -m 0644 data/icons/128x128/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/128x128/apps/avro-bangla.png
 	install -m 0644 data/icons/256x256/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/256x256/apps/avro-bangla.png
+
+	# Images & Splash
+	install -m 0644 data/images/splash.jpg $(DESTDIR)$(pkgdatadir)/images/splash.jpg
 
 	# Documentation
 	install -m 0644 README.md $(DESTDIR)$(datadir)/doc/avro-linux/README.md

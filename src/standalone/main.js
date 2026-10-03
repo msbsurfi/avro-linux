@@ -101,12 +101,21 @@ function main() {
 
     // The TopBar must be able to place itself and stay on top: only X11
     // (or XWayland) allows that, so it never uses a native Wayland connection.
-    let isTopBar = !args.some(a => TOOL_FLAGS.indexOf(a) !== -1);
-    if (isTopBar && GLib.getenv('DISPLAY')) {
-        try { Gdk.set_allowed_backends('x11'); } catch (e) {}
-    }
+    // Set prgname before Gtk.init so Wayland app_id and taskbar icons match correctly
+    let prgName = "avro-topbar";
+    if (args.indexOf('--pad') !== -1) prgName = "avro-pad";
+    else if (args.indexOf('--converter') !== -1) prgName = "avro-converter";
+    else if (args.indexOf('--layout') !== -1) prgName = "avro-layout";
+    else if (args.indexOf('--mouse') !== -1 || args.indexOf('-m') !== -1) prgName = "avro-mouse";
+    else if (args.indexOf('--preferences') !== -1) prgName = "avro-preferences";
+
+    try {
+        GLib.set_prgname(prgName);
+        GLib.set_application_name("Avro Keyboard");
+    } catch (e) {}
 
     Gtk.init(null);
+    try { Gtk.Window.set_default_icon_name("avro-bangla"); } catch (e) {}
 
     if (args.indexOf('--pad') !== -1) {
         if (AvroPad && AvroPad.runAvroPad) {

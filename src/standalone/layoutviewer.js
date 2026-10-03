@@ -74,12 +74,20 @@ const KEYBOARD_ROWS = [
 ];
 
 function runLayoutViewerDialog(parentWindow) {
+    try {
+        GLib.set_prgname("avro-layout");
+        GLib.set_application_name("Avro Layout Viewer");
+    } catch (e) {}
+
     let window = new Gtk.Window({
         title: "Avro Phonetic Keyboard Layout Viewer",
         default_width: 760,
         default_height: 540,
         window_position: Gtk.WindowPosition.CENTER
     });
+    window.set_icon_name("avro-bangla");
+    try { window.set_wmclass("avro-layout", "AvroLayout"); } catch (e) {}
+    try { Gtk.Window.set_default_icon_name("avro-bangla"); } catch (e) {}
 
     if (parentWindow) {
         window.set_transient_for(parentWindow);

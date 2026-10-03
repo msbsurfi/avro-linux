@@ -914,6 +914,12 @@ if (bus.is_connected()) {
     } else {
         bus.register_component(component);
     }
+
+    // Ensure IBus floating property panel is disabled (prevents unwanted 8.8x32.8 window)
+    try {
+        GLib.spawn_command_line_async("gsettings set org.freedesktop.ibus.panel show 0");
+    } catch (e) {}
+
     IBus.main();
 } else {
     print("Exiting because IBus Bus not found, maybe the daemon is not running?");

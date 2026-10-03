@@ -215,6 +215,10 @@ scrolledwindow {
    runAvroPad()
    ═══════════════════════════════════════════════════════════════════════════ */
 function runAvroPad(initialText) {
+    try {
+        GLib.set_prgname("avro-pad");
+        GLib.set_application_name("Avro Pad");
+    } catch (e) {}
 
     /* Apply global CSS */
     let cssProvider = new Gtk.CssProvider();
@@ -234,7 +238,9 @@ function runAvroPad(initialText) {
         default_height: 660,
         window_position: Gtk.WindowPosition.CENTER
     });
-    window.set_icon_name("accessories-text-editor");
+    window.set_icon_name("avro-bangla");
+    try { window.set_wmclass("avro-pad", "AvroPad"); } catch (e) {}
+    try { Gtk.Window.set_default_icon_name("avro-bangla"); } catch (e) {}
 
     /* Suggestion builder */
     let sBuilder = null;

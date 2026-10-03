@@ -32,6 +32,11 @@ const Pango = imports.gi.Pango;
 const PangoCairo = imports.gi.PangoCairo;
 const Cairo = imports.cairo;
 
+try {
+    GLib.set_prgname("avro-topbar");
+    GLib.set_application_name("Avro Keyboard");
+} catch (e) {}
+
 let IBus = null;
 try { IBus = imports.gi.IBus; } catch (e) {}
 
@@ -837,7 +842,22 @@ var AvroTopBar = class AvroTopBar {
         if (this.app) {
             win.set_application(this.app);
         }
+        win.set_icon_name("avro-bangla");
         try { win.set_wmclass("avro-topbar", "AvroTopBar"); } catch (e) {}
+        try { Gtk.Window.set_default_icon_name("avro-bangla"); } catch (e) {}
+        try {
+            let iconCandidates = [
+                "/usr/share/icons/hicolor/256x256/apps/avro-bangla.png",
+                baseDir + "/icons/avro-bangla.png",
+                GLib.get_current_dir() + "/data/icons/256x256/avro-bangla.png"
+            ];
+            for (let ic of iconCandidates) {
+                if (GLib.file_test(ic, GLib.FileTest.EXISTS)) {
+                    win.set_icon_from_file(ic);
+                    break;
+                }
+            }
+        } catch (e) {}
         win.set_type_hint(Gdk.WindowTypeHint.DOCK);
         win.set_keep_above(true);
         win.stick();
@@ -1683,10 +1703,20 @@ var AvroTopBar = class AvroTopBar {
                            Gdk.Gravity.NORTH_WEST, Gtk.get_current_event());
     }
 
-    /* ── system tray (shown only while the bar is hidden) ───────────── */
+    /* ── system tray (modern StatusNotifierItem + fallback Gtk.StatusIcon) ───────────── */
 
     _buildTray() {
         this.tray = null;
+        this.sniRegistered = false;
+        this._sniBus = null;
+        this._sniObjId = 0;
+
+        // 1. Modern DBus StatusNotifierItem for KDE Plasma 6, GNOME, etc.
+        try {
+            this._buildStatusNotifierItem();
+        } catch (e) {}
+
+        // 2. Fallback Gtk.StatusIcon for legacy X11 desktops
         try {
             this.tray = new Gtk.StatusIcon();
             this.tray.set_title("Avro Keyboard");
@@ -1707,6 +1737,108 @@ var AvroTopBar = class AvroTopBar {
             });
         } catch (e) {
             this.tray = null;
+        }
+    }
+
+    _buildStatusNotifierItem() {
+        const SNI_XML = `<node>
+  <interface name="org.kde.StatusNotifierItem">
+    <property name="Category" type="s" access="read"/>
+    <property name="Id" type="s" access="read"/>
+    <property name="Title" type="s" access="read"/>
+    <property name="Status" type="s" access="read"/>
+    <property name="IconName" type="s" access="read"/>
+    <property name="IconThemePath" type="s" access="read"/>
+    <property name="ItemIsMenu" type="b" access="read"/>
+    <method name="ContextMenu">
+      <arg type="i" name="x" direction="in"/>
+      <arg type="i" name="y" direction="in"/>
+    </method>
+    <method name="Activate">
+      <arg type="i" name="x" direction="in"/>
+      <arg type="i" name="y" direction="in"/>
+    </method>
+    <method name="SecondaryActivate">
+      <arg type="i" name="x" direction="in"/>
+      <arg type="i" name="y" direction="in"/>
+    </method>
+    <method name="Scroll">
+      <arg type="i" name="delta" direction="in"/>
+      <arg type="s" name="orientation" direction="in"/>
+    </method>
+    <signal name="NewTitle"/>
+    <signal name="NewIcon"/>
+    <signal name="NewToolTip"/>
+    <signal name="NewStatus">
+      <arg type="s" name="status"/>
+    </signal>
+  </interface>
+</node>`;
+
+        let bus = Gio.bus_get_sync(Gio.BusType.SESSION, null);
+        if (!bus) return;
+
+        let nodeInfo = Gio.DBusNodeInfo.new_for_xml(SNI_XML);
+        this._sniBus = bus;
+        this._sniObjId = bus.register_object(
+            "/StatusNotifierItem",
+            nodeInfo.interfaces[0],
+            (conn, sender, path, iface, method, params, invocation) => {
+                if (method === "Activate") {
+                    if (!this.window.get_visible()) {
+                        this.restoreBar();
+                    } else {
+                        this.toggleMode();
+                    }
+                    invocation.return_value(null);
+                } else if (method === "ContextMenu") {
+                    let menu = this._trayMenu();
+                    menu.show_all();
+                    menu.connect('deactivate', () => GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                        menu.destroy();
+                        return GLib.SOURCE_REMOVE;
+                    }));
+                    menu.popup_at_pointer(null);
+                    invocation.return_value(null);
+                } else if (method === "SecondaryActivate") {
+                    if (this.window.get_visible()) {
+                        this.hideToTray();
+                    } else {
+                        this.restoreBar();
+                    }
+                    invocation.return_value(null);
+                } else {
+                    invocation.return_value(null);
+                }
+            },
+            (conn, sender, path, iface, prop) => {
+                if (prop === "Category") return new GLib.Variant("s", "ApplicationStatus");
+                if (prop === "Id") return new GLib.Variant("s", "avro-topbar");
+                if (prop === "Title") return new GLib.Variant("s", "Avro Keyboard");
+                if (prop === "Status") return new GLib.Variant("s", "Active");
+                if (prop === "IconName") return new GLib.Variant("s", "avro-bangla");
+                if (prop === "IconThemePath") return new GLib.Variant("s", "/usr/share/icons/hicolor");
+                if (prop === "ItemIsMenu") return new GLib.Variant("b", false);
+                return null;
+            },
+            null
+        );
+
+        try {
+            bus.call_sync(
+                "org.kde.StatusNotifierWatcher",
+                "/StatusNotifierWatcher",
+                "org.kde.StatusNotifierWatcher",
+                "RegisterStatusNotifierItem",
+                new GLib.Variant("(s)", ["/StatusNotifierItem"]),
+                null,
+                Gio.DBusCallFlags.NONE,
+                -1,
+                null
+            );
+            this.sniRegistered = true;
+        } catch (e) {
+            this.sniRegistered = false;
         }
     }
 
@@ -1733,38 +1865,46 @@ var AvroTopBar = class AvroTopBar {
     }
 
     _updateTray(size) {
-        if (!this.tray) return;
-        if (size) this._traySize = size;
-        let px = this._traySize || 22;
-        this.tray.set_from_pixbuf(iconPixbuf(this.bangla ? 'bangla' : 'english', px, 'dark'));
-        let f12 = (!this.engine || isAvroEngine(this.engine)) && isAvroEngine(this._banglaLayout().name);
-        let text = this.bangla
-            ? "Avro Keyboard.\nRunning Bangla Keyboard Mode.\n" + (f12 ? "Press F12 to switch to English." : "Click to switch to English.")
-            : "Avro Keyboard.\nRunning English Keyboard Mode.\n" + (f12 ? "Press F12 to switch to Bangla." : "Click to switch to Bangla.");
-        this.tray.set_tooltip_text(text);
+        if (this.tray) {
+            if (size) this._traySize = size;
+            let px = this._traySize || 22;
+            this.tray.set_from_pixbuf(iconPixbuf(this.bangla ? 'bangla' : 'english', px, 'dark'));
+            let f12 = (!this.engine || isAvroEngine(this.engine)) && isAvroEngine(this._banglaLayout().name);
+            let text = this.bangla
+                ? "Avro Keyboard.\nRunning Bangla Keyboard Mode.\n" + (f12 ? "Press F12 to switch to English." : "Click to switch to English.")
+                : "Avro Keyboard.\nRunning English Keyboard Mode.\n" + (f12 ? "Press F12 to switch to Bangla." : "Click to switch to Bangla.");
+            this.tray.set_tooltip_text(text);
+        }
+        if (this._sniBus && this.sniRegistered) {
+            try {
+                this._sniBus.emit_signal(null, "/StatusNotifierItem", "org.kde.StatusNotifierItem", "NewIcon", null);
+                this._sniBus.emit_signal(null, "/StatusNotifierItem", "org.kde.StatusNotifierItem", "NewToolTip", null);
+            } catch (e) {}
+        }
     }
 
     hideToTray() {
-        if (!this.tray) return;
         let [x] = this.window.get_position();
         if (this.window.get_visible()) this.settings.set('topbar-x', x);
         this.window.hide();
         this._updateTray();
-        this.tray.set_visible(true);
+        if (this.tray) this.tray.set_visible(true);
         this.settings.set('topbar-last-ui', 'tray');
         let shown = this.settings.get('tray-hint-count', 0);
         if (shown < 2) {
             this.settings.set('tray-hint-count', shown + 1);
-            this._notify("Avro Keyboard", "Avro Keyboard is running here.");
+            this._notify("Avro Keyboard", "Avro Keyboard is running in the system tray.");
         }
-        // Without a system tray the bar would be lost: bring it back.
-        GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1500, () => {
-            if (this.tray && this.tray.get_visible() && !this.tray.is_embedded()) {
-                this.restoreBar();
-                this._notify("Avro TopBar", "This desktop has no system tray, so the TopBar stays on screen.");
-            }
-            return GLib.SOURCE_REMOVE;
-        });
+        // Only if NEITHER SNI nor Gtk.StatusIcon is available do we warn and restore:
+        if (!this.sniRegistered && this.tray) {
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1500, () => {
+                if (this.tray && this.tray.get_visible() && !this.tray.is_embedded() && !this.sniRegistered) {
+                    this.restoreBar();
+                    this._notify("Avro TopBar", "This desktop has no system tray, so the TopBar stays on screen.");
+                }
+                return GLib.SOURCE_REMOVE;
+            });
+        }
     }
 
     restoreBar() {
@@ -1868,13 +2008,18 @@ var AvroTopBar = class AvroTopBar {
 
     /* Show according to the start-up setting (TopBar / tray / last used). */
     start(command) {
+        // Enforce IBus panel disabled (prevents unwanted 8.8x32.8 window)
+        try {
+            GLib.spawn_command_line_async("gsettings set org.freedesktop.ibus.panel show 0");
+        } catch (e) {}
+
         let mode = this.settings.get('topbar-startup-ui', 'last');
         if (mode === 'last') mode = this.settings.get('topbar-last-ui', 'topbar');
         if (command === 'minimize') mode = 'tray';
         if (command === 'restore') mode = 'topbar';
 
         this._placeInitialIfNeeded();
-        if (mode === 'tray' && this.tray) {
+        if (mode === 'tray' && (this.tray || this.sniRegistered)) {
             this.hideToTray();
         } else {
             this.restoreBar();
@@ -1883,7 +2028,7 @@ var AvroTopBar = class AvroTopBar {
                 try {
                     let splashModule = imports.splash;
                     if (splashModule && splashModule.showSplashScreen) {
-                        splashModule.showSplashScreen(1800);
+                        splashModule.showSplashScreen(2000);
                     }
                 } catch (e) {}
             }
@@ -1910,9 +2055,16 @@ var AvroTopBar = class AvroTopBar {
             this.settings.set('topbar-x', x);
         }
         if (this.tray) this.tray.set_visible(false);
+        if (this._sniBus && this._sniObjId) {
+            try { this._sniBus.unregister_object(this._sniObjId); } catch (e) {}
+            this._sniObjId = 0;
+        }
         for (let id of this._timers) GLib.source_remove(id);
         this._timers = [];
         this.closed = true;
+        try {
+            GLib.spawn_command_line_async("sh -c 'systemctl --user stop app-avro\\\\x2dtopbar@autostart.service 2>/dev/null || true'");
+        } catch (e) {}
         if (this.app) this.app.quit();
         else this.window.destroy();
     }

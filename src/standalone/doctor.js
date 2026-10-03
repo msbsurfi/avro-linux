@@ -182,6 +182,17 @@ function autoFixIssues() {
     } catch (e) {}
 
     try {
+        let [ok, out] = GLib.spawn_command_line_sync("gsettings get org.freedesktop.ibus.panel show");
+        if (ok && out) {
+            let str = String.fromCharCode.apply(null, out).trim();
+            if (str !== "0") {
+                GLib.spawn_command_line_sync("gsettings set org.freedesktop.ibus.panel show 0");
+                fixed.push("Disabled IBus floating property panel (show=0).");
+            }
+        }
+    } catch (e) {}
+
+    try {
         let [ok, out] = GLib.spawn_command_line_sync("gsettings get org.freedesktop.ibus.general embed-preedit-text");
         if (ok && out) {
             let str = String.fromCharCode.apply(null, out).trim();
@@ -215,7 +226,13 @@ function autoFixIssues() {
    GUI Diagnostic Window & Live Interactive Self-Test
    ═══════════════════════════════════════════════════════════════════════════ */
 function runDoctorGUI() {
+    try {
+        GLib.set_prgname("avro-doctor");
+        GLib.set_application_name("Avro Doctor");
+    } catch (e) {}
+
     Gtk.init(null);
+    try { Gtk.Window.set_default_icon_name("avro-bangla"); } catch (e) {}
 
     let window = new Gtk.Window({
         title: "Avro Doctor — Diagnostics & Interactive Test",
@@ -223,6 +240,8 @@ function runDoctorGUI() {
         default_height: 600,
         window_position: Gtk.WindowPosition.CENTER
     });
+    window.set_icon_name("avro-bangla");
+    try { window.set_wmclass("avro-doctor", "AvroDoctor"); } catch (e) {}
 
     let vbox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 10, margin: 16 });
 

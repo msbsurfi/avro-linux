@@ -170,7 +170,13 @@ notebook tab:checked {
 `;
 
 function runpref() {
+    try {
+        GLib.set_prgname("avro-preferences");
+        GLib.set_application_name("Avro Preferences");
+    } catch (e) {}
+
     Gtk.init(null);
+    try { Gtk.Window.set_default_icon_name("avro-bangla"); } catch (e) {}
 
     let cssProvider = new Gtk.CssProvider();
     try {
@@ -190,6 +196,7 @@ function runpref() {
         default_height: 500,
         window_position: Gtk.WindowPosition.CENTER
     });
+    window.set_icon_name("avro-bangla");
     window.get_style_context().add_class("avro-pref-window");
     try { window.set_wmclass("avro-preferences", "AvroPreferences"); } catch (e) {}
 

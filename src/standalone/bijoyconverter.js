@@ -224,12 +224,20 @@ function bijoyToUnicode(text) {
 }
 
 function runConverterDialog(parentWindow) {
+    try {
+        GLib.set_prgname("avro-converter");
+        GLib.set_application_name("Avro Unicode to Bijoy Converter");
+    } catch (e) {}
+
     let dialog = new Gtk.Window({
         title: "Avro Unicode to Bijoy (ANSI) Converter",
         default_width: 680,
         default_height: 520,
         window_position: Gtk.WindowPosition.CENTER
     });
+    dialog.set_icon_name("avro-bangla");
+    try { dialog.set_wmclass("avro-converter", "AvroConverter"); } catch (e) {}
+    try { Gtk.Window.set_default_icon_name("avro-bangla"); } catch (e) {}
 
     if (parentWindow) {
         dialog.set_transient_for(parentWindow);

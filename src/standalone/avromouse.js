@@ -140,6 +140,11 @@ var runAvroMouse = function runAvroMouse(parentWindow) {
         );
     } catch (e) {}
 
+    try {
+        GLib.set_prgname("avro-mouse");
+        GLib.set_application_name("Avro Mouse");
+    } catch (e) {}
+
     let win = new Gtk.Window({
         type: Gtk.WindowType.TOPLEVEL,
         title: "Avro Mouse — On-Screen Click & Type",
@@ -148,6 +153,9 @@ var runAvroMouse = function runAvroMouse(parentWindow) {
         transient_for: parentWindow || null,
         window_position: Gtk.WindowPosition.CENTER
     });
+    win.set_icon_name("avro-bangla");
+    try { win.set_wmclass("avro-mouse", "AvroMouse"); } catch (e) {}
+    try { Gtk.Window.set_default_icon_name("avro-bangla"); } catch (e) {}
     win.get_style_context().add_class("avro-mouse-window");
 
     let rootBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 0 });
