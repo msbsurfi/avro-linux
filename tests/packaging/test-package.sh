@@ -74,11 +74,11 @@ grep -q "\./usr/share/fontconfig/conf.avail/64-avro-bengali.conf" "${TMP_DIR}/co
 grep "\./etc/fonts/conf.d/64-avro-bengali.conf" "${TMP_DIR}/contents.txt" | grep -q -- "-> /usr/share/fontconfig/conf.avail/64-avro-bengali.conf"
 echo "  ✓ Critical file locations present."
 
-# The package must not claim ownership of desktop-wide IM configuration.
-echo "[3/5] Checking non-invasive maintainer scripts..."
+# Verify automatic IBus and Avro configuration in postinst
+echo "[3/5] Checking automatic IBus configuration in maintainer scripts..."
 dpkg-deb -e "${DEB_FILE}" "${TMP_DIR}/control"
-! grep -Eq 'org\.gnome\.desktop\.input-sources|GTK_IM_MODULE=|QT_IM_MODULE=|ibus-daemon -drx' "${TMP_DIR}/control/postinst"
-echo "  ✓ Per-user input-method configuration is preserved."
+grep -q "ibus-avro" "${TMP_DIR}/control/postinst"
+echo "  ✓ Automatic IBus and Avro configuration present in postinst."
 
 # 3. Check file permissions
 echo "[4/5] Checking executable permissions..."

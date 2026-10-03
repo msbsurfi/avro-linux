@@ -275,6 +275,23 @@ function ensureIBusConfigured() {
                 pe.push('ibus-avro');
                 ibusSettings.set_value('preload-engines', new GLib.Variant('as', pe));
             }
+            try {
+                ibusSettings.set_boolean('embed-preedit-text', true);
+            } catch (e) {}
+        }
+
+        // Check if ibus-daemon is running; if not, launch it
+        let [okRun, outRun] = GLib.spawn_command_line_sync("pgrep -x ibus-daemon");
+        if (!okRun || !outRun || outRun.length === 0) {
+            GLib.spawn_command_line_async("ibus-daemon -drx --panel disable");
+        } else {
+            // Verify if ibus-avro is registered in active daemon
+            let [okEng, outEng] = GLib.spawn_command_line_sync("ibus list-engine");
+            let engStr = (okEng && outEng) ? String.fromCharCode.apply(null, outEng) : "";
+            if (engStr.indexOf("ibus-avro") === -1) {
+                GLib.spawn_command_line_sync("ibus write-cache");
+                GLib.spawn_command_line_sync("sh -c 'systemctl --user restart app-ibus@autostart.service 2>/dev/null || ibus-daemon -drx --replace --panel disable'");
+            }
         }
     } catch (e) {}
 }

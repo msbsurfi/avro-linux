@@ -79,6 +79,8 @@ install: build
 	install -d -m 0755 $(DESTDIR)$(datadir)/fontconfig/conf.avail
 	install -d -m 0755 $(DESTDIR)$(sysconfdir)/fonts/conf.d
 	install -d -m 0755 $(DESTDIR)$(sysconfdir)/profile.d
+	install -d -m 0755 $(DESTDIR)$(sysconfdir)/xdg/autostart
+	install -d -m 0755 $(DESTDIR)$(sysconfdir)/xdg/plasma-workspace/env
 
 	# Command-line binary launchers
 	install -m 0755 bin/avro $(DESTDIR)$(prefix)/bin/avro
@@ -137,6 +139,10 @@ install: build
 
 	# Session input method environment variables
 	install -m 0644 data/profile.d/avro-linux.sh $(DESTDIR)$(sysconfdir)/profile.d/avro-linux.sh
+	install -m 0644 data/plasma-workspace/env/avro-linux.sh $(DESTDIR)$(sysconfdir)/xdg/plasma-workspace/env/avro-linux.sh
+
+	# Autostart on desktop login
+	install -m 0644 data/autostart/avro-topbar.desktop $(DESTDIR)$(sysconfdir)/xdg/autostart/avro-topbar.desktop
 
 	# Integration files
 	install -m 0644 data/ibus/ibus-avro.xml $(DESTDIR)$(datadir)/ibus/component/ibus-avro.xml

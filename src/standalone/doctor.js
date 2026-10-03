@@ -99,7 +99,7 @@ function runDiagnosticCheck() {
                 report.ibusRegistered = true;
             } else {
                 report.issues.push("ibus-avro engine component is not registered in IBus.");
-                report.recommendations.push("Verify /usr/share/ibus/component/avro.xml exists and restart ibus.");
+                report.recommendations.push("Verify /usr/share/ibus/component/ibus-avro.xml exists and restart ibus.");
             }
         }
     } catch (e) {}
@@ -290,6 +290,15 @@ function autoFixIssues() {
         if (!ok || !out || out.length === 0) {
             GLib.spawn_command_line_async("ibus-daemon -drx --panel disable");
             fixed.push("Started ibus-daemon in background (-drx --panel disable).");
+        } else {
+            // Check if ibus-avro is registered in active engine list
+            let [okEng, outEng] = GLib.spawn_command_line_sync("ibus list-engine");
+            let engStr = (okEng && outEng) ? String.fromCharCode.apply(null, outEng) : "";
+            if (engStr.indexOf("ibus-avro") === -1) {
+                GLib.spawn_command_line_sync("ibus write-cache");
+                GLib.spawn_command_line_sync("sh -c 'systemctl --user restart app-ibus@autostart.service 2>/dev/null || ibus-daemon -drx --replace --panel disable'");
+                fixed.push("Rebuilt IBus registry cache and reloaded IBus daemon.");
+            }
         }
     } catch (e) {}
 
@@ -315,13 +324,35 @@ function autoFixIssues() {
         }
     } catch (e) {}
 
-    GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
-        try {
-            GLib.spawn_command_line_async("ibus engine ibus-avro");
-            fixed.push("Switched active IBus engine to ibus-avro.");
-        } catch (e) {}
-        return false;
-    });
+    try {
+        let source = Gio.SettingsSchemaSource.get_default();
+        if (source && source.lookup('org.freedesktop.ibus.general', true)) {
+            let ibusSettings = new Gio.Settings({ schema_id: 'org.freedesktop.ibus.general' });
+            let peVal = ibusSettings.get_value('preload-engines');
+            let pe = peVal.deep_unpack();
+            if (pe.indexOf('ibus-avro') === -1) {
+                pe.push('ibus-avro');
+                ibusSettings.set_value('preload-engines', new GLib.Variant('as', pe));
+                fixed.push("Added ibus-avro to IBus preload engines.");
+            }
+        }
+        if (source && source.lookup('org.gnome.desktop.input-sources', true)) {
+            let gnomeSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.input-sources' });
+            let sourcesVal = gnomeSettings.get_value('sources');
+            let sources = sourcesVal.deep_unpack();
+            let hasAvro = sources.some(s => s[1] === 'ibus-avro');
+            if (!hasAvro) {
+                let newSources = [['ibus', 'ibus-avro']].concat(sources);
+                gnomeSettings.set_value('sources', new GLib.Variant('a(ss)', newSources));
+                fixed.push("Added ibus-avro to GNOME desktop input sources.");
+            }
+        }
+    } catch (e) {}
+
+    try {
+        GLib.spawn_command_line_sync("ibus engine ibus-avro");
+        fixed.push("Switched active IBus engine to ibus-avro.");
+    } catch (e) {}
 
     let settings = avroSettings();
     if (settings) {
