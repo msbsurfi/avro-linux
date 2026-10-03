@@ -116,6 +116,11 @@ function initGtk() {
     }
     _gtkState = false;
     try {
+        try {
+            if (typeof imports.evars !== 'undefined' && typeof imports.evars.ensure_xauthority === 'function') {
+                imports.evars.ensure_xauthority();
+            }
+        } catch (e) {}
         if (!GLib.getenv("DISPLAY")) {
             return _gtkState;
         }
@@ -180,6 +185,8 @@ var PreviewWindow = class PreviewWindow {
     _buildWindow(iconFile) {
         this._window = new Gtk.Window({ type: Gtk.WindowType.POPUP, resizable: false });
         this._window.set_type_hint(Gdk.WindowTypeHint.TOOLTIP);
+        this._window.set_accept_focus(false);
+        this._window.set_focus_on_map(false);
         this._window.get_style_context().add_class("avro-pw-window");
         // The 1px of window background around the content is the frame line.
         this._window.set_border_width(1);

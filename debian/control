@@ -1,7 +1,7 @@
 Source: avro-linux
 Section: utils
 Priority: optional
-Maintainer: MD Shifat Bin Siddique Urfi <msbsu@github.com>
+Maintainer: MD Shifat Bin Siddique Urfi and MD Mehedi Hasan <hello@msbsu.com>
 Build-Depends: make
 Standards-Version: 4.7.0
 Homepage: https://github.com/sarim/ibus-avro
@@ -14,7 +14,7 @@ Depends: ${misc:Depends},
          gir1.2-ibus-1.0,
          gir1.2-gtk-3.0,
          dconf-gsettings-backend | gsettings-backend
-Recommends: im-config, fonts-noto-core, gkbd-capplet
+Recommends: im-config, fonts-noto-core | fonts-beng, ibus-wayland, gkbd-capplet
 Conflicts: ibus-avro
 Replaces: ibus-avro
 Description: Avro Phonetic Bengali input method for IBus

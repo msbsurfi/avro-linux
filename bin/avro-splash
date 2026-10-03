@@ -1,0 +1,14 @@
+#!/bin/sh
+# Avro Linux — Windows-Style Splash Screen Launcher
+# SPDX-License-Identifier: MPL-2.0
+# Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)
+
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -f "${SCRIPT_DIR}/src/standalone/splash.js" ]; then
+    exec "${SCRIPT_DIR}/src/standalone/splash.js" "$@"
+elif [ -f "/usr/share/avro-linux/standalone/splash.js" ]; then
+    exec gjs /usr/share/avro-linux/standalone/splash.js "$@"
+else
+    echo "Error: splash.js not found" >&2
+    exit 1
+fi

@@ -30,6 +30,7 @@ fi
 # Keep the developer's real Avro configuration (learned word choices, personal
 # dictionary, dconf settings) out of the tests, in both directions.
 export XDG_CONFIG_HOME="${USER_DICT_TMP}"
+export GSETTINGS_SCHEMA_DIR="${ROOT_DIR}/data/gsettings"
 
 run_test() {
     local name="$1"

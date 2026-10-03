@@ -39,6 +39,26 @@ imports.searchPath.push('/usr/share/avro-linux/avro-core/fixed');
 let FixedLayout = null;
 try { FixedLayout = imports.fixedlayout; } catch (e) {}
 
+// Shared modern theme (src/common/avrotheme.js)
+let Theme = null;
+(function loadTheme() {
+    let dirs = ['/usr/share/avro-linux/common'];
+    try {
+        let m = new Error().stack.match(/(?:^|@|\()(?:file:\/\/)?([^\s:()@]+\.js):\d+/m);
+        if (m) {
+            let d = GLib.path_get_dirname(GLib.canonicalize_filename(m[1], GLib.get_current_dir()));
+            dirs.unshift(d + '/../common', d + '/../src/common');
+        }
+    } catch (e) {}
+    for (let d of dirs) {
+        if (GLib.file_test(d + '/avrotheme.js', GLib.FileTest.EXISTS)) {
+            imports.searchPath.unshift(d);
+            try { Theme = imports.avrotheme; } catch (e) { printerr('Avro theme: ' + e); }
+            break;
+        }
+    }
+})();
+
 const KEYBOARD_ROWS = [
     // Row 1 (Numbers)
     [
@@ -219,6 +239,7 @@ function drawKeyboard(cr, width, height, layout, altGrView) {
 
 /* The Avro Phonetic guide (the Layout Viewer for Avro Phonetic). */
 function buildPhoneticGuide() {
+    let pal = Theme ? Theme.apply() : null;
     let notebook = new Gtk.Notebook();
 
     /* ========================================================================= */
@@ -368,6 +389,12 @@ function buildPhoneticGuide() {
 }
 
 function runLayoutViewerDialog(parentWindow, layoutId) {
+    try {
+        GLib.set_prgname("avro-layout");
+        GLib.set_application_name("Avro Layout Viewer");
+    } catch (e) {}
+    if (Theme) Theme.apply();
+
     let settings = avroSettings();
     let explicit = (layoutId === 'phonetic' || (FixedLayout && FixedLayout.getLayout(layoutId))) ? layoutId : null;
     let altGrView = false;
@@ -378,7 +405,10 @@ function runLayoutViewerDialog(parentWindow, layoutId) {
         default_height: 420,
         window_position: Gtk.WindowPosition.CENTER
     });
+    window.set_icon_name("avro-layout");
     try { window.set_wmclass("avro-layout", "AvroLayoutViewer"); } catch (e) {}
+    try { Gtk.Window.set_default_icon_name("avro-layout"); } catch (e) {}
+    if (Theme) Theme.styleWindow(window);
     if (parentWindow) {
         window.set_transient_for(parentWindow);
     }

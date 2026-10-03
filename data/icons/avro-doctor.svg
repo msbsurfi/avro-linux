@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Avro Linux — Avro Doctor icon. SPDX-License-Identifier: MPL-2.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fb7185"/>
+      <stop offset="1" stop-color="#be123c"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect x="12" y="12" width="232" height="232" rx="58" fill="url(#bg)"/>
+  <rect x="12" y="12" width="232" height="116" rx="58" fill="url(#gloss)"/>
+  <path d="M128 208 C58 158 44 108 80 82 C104 66 124 80 128 96 C132 80 152 66 176 82 C212 108 198 158 128 208 Z" fill="#000" opacity="0.18" transform="translate(0 6)"/>
+  <path d="M128 208 C58 158 44 108 80 82 C104 66 124 80 128 96 C132 80 152 66 176 82 C212 108 198 158 128 208 Z" fill="#ffffff"/>
+  <path d="M66 134 H98 L112 104 L134 164 L150 126 H190" fill="none" stroke="#e11d48" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

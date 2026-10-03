@@ -43,6 +43,7 @@ function checkReport(r, what) {
     assert(ok, what + ": report contains header");
     if (!ok && r.err) printerr("    stderr: " + r.err.trim().split("\n").slice(-3).join(" | "));
     assert(r.out.indexOf("MD Shifat Bin Siddique Urfi") !== -1, what + ": report credits MD Shifat Bin Siddique Urfi");
+    assert(r.out.indexOf("MD Mehedi Hasan") !== -1, what + ": report credits MD Mehedi Hasan");
     assert(r.out.indexOf("IBus Subsystem") !== -1, what + ": report checks IBus Subsystem");
     assert(r.out.indexOf("Environment Variables") !== -1, what + ": report checks Environment Variables");
     assert(r.out.indexOf("Configuration & Fonts") !== -1, what + ": report checks Configuration & Fonts");

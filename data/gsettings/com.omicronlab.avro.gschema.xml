@@ -178,5 +178,11 @@
       <description>Internal: whether the TopBar has added itself to the programs that start on login. Like Avro Keyboard, which starts with Windows unless that is turned off, the TopBar does this once, the first time it runs; after that only the user's choice in Preferences counts.</description>
     </key>
 
+    <key type="b" name="switch-splash">
+      <default>true</default>
+      <summary>Show splash screen on startup</summary>
+      <description>Whether to show the Windows-style Avro splash screen when the TopBar starts</description>
+    </key>
+
   </schema>
 </schemalist>

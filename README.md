@@ -7,7 +7,7 @@
 
 **Avro Linux (Remastered)** is a Linux-native implementation of OmicronLab's legendary Avro Keyboard for Debian-based distributions (Debian 12/13, Ubuntu 22.04/24.04/26.04, Linux Mint, Pop!_OS) across both **Wayland** and **X11** sessions.
 
-Remastered by **MD Shifat Bin Siddique Urfi**, this release delivers full Windows Avro feature parity, including the iconic floating sticky TopBar, standalone Avro Pad, Bijoy ↔ Unicode Converter, Keyboard Layout Viewer, Candidate Suggestions Preview, and the Avro Doctor diagnostic suite.
+Remastered by **MD Shifat Bin Siddique Urfi (DMC, K-79)** and **MD Mehedi Hasan (BUET, 2021-22)**, this release delivers full Windows Avro feature parity, including the iconic floating sticky TopBar, standalone Avro Pad, Bijoy ↔ Unicode Converter, Keyboard Layout Viewer, Candidate Suggestions Preview, and the Avro Doctor diagnostic suite.
 
 ---
 

@@ -65,15 +65,20 @@ install: build
 	install -d -m 0755 $(DESTDIR)$(datadir)/metainfo
 	install -d -m 0755 $(DESTDIR)$(datadir)/pixmaps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps
+	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/scalable/actions
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/16x16/apps
+	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/22x22/apps
+	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/24x24/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/32x32/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/48x48/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/64x64/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/128x128/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/256x256/apps
+	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/images
 	install -d -m 0755 $(DESTDIR)$(datadir)/doc/avro-linux
 	install -d -m 0755 $(DESTDIR)$(datadir)/fontconfig/conf.avail
 	install -d -m 0755 $(DESTDIR)$(sysconfdir)/fonts/conf.d
+	install -d -m 0755 $(DESTDIR)$(sysconfdir)/profile.d
 
 	# Command-line binary launchers
 	install -m 0755 bin/avro $(DESTDIR)$(prefix)/bin/avro
@@ -86,15 +91,18 @@ install: build
 	install -m 0755 bin/avro-linux-doctor $(DESTDIR)$(prefix)/bin/avro-linux-doctor
 	install -m 0755 bin/avro-preview $(DESTDIR)$(prefix)/bin/avro-preview
 	install -m 0755 bin/avro-mouse $(DESTDIR)$(prefix)/bin/avro-mouse
+	install -m 0755 bin/avro-splash $(DESTDIR)$(prefix)/bin/avro-splash
 
 	# Common & Engine scripts
 	install -m 0644 src/common/evars.js $(DESTDIR)$(pkgdatadir)/common/evars.js
 	install -m 0644 src/common/autostart.js $(DESTDIR)$(pkgdatadir)/common/autostart.js
+	install -m 0644 src/common/avrotheme.js $(DESTDIR)$(pkgdatadir)/common/avrotheme.js
 	install -m 0755 src/engine/main-gjs.js $(DESTDIR)$(pkgdatadir)/engine/main-gjs.js
 
 	# Standalone application suite
 	install -m 0755 src/standalone/main.js $(DESTDIR)$(pkgdatadir)/standalone/main.js
 	install -m 0755 src/standalone/topbar.js $(DESTDIR)$(pkgdatadir)/standalone/topbar.js
+	install -m 0755 src/standalone/splash.js $(DESTDIR)$(pkgdatadir)/standalone/splash.js
 	install -m 0755 src/standalone/avropad.js $(DESTDIR)$(pkgdatadir)/standalone/avropad.js
 	install -m 0755 src/standalone/bijoyconverter.js $(DESTDIR)$(pkgdatadir)/standalone/bijoyconverter.js
 	install -m 0755 src/standalone/layoutviewer.js $(DESTDIR)$(pkgdatadir)/standalone/layoutviewer.js
@@ -127,6 +135,9 @@ install: build
 	install -m 0644 data/fontconfig/64-avro-bengali.conf $(DESTDIR)$(datadir)/fontconfig/conf.avail/64-avro-bengali.conf
 	ln -sf $(datadir)/fontconfig/conf.avail/64-avro-bengali.conf $(DESTDIR)$(sysconfdir)/fonts/conf.d/64-avro-bengali.conf
 
+	# Session input method environment variables
+	install -m 0644 data/profile.d/avro-linux.sh $(DESTDIR)$(sysconfdir)/profile.d/avro-linux.sh
+
 	# Integration files
 	install -m 0644 data/ibus/ibus-avro.xml $(DESTDIR)$(datadir)/ibus/component/ibus-avro.xml
 	install -m 0644 data/gsettings/com.omicronlab.avro.gschema.xml $(DESTDIR)$(datadir)/glib-2.0/schemas/com.omicronlab.avro.gschema.xml
@@ -145,12 +156,24 @@ install: build
 	install -m 0644 data/icons/avro-bangla.png $(DESTDIR)$(pkgdatadir)/icons/avro-bangla.png
 	install -m 0644 data/icons/avro-bangla.png $(DESTDIR)$(datadir)/pixmaps/avro-bangla.png
 	install -m 0644 data/icons/avro-bangla.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps/avro-bangla.svg
+	install -m 0644 data/icons/avro-pad.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps/avro-pad.svg
+	install -m 0644 data/icons/avro-preferences.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps/avro-preferences.svg
+	install -m 0644 data/icons/avro-converter.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps/avro-converter.svg
+	install -m 0644 data/icons/avro-layout.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps/avro-layout.svg
+	install -m 0644 data/icons/avro-mouse.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps/avro-mouse.svg
+	install -m 0644 data/icons/avro-doctor.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps/avro-doctor.svg
+	install -m 0644 data/icons/symbolic/*-symbolic.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/actions/
 	install -m 0644 data/icons/16x16/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/16x16/apps/avro-bangla.png
+	install -m 0644 data/icons/22x22/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/22x22/apps/avro-bangla.png
+	install -m 0644 data/icons/24x24/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/24x24/apps/avro-bangla.png
 	install -m 0644 data/icons/32x32/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/32x32/apps/avro-bangla.png
-	install -m 0644 data/icons/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/48x48/apps/avro-bangla.png
+	install -m 0644 data/icons/48x48/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/48x48/apps/avro-bangla.png
 	install -m 0644 data/icons/64x64/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/64x64/apps/avro-bangla.png
 	install -m 0644 data/icons/128x128/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/128x128/apps/avro-bangla.png
 	install -m 0644 data/icons/256x256/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/256x256/apps/avro-bangla.png
+
+	# Images & Splash
+	install -m 0644 data/images/splash.jpg $(DESTDIR)$(pkgdatadir)/images/splash.jpg
 
 	# Documentation
 	install -m 0644 README.md $(DESTDIR)$(datadir)/doc/avro-linux/README.md

@@ -14,6 +14,11 @@ case "$1" in
         if command -v gtk-update-icon-cache >/dev/null 2>&1; then
             gtk-update-icon-cache -q -t -f /usr/share/icons/hicolor || true
         fi
+        if command -v kbuildsycoca6 >/dev/null 2>&1; then
+            kbuildsycoca6 --noincremental 2>/dev/null || true
+        elif command -v kbuildsycoca5 >/dev/null 2>&1; then
+            kbuildsycoca5 --noincremental 2>/dev/null || true
+        fi
         # Refresh only the system component cache. Do not start IBus or write a
         # cache for root/the installing user.
         if command -v ibus >/dev/null 2>&1; then

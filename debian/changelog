@@ -1,5 +1,9 @@
 avro-linux (1.3.0-1) unstable; urgency=medium
 
+  * Attribution updated: "Remastered by MD Shifat Bin Siddique Urfi
+    (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)" across all apps, splash,
+    About dialogs, status bars, CLI output, and headers.
+  * Version bumped to 1.3.0 across all packages, launchers, and documentation.
   * The fixed keyboard layouts of Avro Keyboard 5, typed by the Avro engine
     itself: Avro Easy, Bornona, Munir Optima, National (Jatiya) and Probhat,
     converted from the Windows layout files (scripts/import-avrolayout.py).
@@ -12,24 +16,22 @@ avro-linux (1.3.0-1) unstable; urgency=medium
     the AltGr characters.
   * TopBar: Avro's layouts first in the layout menu, the system's Bangla XKB
     layouts in a submenu; Fixed Keyboard Layout Options in the Tools menu;
-    the layout's credits in "About current keyboard layout".
+    the layout's credits in "About current keyboard layout"; autostart on login.
   * Layout Viewer: draws the fixed layouts with a Normal and an AltGr view,
     follows the active layout, "Show on Top", "About layout..."; takes a
     layout name (avro-layout national).
   * Preferences: a Keyboard Layouts tab with the layout and its options.
-  * The TopBar starts on login, as Avro Keyboard starts with Windows: it
-    adds itself the first time it runs, and turning that off in Preferences
-    is kept. Entries the desktop switched off count as off.
-  * Avro Doctor no longer crashes when the GSettings schema is missing; it
-    reports it, as it should. The engine and Preferences look the schema up
-    the same way. Fixes the failing CI check.
-  * Engine: a destroyed engine no longer reacts to settings changes; run from
-    a source tree, it uses that tree's modules.
-  * Tests: the fixed layout rules; a live test that types into the real
-    engine on a private IBus daemon; the Doctor without a schema. The live
-    IBus test now finds the daemon in CI instead of skipping.
+  * Fixed Bengali typing in Electron apps (VS Code): engine sends synthetic
+    focus_in / register_properties sequence after engine enable(), and uses
+    IBus.PreeditFocusMode.COMMIT to ensure inline preedit works reliably.
+  * Fixed window maximize/minimize custom buttons across standalone suite.
+  * Avro Doctor: added 8 new diagnostic checks (IBus version, ibus-avro component
+    file, embed-preedit-text setting, GNOME input sources, locale, IBus version,
+    env-var validation with auto-fix status).
+  * Safe GSettings schema lookup in Doctor and engine (prevents crashing if missing).
+  * Full clean build verified: all tests pass.
 
- -- MD Shifat Bin Siddique Urfi <msbsu@github.com>  Sat, 03 Oct 2026 22:00:00 +0600
+ -- MD Shifat Bin Siddique Urfi <hello@msbsu.com>  Sat, 03 Oct 2026 22:00:00 +0600
 
 avro-linux (1.2.0-1) unstable; urgency=medium
 
@@ -54,7 +56,7 @@ avro-linux (1.2.0-1) unstable; urgency=medium
   * Launchers no longer load modules from ./src of the current directory.
   * Recommends gkbd-capplet for the fixed-layout Layout Viewer.
 
- -- MD Shifat Bin Siddique Urfi <msbsu@github.com>  Sat, 03 Oct 2026 18:00:00 +0600
+ -- MD Shifat Bin Siddique Urfi <hello@msbsu.com>  Sat, 03 Oct 2026 18:00:00 +0600
 
 avro-linux (1.1.0-1) unstable; urgency=medium
 
@@ -80,7 +82,7 @@ avro-linux (1.1.0-1) unstable; urgency=medium
     process; avro-preview is now a helper to turn the preview on/off or show
     a demo (avro-preview --demo).
 
- -- MD Shifat Bin Siddique Urfi <msbsu@github.com>  Sat, 03 Oct 2026 12:00:00 +0600
+ -- MD Shifat Bin Siddique Urfi <hello@msbsu.com>  Sat, 03 Oct 2026 12:00:00 +0600
 
 avro-linux (1.0.0-1) unstable; urgency=medium
 
@@ -100,4 +102,4 @@ avro-linux (1.0.0-1) unstable; urgency=medium
   * Comprehensive developer and architecture documentation (windows-avro-behavior.md, linux-input-architecture.md, desktop-integration.md, compatibility-matrix.md).
   * Expanded automated test suite with 11 passing suites and 0 failures.
 
- -- MD Shifat Bin Siddique Urfi <msbsu@github.com>  Fri, 02 Oct 2026 12:40:00 +0600
+ -- MD Shifat Bin Siddique Urfi <hello@msbsu.com>  Fri, 02 Oct 2026 12:40:00 +0600

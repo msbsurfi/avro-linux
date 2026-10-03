@@ -21,10 +21,34 @@ function get_version() {
 }
 
 /**
+ * Auto-discover XAUTHORITY in runtime dir if not set (vital for Wayland/XWayland).
+ */
+function ensure_xauthority() {
+    if (!GLib.getenv("XAUTHORITY")) {
+        try {
+            let runtimeDir = GLib.getenv("XDG_RUNTIME_DIR") || ("/run/user/" + GLib.get_user_name());
+            let d = Gio.File.new_for_path(runtimeDir);
+            if (d.query_exists(null)) {
+                let enumerator = d.enumerate_children("standard::name", Gio.FileQueryInfoFlags.NONE, null);
+                let info;
+                while ((info = enumerator.next_file(null)) !== null) {
+                    let name = info.get_name();
+                    if (name.indexOf("xauth_") === 0) {
+                        GLib.setenv("XAUTHORITY", runtimeDir + "/" + name, true);
+                        break;
+                    }
+                }
+            }
+        } catch (e) {}
+    }
+}
+
+/**
  * Configure imports.searchPath to include all necessary module directories.
  * If baseDir is provided, uses that base; otherwise defaults to get_pkgdatadir().
  */
 function init_search_paths(baseDir) {
+    ensure_xauthority();
     let dir = baseDir || get_pkgdatadir();
     let paths = [
         dir,
@@ -59,3 +83,4 @@ function init_search_paths(baseDir) {
         }
     }
 }
+

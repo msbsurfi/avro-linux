@@ -7,11 +7,17 @@
     =============================================================================
 */
 
+const GLib = imports.gi.GLib;
+const _args = typeof ARGV !== 'undefined' ? ARGV : [];
+const _isTopBar = !_args.some(a => ['--pad', '--converter', '--layout', '--mouse', '-m', '--preferences'].indexOf(a) !== -1);
+if (_isTopBar && GLib.getenv('DISPLAY')) {
+    GLib.setenv('GDK_BACKEND', 'x11', true);
+}
+
 imports.gi.versions.Gtk = '3.0';
 imports.gi.versions.Gdk = '3.0';
 const Gtk = imports.gi.Gtk;
 const Gdk = imports.gi.Gdk;
-const GLib = imports.gi.GLib;
 
 // Base paths (gjs does not put the script itself in ARGV)
 let baseDir = '/usr/share/avro-linux';
@@ -60,7 +66,7 @@ try { PrefApp = imports.pref; } catch (e) {}
 
 function printHelp() {
     print("Avro Linux (Remastered Edition) — Standalone Bengali Input Suite");
-    print("Lead Developer & Maintainer: MD Shifat Bin Siddique Urfi");
+    print("Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)");
     print("Version: " + appVersion());
     print("");
     print("Usage: avro [OPTION...]");
@@ -84,7 +90,7 @@ function main() {
 
     if (args.indexOf('--version') !== -1 || args.indexOf('-v') !== -1) {
         print("Avro Linux (Remastered Edition) v" + appVersion());
-        print("Lead Developer & Remaster Maintainer: MD Shifat Bin Siddique Urfi");
+        print("Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)");
         print("License: MPL-2.0");
         return;
     }
@@ -96,12 +102,28 @@ function main() {
 
     // The TopBar must be able to place itself and stay on top: only X11
     // (or XWayland) allows that, so it never uses a native Wayland connection.
-    let isTopBar = !args.some(a => TOOL_FLAGS.indexOf(a) !== -1);
-    if (isTopBar && GLib.getenv('DISPLAY')) {
-        try { Gdk.set_allowed_backends('x11'); } catch (e) {}
-    }
+    // Set prgname before Gtk.init so Wayland app_id and taskbar icons match correctly
+    let prgName = "avro-topbar";
+    if (args.indexOf('--pad') !== -1) prgName = "avro-pad";
+    else if (args.indexOf('--converter') !== -1) prgName = "avro-converter";
+    else if (args.indexOf('--layout') !== -1) prgName = "avro-layout";
+    else if (args.indexOf('--mouse') !== -1 || args.indexOf('-m') !== -1) prgName = "avro-mouse";
+    else if (args.indexOf('--preferences') !== -1) prgName = "avro-preferences";
+
+    try {
+        GLib.set_prgname(prgName);
+        GLib.set_application_name("Avro Keyboard");
+    } catch (e) {}
 
     Gtk.init(null);
+    // Each tool has its own icon; the TopBar and everything else keep the Avro logo.
+    let toolIcon = "avro-bangla";
+    if (prgName === "avro-pad") toolIcon = "avro-pad";
+    else if (prgName === "avro-converter") toolIcon = "avro-converter";
+    else if (prgName === "avro-layout") toolIcon = "avro-layout";
+    else if (prgName === "avro-mouse") toolIcon = "avro-mouse";
+    else if (prgName === "avro-preferences") toolIcon = "avro-preferences";
+    try { Gtk.Window.set_default_icon_name(toolIcon); } catch (e) {}
 
     if (args.indexOf('--pad') !== -1) {
         if (AvroPad && AvroPad.runAvroPad) {

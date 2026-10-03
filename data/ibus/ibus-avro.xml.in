@@ -16,7 +16,7 @@
 			<language>bn</language>
 			<license>MPL-2.0</license>
 			<author>Sarim Khan &lt;sarim2005@gmail.com&gt;</author>
-			<icon>@pkgdatadir@/icons/avro-bangla.png</icon>
+			<icon>avro-bangla</icon>
 			<layout>us</layout>
 			<longname>Avro Phonetic</longname>
 			<description>Avro Phonetic Bengali Input Method</description>

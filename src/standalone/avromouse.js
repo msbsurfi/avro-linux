@@ -3,7 +3,7 @@
     =============================================================================
     Avro Linux — Avro Mouse (On-Screen Click & Type Bengali Virtual Keyboard)
     SPDX-License-Identifier: MPL-2.0
-    Developer & Maintainer: MD Shifat Bin Siddique Urfi
+    Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)
     =============================================================================
 */
 
@@ -13,204 +13,131 @@ const Gdk = imports.gi.Gdk;
 const GLib = imports.gi.GLib;
 const Pango = imports.gi.Pango;
 
-const MOUSE_CSS = `
-* {
-    outline: none;
+const MOUSE_CSS = (p) => `
+.avro-win .avro-mouse-label {
+    color: ${p.subtext}; font-size: 9pt; font-weight: 600; margin-top: 6px;
 }
-
-.avro-mouse-window {
-    background: #141822;
-    border: 1px solid rgba(88, 166, 255, 0.25);
-    border-radius: 12px;
-}
-
-.avro-mouse-header {
-    background: linear-gradient(135deg, #1b2838, #0e1726);
-    padding: 8px 14px;
-    border-bottom: 1px solid rgba(88, 166, 255, 0.2);
-    border-radius: 12px 12px 0 0;
-}
-
-.avro-mouse-title {
-    color: #58a6ff;
-    font-size: 15px;
-    font-weight: bold;
-}
-
-.avro-mouse-subtitle {
-    color: #8b9bb4;
-    font-size: 11px;
-}
-
-.avro-mouse-textview {
-    background: #0d1117;
-    color: #58a6ff;
+.avro-win button.avro-key label {
     font-family: 'Noto Sans Bengali', 'Kalpurush', 'SolaimanLipi', sans-serif;
-    font-size: 18px;
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    font-size: 15pt; font-weight: 600;
 }
-
-.avro-key-btn {
-    background: #1e2638;
-    color: #e6edf3;
+.avro-win button.avro-key { min-width: 40px; min-height: 38px; padding: 2px 4px; }
+.avro-win .avro-mouse-text, .avro-win .avro-mouse-text text {
     font-family: 'Noto Sans Bengali', 'Kalpurush', 'SolaimanLipi', sans-serif;
-    font-size: 16px;
-    font-weight: bold;
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 6px;
-    padding: 6px 10px;
-    min-width: 36px;
-    min-height: 36px;
-}
-
-.avro-key-btn:hover {
-    background: #28354f;
-    border-color: #58a6ff;
-    color: #58a6ff;
-}
-
-.avro-key-btn:active {
-    background: #00e5a0;
-    color: #0b141a;
-}
-
-.avro-vowel-btn {
-    background: #182a3d;
-    border-color: rgba(88, 166, 255, 0.3);
-}
-
-.avro-kar-btn {
-    background: #232238;
-    color: #d2a8ff;
-    border-color: rgba(210, 168, 255, 0.3);
-}
-
-.avro-hasanta-btn {
-    background: #3e2230;
-    color: #ff7b72;
-    border-color: rgba(255, 123, 114, 0.4);
-    font-size: 18px;
-}
-
-.avro-action-btn {
-    background: #21262d;
-    color: #c9d1d9;
-    font-size: 13px;
-    font-weight: bold;
-    border-radius: 6px;
-    padding: 6px 14px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.avro-action-btn:hover {
-    background: #30363d;
-    color: #ffffff;
-}
-
-.avro-copy-btn {
-    background: linear-gradient(135deg, #1f6feb, #238636);
-    color: #ffffff;
-    font-weight: bold;
-    border: none;
-}
-
-.avro-copy-btn:hover {
-    background: linear-gradient(135deg, #388bfd, #2ea043);
-}
-
-.section-label {
-    color: #8b9bb4;
-    font-size: 11px;
-    font-weight: bold;
-    margin-top: 4px;
-    margin-bottom: 2px;
+    font-size: 17pt;
 }
 `;
 
-var runAvroMouse = function runAvroMouse(parentWindow) {
-    let cssProvider = new Gtk.CssProvider();
+/* Locate and load the shared modern theme */
+let Theme = null;
+(function loadTheme() {
+    let dirs = ['/usr/share/avro-linux/common'];
     try {
-        cssProvider.load_from_data(MOUSE_CSS);
+        let m = new Error().stack.match(/(?:^|@|\()(?:file:\/\/)?([^\s:()@]+\.js):\d+/m);
+        if (m) {
+            let d = GLib.path_get_dirname(GLib.canonicalize_filename(m[1], GLib.get_current_dir()));
+            dirs.unshift(d + '/../common', d + '/../src/common');
+        }
+    } catch (e) {}
+    for (let d of dirs) {
+        if (GLib.file_test(d + '/avrotheme.js', GLib.FileTest.EXISTS)) {
+            imports.searchPath.unshift(d);
+            try { Theme = imports.avrotheme; } catch (e) { printerr('Avro theme: ' + e); }
+            break;
+        }
+    }
+})();
+
+var runAvroMouse = function runAvroMouse(parentWindow) {
+    try {
+        GLib.set_prgname("avro-mouse");
+        GLib.set_application_name("Avro Mouse");
+    } catch (e) {}
+
+    let pal = Theme.apply();
+    try {
+        let mouseProvider = new Gtk.CssProvider();
+        mouseProvider.load_from_data(MOUSE_CSS(pal));
         Gtk.StyleContext.add_provider_for_screen(
             Gdk.Screen.get_default(),
-            cssProvider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            mouseProvider,
+            Gtk.STYLE_PROVIDER_PRIORITY_USER
         );
     } catch (e) {}
 
     let win = new Gtk.Window({
         type: Gtk.WindowType.TOPLEVEL,
         title: "Avro Mouse — On-Screen Click & Type",
-        default_width: 580,
-        default_height: 480,
+        default_width: 700,
+        default_height: 640,
         transient_for: parentWindow || null,
         window_position: Gtk.WindowPosition.CENTER
     });
-    win.get_style_context().add_class("avro-mouse-window");
+    win.set_icon_name("avro-mouse");
+    try { win.set_wmclass("avro-mouse", "AvroMouse"); } catch (e) {}
+    try { Gtk.Window.set_default_icon_name("avro-mouse"); } catch (e) {}
+    Theme.styleWindow(win);
+    win.set_titlebar(Theme.headerBar({
+        icon: "avro-mouse",
+        title: "Avro Mouse",
+        subtitle: "Click any Bengali letter or sign to type"
+    }));
 
     let rootBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 0 });
+    let contentBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 10, margin: 16 });
 
-    // 1. Header
-    let headerBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 10 });
-    headerBox.get_style_context().add_class("avro-mouse-header");
-
-    let titleVBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 2 });
-    let lblTitle = new Gtk.Label({ label: "Avro Mouse — On-Screen Keyboard", xalign: 0 });
-    lblTitle.get_style_context().add_class("avro-mouse-title");
-    let lblSub = new Gtk.Label({ label: "Click any Bengali letter or sign to type • Remastered by MD Shifat Bin Siddique Urfi", xalign: 0 });
-    lblSub.get_style_context().add_class("avro-mouse-subtitle");
-    titleVBox.pack_start(lblTitle, false, false, 0);
-    titleVBox.pack_start(lblSub, false, false, 0);
-
-    headerBox.pack_start(titleVBox, true, true, 0);
-    rootBox.pack_start(headerBox, false, false, 0);
-
-    let contentBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 8, margin: 12 });
-
-    // 2. Text Input & Preview Area
+    // 1. Text Input & Preview Area
     let scrolledText = new Gtk.ScrolledWindow({
-        min_content_height: 70,
+        min_content_height: 96,
         hexpand: true,
         vexpand: false
     });
+    scrolledText.get_style_context().add_class("avro-framed");
     let textView = new Gtk.TextView({
         wrap_mode: Gtk.WrapMode.WORD_CHAR,
-        hexpand: true
+        hexpand: true,
+        left_margin: 12, right_margin: 12, top_margin: 10, bottom_margin: 10
     });
-    textView.get_style_context().add_class("avro-mouse-textview");
+    textView.get_style_context().add_class("avro-mouse-text");
     let textBuffer = textView.get_buffer();
     scrolledText.add(textView);
     contentBox.pack_start(scrolledText, false, false, 0);
 
-    // 3. Actions Row (Copy, Space, Backspace, Clear)
+    // 2. Actions Row (Copy, Space, Backspace, Clear)
     let actionRow = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8 });
 
-    let btnCopy = new Gtk.Button({ label: "Copy Text" });
-    btnCopy.get_style_context().add_class("avro-copy-btn");
-    btnCopy.get_style_context().add_class("avro-action-btn");
+    function actionButton(icon, text) {
+        let b = new Gtk.Button();
+        let box = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8 });
+        box.pack_start(Gtk.Image.new_from_icon_name(icon, Gtk.IconSize.BUTTON), false, false, 0);
+        let lbl = new Gtk.Label({ label: text });
+        box.pack_start(lbl, false, false, 0);
+        b.add(box);
+        b._label = lbl;
+        return b;
+    }
+
+    let btnCopy = actionButton("avro-copy-symbolic", "Copy Text");
+    btnCopy.get_style_context().add_class("suggested-action");
     btnCopy.connect("clicked", () => {
         let text = textBuffer.text;
         if (text && text.length > 0) {
             let clipboard = Gtk.Clipboard.get_default(Gdk.Display.get_default());
             clipboard.set_text(text, -1);
-            btnCopy.set_label("✓ Copied!");
+            btnCopy._label.set_label("Copied!");
             GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1500, () => {
-                btnCopy.set_label("Copy Text");
+                btnCopy._label.set_label("Copy Text");
                 return false;
             });
         }
     });
 
-    let btnSpace = new Gtk.Button({ label: "␣ Space" });
-    btnSpace.get_style_context().add_class("avro-action-btn");
+    let btnSpace = actionButton("avro-space-symbolic", "Space");
     btnSpace.connect("clicked", () => {
         textBuffer.insert_at_cursor(" ", 1);
     });
 
-    let btnBackspace = new Gtk.Button({ label: "⌫ Backspace" });
-    btnBackspace.get_style_context().add_class("avro-action-btn");
+    let btnBackspace = actionButton("avro-backspace-symbolic", "Backspace");
     btnBackspace.connect("clicked", () => {
         let [hasSel, start, end] = textBuffer.get_selection_bounds();
         if (hasSel) {
@@ -225,8 +152,8 @@ var runAvroMouse = function runAvroMouse(parentWindow) {
         }
     });
 
-    let btnClear = new Gtk.Button({ label: "✕ Clear" });
-    btnClear.get_style_context().add_class("avro-action-btn");
+    let btnClear = actionButton("avro-clear-symbolic", "Clear");
+    btnClear.get_style_context().add_class("destructive-action");
     btnClear.connect("clicked", () => {
         textBuffer.set_text("", 0);
     });
@@ -237,12 +164,17 @@ var runAvroMouse = function runAvroMouse(parentWindow) {
     actionRow.pack_end(btnClear, false, false, 0);
     contentBox.pack_start(actionRow, false, false, 0);
 
+    // Keyboard card
+    let keyCard = Theme.card(0);
+    let keyBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 6, margin: 16, halign: Gtk.Align.CENTER });
+    keyCard.pack_start(keyBox, true, true, 0);
+
     // Helper to append a char button
     function makeKey(char, extraClass) {
         let b = new Gtk.Button({ label: char });
         b.set_can_focus(false);
         b.set_focus_on_click(false);
-        b.get_style_context().add_class("avro-key-btn");
+        b.get_style_context().add_class("avro-key");
         if (extraClass) b.get_style_context().add_class(extraClass);
         b.connect("clicked", () => {
             textBuffer.insert_at_cursor(char, -1);
@@ -250,66 +182,64 @@ var runAvroMouse = function runAvroMouse(parentWindow) {
         return b;
     }
 
-    // 4. Vowels (স্বরবর্ণ)
-    let lblVowels = new Gtk.Label({ label: "স্বরবর্ণ (Vowels):", xalign: 0 });
-    lblVowels.get_style_context().add_class("section-label");
-    contentBox.pack_start(lblVowels, false, false, 0);
+    function keyRow(list, cls) {
+        let row = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 5, halign: Gtk.Align.START });
+        list.forEach(c => row.pack_start(makeKey(c, cls), false, false, 0));
+        return row;
+    }
 
-    let vowelsGrid = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 4 });
+    function sectionLabel(text) {
+        let l = new Gtk.Label({ label: text, xalign: 0 });
+        l.get_style_context().add_class("avro-mouse-label");
+        keyBox.pack_start(l, false, false, 0);
+    }
+
+    // 3. Vowels (স্বরবর্ণ)
+    sectionLabel("স্বরবর্ণ (Vowels)");
     const VOWELS = ["অ", "আ", "ই", "ঈ", "উ", "ঊ", "ঋ", "এ", "ঐ", "ও", "ঔ"];
-    VOWELS.forEach(v => vowelsGrid.pack_start(makeKey(v, "avro-vowel-btn"), false, false, 0));
-    contentBox.pack_start(vowelsGrid, false, false, 0);
+    keyBox.pack_start(keyRow(VOWELS, "avro-key-vowel"), false, false, 0);
 
-    // 5. Kar Signs (কার ও যুক্তচিহ্ন)
-    let lblKars = new Gtk.Label({ label: "কার ও হসন্ত (Vowel Signs & Conjunct Builder):", xalign: 0 });
-    lblKars.get_style_context().add_class("section-label");
-    contentBox.pack_start(lblKars, false, false, 0);
-
-    let karsGrid = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 4 });
+    // 4. Kar Signs (কার ও যুক্তচিহ্ন)
+    sectionLabel("কার ও হসন্ত (Vowel Signs & Conjunct Builder)");
     const KARS = ["া", "ি", "ী", "ু", "ূ", "ৃ", "ে", "ৈ", "ো", "ৌ"];
-    KARS.forEach(k => karsGrid.pack_start(makeKey(k, "avro-kar-btn"), false, false, 0));
+    let karsRow = keyRow(KARS, "avro-key-kar");
     // Hasanta for conjuncts
-    let btnHasanta = makeKey("্", "avro-hasanta-btn");
+    let btnHasanta = makeKey("্", "avro-key-special");
     btnHasanta.set_tooltip_text("হসন্ত (্) — click between two consonants to form conjuncts (যেমন: ক + ্ + ষ = ক্ষ)");
-    karsGrid.pack_start(btnHasanta, false, false, 0);
+    karsRow.pack_start(btnHasanta, false, false, 0);
     // Dari
-    let btnDari = makeKey("।", "avro-kar-btn");
-    karsGrid.pack_start(btnDari, false, false, 0);
+    karsRow.pack_start(makeKey("।", "avro-key-special"), false, false, 0);
+    keyBox.pack_start(karsRow, false, false, 0);
 
-    contentBox.pack_start(karsGrid, false, false, 0);
-
-    // 6. Consonants (ব্যঞ্জনবর্ণ)
-    let lblCons = new Gtk.Label({ label: "ব্যঞ্জনবর্ণ (Consonants):", xalign: 0 });
-    lblCons.get_style_context().add_class("section-label");
-    contentBox.pack_start(lblCons, false, false, 0);
-
+    // 5. Consonants (ব্যঞ্জনবর্ণ)
+    sectionLabel("ব্যঞ্জনবর্ণ (Consonants)");
     const CONSONANT_ROWS = [
         ["ক", "খ", "গ", "ঘ", "ঙ", "চ", "ছ", "জ", "ঝ", "ঞ"],
         ["ট", "ঠ", "ড", "ঢ", "ণ", "ত", "থ", "দ", "ধ", "ন"],
         ["প", "ফ", "ব", "ভ", "ম", "য", "র", "ল", "শ", "ষ"],
-        ["স", "হ", "ড়", "ঢ়", "য়", "ৎ", "ং", "ঃ", "ঁ"]
+        ["স", "হ", "ড়", "ঢ়", "য়", "ৎ", "ং", "ঃ", "ঁ"]
     ];
+    CONSONANT_ROWS.forEach(rowList => keyBox.pack_start(keyRow(rowList, null), false, false, 0));
 
-    CONSONANT_ROWS.forEach(rowList => {
-        let rowBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 4 });
-        rowList.forEach(c => rowBox.pack_start(makeKey(c, null), false, false, 0));
-        contentBox.pack_start(rowBox, false, false, 0);
-    });
-
-    // 7. Digits (সংখ্যা)
-    let lblDigits = new Gtk.Label({ label: "সংখ্যা (Bengali Numerals):", xalign: 0 });
-    lblDigits.get_style_context().add_class("section-label");
-    contentBox.pack_start(lblDigits, false, false, 0);
-
-    let digitsBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 4 });
+    // 6. Digits (সংখ্যা)
+    sectionLabel("সংখ্যা (Bengali Numerals)");
     const DIGITS = ["০", "১", "২", "৩", "৪", "৫", "৬", "৭", "৮", "৯"];
-    DIGITS.forEach(d => digitsBox.pack_start(makeKey(d, null), false, false, 0));
-    contentBox.pack_start(digitsBox, false, false, 0);
+    keyBox.pack_start(keyRow(DIGITS, null), false, false, 0);
 
-    rootBox.pack_start(contentBox, true, true, 0);
+    contentBox.pack_start(keyCard, true, true, 0);
+    let sw = new Gtk.ScrolledWindow({ hscrollbar_policy: Gtk.PolicyType.NEVER });
+    sw.add(contentBox);
+    rootBox.pack_start(sw, true, true, 0);
     win.add(rootBox);
 
+    // Standalone (no parent window): own the main loop
+    if (!parentWindow) {
+        win.connect("destroy", () => Gtk.main_quit());
+    }
     win.show_all();
+    if (!parentWindow) {
+        Gtk.main();
+    }
     return win;
 };
 
@@ -327,7 +257,5 @@ try {
 
 if (_isMain) {
     Gtk.init(null);
-    let w = runAvroMouse();
-    w.connect("destroy", () => Gtk.main_quit());
-    Gtk.main();
+    runAvroMouse();
 }
