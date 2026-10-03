@@ -176,8 +176,19 @@ function autoFixIssues() {
     try {
         let [ok, out] = GLib.spawn_command_line_sync("pgrep -x ibus-daemon");
         if (!ok || !out || out.length === 0) {
-            GLib.spawn_command_line_async("ibus-daemon -drx");
-            fixed.push("Started ibus-daemon in background (-drx).");
+            GLib.spawn_command_line_async("ibus-daemon -drx --panel disable");
+            fixed.push("Started ibus-daemon in background (-drx --panel disable).");
+        }
+    } catch (e) {}
+
+    try {
+        let [ok, out] = GLib.spawn_command_line_sync("gsettings get org.freedesktop.ibus.general embed-preedit-text");
+        if (ok && out) {
+            let str = String.fromCharCode.apply(null, out).trim();
+            if (str !== "true") {
+                GLib.spawn_command_line_sync("gsettings set org.freedesktop.ibus.general embed-preedit-text true");
+                fixed.push("Enabled live inline preedit (embed-preedit-text=true).");
+            }
         }
     } catch (e) {}
 

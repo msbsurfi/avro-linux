@@ -149,9 +149,11 @@ if (bus.is_connected()) {
         if (!engine.mode_bangla) {
             prop_mode.set_label(IBus.Text.new_from_string("English"));
             prop_mode.set_symbol(IBus.Text.new_from_string("En"));
+            try { prop_mode.set_icon("input-keyboard"); } catch (e) {}
         } else {
             prop_mode.set_label(IBus.Text.new_from_string("বাংলা (Avro)"));
             prop_mode.set_symbol(IBus.Text.new_from_string("বা"));
+            try { prop_mode.set_icon("avro-bangla"); } catch (e) {}
         }
         engine.update_property(prop_mode);
     }
@@ -383,18 +385,41 @@ if (bus.is_connected()) {
         resetAll(engine);
     }
 
+    var focusOutTimeoutId = 0;
+
     function engine_focus_out(engine) {
-        // The preview belongs to the focused text field
-        hidePreviewWindow(engine);
-        finishCompositionByClient(engine);
+        if (focusOutTimeoutId !== 0) {
+            GLib.source_remove(focusOutTimeoutId);
+            focusOutTimeoutId = 0;
+        }
+        if (engine.buffertext && engine.buffertext.length > 0) {
+            // Debounce by 80ms: in Wayland/KWin environments where a window maps or
+            // focus momentarily bounces, focus_in cancels this timer before composition is aborted.
+            focusOutTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 80, () => {
+                focusOutTimeoutId = 0;
+                hidePreviewWindow(engine);
+                commitCandidate(engine);
+                return GLib.SOURCE_REMOVE;
+            });
+        } else {
+            hidePreviewWindow(engine);
+            finishCompositionByClient(engine);
+        }
     }
 
     function engine_reset(engine) {
+        if (focusOutTimeoutId !== 0) {
+            GLib.source_remove(focusOutTimeoutId);
+            focusOutTimeoutId = 0;
+        }
         finishCompositionByClient(engine);
     }
 
     function engine_disable(engine) {
-        // Switching to another keyboard keeps the word being typed
+        if (focusOutTimeoutId !== 0) {
+            GLib.source_remove(focusOutTimeoutId);
+            focusOutTimeoutId = 0;
+        }
         finishCompositionByClient(engine);
     }
 
@@ -435,6 +460,10 @@ if (bus.is_connected()) {
     proplist.append(propp);
 
     function engine_focus_in(engine) {
+        if (focusOutTimeoutId !== 0) {
+            GLib.source_remove(focusOutTimeoutId);
+            focusOutTimeoutId = 0;
+        }
         engine.register_properties(proplist);
         updateEngineProperty(engine);
         if (engine.buffertext && engine.buffertext.length > 0) {
@@ -614,7 +643,10 @@ if (bus.is_connected()) {
     }
 
     function hideSystemPanel(engine) {
-        try { engine.hide_lookup_table(); } catch (e) {}
+        try {
+            if (engine.lookuptable) engine.lookuptable.clear();
+            engine.hide_lookup_table();
+        } catch (e) {}
         try { engine.hide_auxiliary_text(); } catch (e) {}
     }
 
@@ -632,6 +664,7 @@ if (bus.is_connected()) {
             hideSystemPanel(engine);
         }
         if (mode === 'classic') {
+            hideSystemPanel(engine);
             showPreviewWindow(engine);
         } else if (mode === 'system') {
             showSystemPanel(engine);
@@ -854,7 +887,7 @@ if (bus.is_connected()) {
         language: "bn",
         license: "MPL-2.0",
         author: "Sarim Khan <sarim2005@gmail.com>",
-        icon: eevars.get_pkgdatadir() + "/icons/avro-bangla.png",
+        icon: "avro-bangla",
         layout: "us",
         setup: "/usr/bin/env gjs " + eevars.get_pkgdatadir() + "/preferences/pref.js --standalone",
         rank: 99
@@ -867,7 +900,7 @@ if (bus.is_connected()) {
         language: "bn",
         license: "MPL-2.0",
         author: "Sarim Khan <sarim2005@gmail.com>",
-        icon: eevars.get_pkgdatadir() + "/icons/avro-bangla.png",
+        icon: "avro-bangla",
         layout: "us",
         setup: "/usr/bin/env gjs " + eevars.get_pkgdatadir() + "/preferences/pref.js --standalone",
         rank: 99

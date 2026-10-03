@@ -85,6 +85,7 @@ install: build
 	install -m 0755 bin/avro-linux-doctor $(DESTDIR)$(prefix)/bin/avro-linux-doctor
 	install -m 0755 bin/avro-preview $(DESTDIR)$(prefix)/bin/avro-preview
 	install -m 0755 bin/avro-mouse $(DESTDIR)$(prefix)/bin/avro-mouse
+	install -m 0755 bin/avro-splash $(DESTDIR)$(prefix)/bin/avro-splash
 
 	# Common & Engine scripts
 	install -m 0644 src/common/evars.js $(DESTDIR)$(pkgdatadir)/common/evars.js
@@ -93,6 +94,7 @@ install: build
 	# Standalone application suite
 	install -m 0755 src/standalone/main.js $(DESTDIR)$(pkgdatadir)/standalone/main.js
 	install -m 0755 src/standalone/topbar.js $(DESTDIR)$(pkgdatadir)/standalone/topbar.js
+	install -m 0755 src/standalone/splash.js $(DESTDIR)$(pkgdatadir)/standalone/splash.js
 	install -m 0755 src/standalone/avropad.js $(DESTDIR)$(pkgdatadir)/standalone/avropad.js
 	install -m 0755 src/standalone/bijoyconverter.js $(DESTDIR)$(pkgdatadir)/standalone/bijoyconverter.js
 	install -m 0755 src/standalone/layoutviewer.js $(DESTDIR)$(pkgdatadir)/standalone/layoutviewer.js

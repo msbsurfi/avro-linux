@@ -139,5 +139,11 @@
       <description>Internal: how many times the "Avro Keyboard is running here" notification has been shown (at most 2)</description>
     </key>
 
+    <key type="b" name="switch-splash">
+      <default>true</default>
+      <summary>Show splash screen on startup</summary>
+      <description>Whether to show the Windows-style Avro splash screen when the TopBar starts</description>
+    </key>
+
   </schema>
 </schemalist>

@@ -125,15 +125,72 @@ function createDiagnosticReport() {
     return diagText;
 }
 
+function hasKey(settings, key) {
+    if (!settings) return false;
+    try {
+        return settings.settings_schema.has_key(key);
+    } catch (e) {
+        try {
+            return settings.list_keys().indexOf(key) !== -1;
+        } catch (e2) {
+            return false;
+        }
+    }
+}
+
+const PREF_CSS = `
+window.avro-pref-window {
+    background-color: @theme_bg_color;
+}
+.avro-card {
+    background-color: alpha(@theme_base_color, 0.45);
+    border: 1px solid alpha(@theme_fg_color, 0.12);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 6px;
+}
+.avro-card:hover {
+    border-color: alpha(@theme_fg_color, 0.22);
+}
+.dim-label {
+    opacity: 0.72;
+    font-size: 8.8pt;
+}
+notebook header {
+    background-color: alpha(@theme_base_color, 0.25);
+    border-bottom: 1px solid alpha(@theme_fg_color, 0.1);
+}
+notebook tab {
+    padding: 8px 18px;
+    font-weight: 500;
+}
+notebook tab:checked {
+    border-bottom: 2px solid #0078d7;
+}
+`;
+
 function runpref() {
     Gtk.init(null);
 
+    let cssProvider = new Gtk.CssProvider();
+    try {
+        cssProvider.load_from_data(PREF_CSS);
+    } catch (e) {
+        cssProvider.load_from_data(new TextEncoder().encode(PREF_CSS));
+    }
+    Gtk.StyleContext.add_provider_for_screen(
+        Gdk.Screen.get_default(),
+        cssProvider,
+        Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 10
+    );
+
     let window = new Gtk.Window({
         title: "Avro Preferences",
-        default_width: 540,
-        default_height: 480,
+        default_width: 560,
+        default_height: 500,
         window_position: Gtk.WindowPosition.CENTER
     });
+    window.get_style_context().add_class("avro-pref-window");
     try { window.set_wmclass("avro-preferences", "AvroPreferences"); } catch (e) {}
 
     // Try setting icon
@@ -279,6 +336,7 @@ function runpref() {
             setting.reset("lutable-size");
             setting.reset("cboxorient");
             setting.reset("mode-bangla");
+            if (hasKey(setting, "switch-splash")) setting.reset("switch-splash");
             readFromSettings();
         }
     });
@@ -377,6 +435,9 @@ function runpref() {
     let switchAutostart = new Gtk.Switch({ valign: Gtk.Align.CENTER, active: isTopBarAutostart() });
     switchAutostart.connect("notify::active", () => setTopBarAutostart(switchAutostart.get_active()));
     topbarRow("Start Avro TopBar when I log in", "Adds the TopBar to your desktop's autostart programs", switchAutostart);
+
+    let switchSplash = new Gtk.Switch({ valign: Gtk.Align.CENTER });
+    topbarRow("Show splash screen on startup", "Display the classic Avro splash screen when TopBar launches", switchSplash);
 
     let btnOpenTopbar = new Gtk.Button({ label: "Open Avro TopBar", halign: Gtk.Align.START });
     btnOpenTopbar.connect("clicked", () => GLib.spawn_command_line_async("avro-topbar restore"));
@@ -616,6 +677,9 @@ function runpref() {
             cboxOrient.set_active(setting.get_int("cboxorient"));
             cboxStyle.set_active_id(setting.get_string("preview-style"));
             cboxTheme.set_active_id(setting.get_string("preview-theme"));
+            if (hasKey(setting, "switch-splash")) {
+                switchSplash.set_active(setting.get_boolean("switch-splash"));
+            }
             updateSensitivities();
         } catch (e) {}
     }
@@ -643,6 +707,9 @@ function runpref() {
         setting.bind("topbar-transparency-level", scaleLevel.get_adjustment(), "value", Gio.SettingsBindFlags.DEFAULT);
         setting.bind("topbar-x-button", cboxXButton, "active-id", Gio.SettingsBindFlags.DEFAULT);
         setting.bind("topbar-startup-ui", cboxStartup, "active-id", Gio.SettingsBindFlags.DEFAULT);
+        if (hasKey(setting, "switch-splash")) {
+            setting.bind("switch-splash", switchSplash, "active", Gio.SettingsBindFlags.DEFAULT);
+        }
         scaleLevel.set_sensitive(switchTransparent.get_active());
         switchTransparent.connect("notify::active", () => scaleLevel.set_sensitive(switchTransparent.get_active()));
 

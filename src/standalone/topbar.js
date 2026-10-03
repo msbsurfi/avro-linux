@@ -781,11 +781,6 @@ function drawLayoutArrow(cr, el, skin) {
 /* ═══════════════════════════════════════════════════════════════════════════
    The TopBar
    ═══════════════════════════════════════════════════════════════════════════ */
-const HINT_CSS = `
-.avro-hint-frame { background-color: #767676; }
-.avro-hint { background-color: #ffffe1; color: #000000; padding: 7px 12px; font-weight: bold; }
-`;
-
 var AvroTopBar = class AvroTopBar {
     /**
      * @param {Gtk.Application|null} app
@@ -1802,34 +1797,6 @@ var AvroTopBar = class AvroTopBar {
         } catch (e) {}
     }
 
-    /* First two runs: a balloon over the mode button, as on Windows. */
-    _maybeShowHint() {
-        let shown = this.settings.get('topbar-hint-count', 0);
-        if (shown >= 2 || !this.window.get_visible()) return;
-        this.settings.set('topbar-hint-count', shown + 1);
-
-        if (!this._hintCss) {
-            this._hintCss = new Gtk.CssProvider();
-            try { this._hintCss.load_from_data(HINT_CSS); } catch (e) { this._hintCss.load_from_data(new TextEncoder().encode(HINT_CSS)); }
-            Gtk.StyleContext.add_provider_for_screen(Gdk.Screen.get_default(), this._hintCss,
-                                                     Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION);
-        }
-        let f12 = isAvroEngine(this._banglaLayout().name);
-        let pop = new Gtk.Window({ type: Gtk.WindowType.POPUP });
-        pop.get_style_context().add_class('avro-hint-frame');
-        pop.set_border_width(1);
-        let box = new Gtk.EventBox({ visible_window: true });
-        box.get_style_context().add_class('avro-hint');
-        box.add(new Gtk.Label({ label: "Click here to start Bangla typing" + (f12 ? "\nor Press F12" : ""), xalign: 0 }));
-        box.connect('button-press-event', () => { pop.destroy(); return true; });
-        pop.add(box);
-        let [wx, wy] = this.window.get_position();
-        let mode = elementById('mode');
-        pop.move(wx + Math.round(mode.x * this.scale), wy + this.height + 4);
-        pop.show_all();
-        GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 5, () => { pop.destroy(); return GLib.SOURCE_REMOVE; });
-    }
-
     /* ── dialogs ─────────────────────────────────────────────────────── */
 
     _info(title, primary, secondary) {
@@ -1911,7 +1878,15 @@ var AvroTopBar = class AvroTopBar {
             this.hideToTray();
         } else {
             this.restoreBar();
-            GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 5, () => { this._maybeShowHint(); return GLib.SOURCE_REMOVE; });
+            let showSplash = this.settings.get('switch-splash', true);
+            if (showSplash && !command) {
+                try {
+                    let splashModule = imports.splash;
+                    if (splashModule && splashModule.showSplashScreen) {
+                        splashModule.showSplashScreen(1800);
+                    }
+                } catch (e) {}
+            }
         }
         if (command && command !== 'minimize' && command !== 'restore') {
             this.handleCommand(command);

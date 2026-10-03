@@ -77,6 +77,13 @@ try {
     assert(false, "Failed to load floating-preview module: " + e.message);
 }
 
+try {
+    const sp = imports.splash;
+    assert(sp && typeof sp.showSplashScreen === 'function', "splash exports showSplashScreen");
+} catch (e) {
+    assert(false, "Failed to load splash module: " + e.message);
+}
+
 // 2. Test Unicode <-> Bijoy conversions
 const bc = imports.bijoyconverter;
 if (bc && bc.unicodeToBijoy && bc.bijoyToUnicode) {
@@ -112,7 +119,8 @@ const BIN_FILES = [
     "bin/avro-preferences",
     "bin/avro-doctor",
     "bin/avro-linux-doctor",
-    "bin/avro-preview"
+    "bin/avro-preview",
+    "bin/avro-splash"
 ];
 
 for (let i = 0; i < BIN_FILES.length; i++) {
