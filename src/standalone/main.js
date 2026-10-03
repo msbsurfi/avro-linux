@@ -115,7 +115,14 @@ function main() {
     } catch (e) {}
 
     Gtk.init(null);
-    try { Gtk.Window.set_default_icon_name("avro-bangla"); } catch (e) {}
+    // Each tool has its own icon; the TopBar and everything else keep the Avro logo.
+    let toolIcon = "avro-bangla";
+    if (prgName === "avro-pad") toolIcon = "avro-pad";
+    else if (prgName === "avro-converter") toolIcon = "avro-converter";
+    else if (prgName === "avro-layout") toolIcon = "avro-layout";
+    else if (prgName === "avro-mouse") toolIcon = "avro-mouse";
+    else if (prgName === "avro-preferences") toolIcon = "avro-preferences";
+    try { Gtk.Window.set_default_icon_name(toolIcon); } catch (e) {}
 
     if (args.indexOf('--pad') !== -1) {
         if (AvroPad && AvroPad.runAvroPad) {

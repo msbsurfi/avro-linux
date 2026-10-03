@@ -70,146 +70,42 @@ try { BijoyConverter = imports.bijoyconverter; } catch (e) {}
 let LayoutViewer = null;
 try { LayoutViewer = imports.layoutviewer; } catch (e) {}
 
+// Shared modern theme (src/common/avrotheme.js)
+let Theme = null;
+(function loadTheme() {
+    let dirs = ['/usr/share/avro-linux/common'];
+    try {
+        let m = new Error().stack.match(/(?:^|@|\()(?:file:\/\/)?([^\s:()@]+\.js):\d+/m);
+        if (m) {
+            let d = GLib.path_get_dirname(GLib.canonicalize_filename(m[1], GLib.get_current_dir()));
+            dirs.unshift(d + '/../common', d + '/../src/common');
+        }
+    } catch (e) {}
+    for (let d of dirs) {
+        if (GLib.file_test(d + '/avrotheme.js', GLib.FileTest.EXISTS)) {
+            imports.searchPath.unshift(d);
+            try { Theme = imports.avrotheme; } catch (e) { printerr('Avro theme: ' + e); }
+            break;
+        }
+    }
+})();
+
 /* ═══════════════════════════════════════════════════════════════════════════
-   CSS — Royal Minimal Professional Dark Theme
+   CSS — Avro Pad specifics (the common look comes from avrotheme.js)
    ═══════════════════════════════════════════════════════════════════════════ */
-const APP_CSS = `
-* { outline: none; }
-
-window {
-    background-color: #1a1d23;
-    color: #e8eaf0;
-}
-
-/* ── Toolbar ── */
-toolbar {
-    background: linear-gradient(180deg, #23283a 0%, #1a1d23 100%);
-    border-bottom: 1px solid #2e3346;
-    padding: 4px 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
-}
-toolbar toolbutton button {
-    background: transparent;
-    color: #b0b8d0;
-    border: 1px solid transparent;
-    border-radius: 8px;
-    padding: 4px 10px;
-    margin: 1px 2px;
-    font-size: 13px;
-    transition: all 120ms ease;
-}
-toolbar toolbutton button:hover {
-    background: rgba(255,255,255,0.08);
-    color: #e8eaf0;
-    border-color: rgba(255,255,255,0.12);
-}
-toolbar toolbutton button:active {
-    background: rgba(255,255,255,0.14);
-}
-
-/* ── Mode buttons ── */
-.btn-bangla {
-    background: linear-gradient(135deg, #00b09b, #75c941) !important;
-    color: #062b16 !important;
-    font-weight: 900 !important;
-    border-radius: 10px !important;
-    padding: 4px 18px !important;
-    border: 1px solid #75c941 !important;
-    box-shadow: 0 0 12px rgba(117,201,65,0.35) !important;
-}
-.btn-bangla:hover {
-    background: linear-gradient(135deg, #00c9b2, #8ee050) !important;
-}
-.btn-english {
-    background: linear-gradient(135deg, #3a3f52, #4a90d9) !important;
-    color: #ffffff !important;
-    font-weight: 900 !important;
-    border-radius: 10px !important;
-    padding: 4px 18px !important;
-    border: 1px solid rgba(255,255,255,0.2) !important;
-}
-.btn-english:hover {
-    background: linear-gradient(135deg, #4a90d9, #5ea8f0) !important;
-}
-
-/* ── Candidate / Suggestion bar ── */
-.cand-bar {
-    background: linear-gradient(90deg, #1e2235, #23283a);
-    border-bottom: 1px solid #2e3346;
-    padding: 5px 14px;
-    min-height: 34px;
-}
-.cand-label-header {
-    color: #5b9bd5;
-    font-weight: bold;
-    font-size: 12px;
-}
-.cand-label-list {
-    color: #c0c8dc;
+function buildPadCss(p) {
+    return `
+.avro-win .cand-label-list {
     font-size: 14px;
     font-family: 'Noto Sans Bengali', 'Kalpurush', 'SolaimanLipi', sans-serif;
 }
-.cand-label-hint {
-    color: #4e566e;
-    font-size: 12px;
-    font-style: italic;
-}
-.cand-active {
-    color: #00e5a0;
-    font-weight: bold;
-}
-
-/* ── Editor ── */
-textview {
-    background-color: #141720;
-    color: #dce3f5;
-    border: none;
-}
-textview text {
-    background-color: #141720;
-    color: #dce3f5;
-    font-size: 18pt;
+.avro-win textview text {
     font-family: 'Noto Sans Bengali', 'Kalpurush', 'Siyam Rupali', 'SolaimanLipi', sans-serif;
-    caret-color: #4a90d9;
+    caret-color: ${p.accent};
 }
-
-/* ── Status bar ── */
-.status-bar {
-    background-color: #12151e;
-    border-top: 1px solid #2a2f40;
-    padding: 4px 14px;
-}
-.status-left {
-    color: #6879a0;
-    font-size: 11px;
-}
-.status-right {
-    color: #3d4a68;
-    font-size: 11px;
-}
-
-/* ── Scrollbar ── */
-scrollbar {
-    background-color: #1a1d23;
-    border: none;
-}
-scrollbar slider {
-    background-color: #2e3448;
-    border-radius: 6px;
-    border: 1px solid #3a4060;
-    min-width: 8px;
-    min-height: 8px;
-}
-scrollbar slider:hover {
-    background-color: #3d4a6a;
-}
-
-/* ── Scrolled window ── */
-scrolledwindow {
-    border: none;
-    background-color: #141720;
-}
+.avro-win button.avro-mode { min-width: 118px; }
 `;
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    runAvroPad()
@@ -220,27 +116,30 @@ function runAvroPad(initialText) {
         GLib.set_application_name("Avro Pad");
     } catch (e) {}
 
-    /* Apply global CSS */
-    let cssProvider = new Gtk.CssProvider();
+    /* Apply the shared theme plus Avro Pad specifics */
+    let pal = Theme.apply();
     try {
-        cssProvider.load_from_data(APP_CSS);
+        let padProvider = new Gtk.CssProvider();
+        padProvider.load_from_data(buildPadCss(pal));
         Gtk.StyleContext.add_provider_for_screen(
             Gdk.Screen.get_default(),
-            cssProvider,
-            Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+            padProvider,
+            Gtk.STYLE_PROVIDER_PRIORITY_USER
         );
     } catch (e) {}
 
     /* Main window */
     let window = new Gtk.Window({
         title: "Avro Pad — Bengali Text Editor",
-        default_width: 920,
-        default_height: 660,
+        default_width: 980,
+        default_height: 700,
         window_position: Gtk.WindowPosition.CENTER
     });
-    window.set_icon_name("avro-bangla");
+    window.set_icon_name("avro-pad");
     try { window.set_wmclass("avro-pad", "AvroPad"); } catch (e) {}
-    try { Gtk.Window.set_default_icon_name("avro-bangla"); } catch (e) {}
+    try { Gtk.Window.set_default_icon_name("avro-pad"); } catch (e) {}
+    Theme.styleWindow(window);
+    window.set_size_request(640, 420);
 
     /* Suggestion builder */
     let sBuilder = null;
@@ -261,22 +160,28 @@ function runAvroPad(initialText) {
     /* ═══════════════════════════════════════════════════════════════════════
        TOOLBAR
        ═══════════════════════════════════════════════════════════════════════ */
-    let toolbar = new Gtk.Toolbar();
-    toolbar.get_style_context().add_class("primary-toolbar");
+    let header = Theme.headerBar({
+        icon: "avro-pad",
+        title: "Avro Pad",
+        subtitle: "Bengali text editor"
+    });
+    window.set_titlebar(header);
 
-    /* Mode toggle button */
-    let btnMode = new Gtk.ToolButton();
+    /* Mode toggle pill */
+    let btnMode = new Gtk.Button({ valign: Gtk.Align.CENTER, margin_start: 14 });
+    btnMode.get_style_context().add_class("avro-pill");
+    btnMode.get_style_context().add_class("avro-mode");
     function updateModeBtn() {
-        btnMode.get_style_context().remove_class("btn-bangla");
-        btnMode.get_style_context().remove_class("btn-english");
+        btnMode.get_style_context().remove_class("avro-on");
+        btnMode.get_style_context().remove_class("avro-off");
         if (isBangla) {
-            btnMode.set_label("বাংলা  [F12]");
+            btnMode.set_label("বাংলা  ·  F12");
             btnMode.set_tooltip_text("Mode: বাংলা — Press F12 or click to switch to English");
-            btnMode.get_style_context().add_class("btn-bangla");
+            btnMode.get_style_context().add_class("avro-on");
         } else {
-            btnMode.set_label("English  [F12]");
+            btnMode.set_label("English  ·  F12");
             btnMode.set_tooltip_text("Mode: English — Press F12 or click to switch to বাংলা");
-            btnMode.get_style_context().add_class("btn-english");
+            btnMode.get_style_context().add_class("avro-off");
         }
     }
     updateModeBtn();
@@ -286,77 +191,63 @@ function runAvroPad(initialText) {
         updateModeBtn();
         updateCandBar();
     });
-    toolbar.insert(btnMode, -1);
+    header.pack_start(btnMode);
 
-    toolbar.insert(new Gtk.SeparatorToolItem(), -1);
+    function headerSep() {
+        let sep = new Gtk.Separator({ orientation: Gtk.Orientation.VERTICAL, margin_top: 14, margin_bottom: 14, margin_start: 4, margin_end: 4 });
+        return sep;
+    }
 
-    /* Copy */
-    let btnCopy = new Gtk.ToolButton({ icon_name: "edit-copy", label: "Copy All" });
-    btnCopy.set_is_important(true);
-    btnCopy.set_tooltip_text("Copy entire document to clipboard");
-    toolbar.insert(btnCopy, -1);
+    /* Actions, packed right-to-left (the window buttons are already at the far right) */
+    let btnAbout = Theme.iconButton("avro-about-symbolic", "About Avro Pad");
+    let btnClear = Theme.iconButton("avro-clear-symbolic", "Clear document");
+    let btnLayout = Theme.iconButton("avro-typing-symbolic", "Avro Phonetic Keyboard Layout Guide");
+    let btnBijoy = Theme.iconButton("avro-convert-symbolic", "Open Unicode ↔ Bijoy (SutonnyMJ) Converter");
+    let btnZoomIn = Theme.iconButton("avro-zoomin-symbolic", "Increase font size");
+    let btnZoomOut = Theme.iconButton("avro-zoomout-symbolic", "Decrease font size");
+    let btnCopy = Theme.iconButton("avro-copy-symbolic", "Copy entire document to clipboard");
 
-    /* Font size */
-    let btnZoomIn  = new Gtk.ToolButton({ icon_name: "zoom-in",  label: "A+" });
-    let btnZoomOut = new Gtk.ToolButton({ icon_name: "zoom-out", label: "A−" });
-    btnZoomIn .set_tooltip_text("Increase font size");
-    btnZoomOut.set_tooltip_text("Decrease font size");
-    toolbar.insert(btnZoomIn,  -1);
-    toolbar.insert(btnZoomOut, -1);
-
-    toolbar.insert(new Gtk.SeparatorToolItem(), -1);
-
-    /* Bijoy converter */
-    let btnBijoy = new Gtk.ToolButton({ icon_name: "document-properties", label: "↔ Bijoy" });
-    btnBijoy.set_tooltip_text("Open Unicode ↔ Bijoy (SutonnyMJ) Converter");
     btnBijoy.connect("clicked", () => {
         if (BijoyConverter && BijoyConverter.runConverterDialog)
             BijoyConverter.runConverterDialog(window);
     });
-    toolbar.insert(btnBijoy, -1);
-
-    /* Layout viewer */
-    let btnLayout = new Gtk.ToolButton({ icon_name: "help-browser", label: "Layout" });
-    btnLayout.set_tooltip_text("Avro Phonetic Keyboard Layout Guide");
     btnLayout.connect("clicked", () => {
         if (LayoutViewer && LayoutViewer.runLayoutViewerDialog)
             LayoutViewer.runLayoutViewerDialog(window);
     });
-    toolbar.insert(btnLayout, -1);
-
-    toolbar.insert(new Gtk.SeparatorToolItem(), -1);
-
-    /* Clear */
-    let btnClear = new Gtk.ToolButton({ icon_name: "edit-clear-all", label: "Clear" });
-    btnClear.set_tooltip_text("Clear document");
-    toolbar.insert(btnClear, -1);
-
-    /* About */
-    let btnAbout = new Gtk.ToolButton({ icon_name: "help-about", label: "About" });
-    btnAbout.set_tooltip_text("About Avro Pad");
     btnAbout.connect("clicked", () => showAbout(window));
-    toolbar.insert(btnAbout, -1);
 
-    mainBox.pack_start(toolbar, false, false, 0);
+    header.pack_end(btnAbout);
+    header.pack_end(btnClear);
+    header.pack_end(headerSep());
+    header.pack_end(btnLayout);
+    header.pack_end(btnBijoy);
+    header.pack_end(headerSep());
+    header.pack_end(btnZoomIn);
+    header.pack_end(btnZoomOut);
+    header.pack_end(btnCopy);
 
     /* ═══════════════════════════════════════════════════════════════════════
        CANDIDATE / SUGGESTION BAR
        ═══════════════════════════════════════════════════════════════════════ */
-    let candBarBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 0, border_width: 0 });
-    candBarBox.get_style_context().add_class("cand-bar");
+    let candBarBox = new Gtk.Box({
+        orientation: Gtk.Orientation.HORIZONTAL, spacing: 0, border_width: 0,
+        margin_start: 16, margin_end: 16, margin_top: 14, margin_bottom: 10
+    });
+    candBarBox.get_style_context().add_class("avro-candbar");
 
-    let candHdr = new Gtk.Label({ label: " SUGGESTIONS ", xalign: 0 });
-    candHdr.get_style_context().add_class("cand-label-header");
+    let candHdr = new Gtk.Label({ label: "SUGGESTIONS", xalign: 0 });
+    candHdr.get_style_context().add_class("avro-cand-header");
 
     let candList = new Gtk.Label({ label: "", xalign: 0, use_markup: true });
     candList.get_style_context().add_class("cand-label-list");
     candList.set_ellipsize(3);  // PANGO_ELLIPSIZE_END
 
-    let candHint = new Gtk.Label({ label: "  [1-9]=select  Space=commit  Esc=cancel", xalign: 1 });
-    candHint.get_style_context().add_class("cand-label-hint");
+    let candHint = new Gtk.Label({ label: "[1-9] select   Space commit   Esc cancel", xalign: 1 });
+    candHint.get_style_context().add_class("avro-cand-hint");
 
     candBarBox.pack_start(candHdr,  false, false, 4);
-    candBarBox.pack_start(candList, true,  true,  8);
+    candBarBox.pack_start(candList, true,  true,  12);
     candBarBox.pack_end  (candHint, false, false, 8);
 
     mainBox.pack_start(candBarBox, false, false, 0);
@@ -367,8 +258,10 @@ function runAvroPad(initialText) {
     let scrolled = new Gtk.ScrolledWindow({
         shadow_type: Gtk.ShadowType.NONE,
         hexpand: true,
-        vexpand: true
+        vexpand: true,
+        margin_start: 16, margin_end: 16, margin_bottom: 12
     });
+    scrolled.get_style_context().add_class("avro-framed");
     let textView = new Gtk.TextView({
         wrap_mode: Gtk.WrapMode.WORD,
         left_margin:   22,
@@ -395,7 +288,7 @@ function runAvroPad(initialText) {
     let preeditTag = new Gtk.TextTag({
         name: "avro-preedit",
         underline: Pango.Underline.SINGLE,
-        foreground: "#00e5a0"
+        foreground: pal.preedit
     });
     textBuffer.get_tag_table().add(preeditTag);
 
@@ -459,7 +352,7 @@ function runAvroPad(initialText) {
        STATUS BAR
        ═══════════════════════════════════════════════════════════════════════ */
     let statusBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 0, border_width: 0 });
-    statusBox.get_style_context().add_class("status-bar");
+    statusBox.get_style_context().add_class("avro-statusbar");
 
     let statusLeft  = new Gtk.Label({ label: "Avro Pad • Remastered by MD Shifat Bin Siddique Urfi", xalign: 0 });
     let statusRight = new Gtk.Label({ label: "F12 = Toggle Bangla/English", xalign: 1 });
@@ -484,7 +377,7 @@ function runAvroPad(initialText) {
                 candList.set_markup("<i>English mode active — F12 to switch to Bangla</i>");
             } else {
                 candList.set_markup(
-                    "<span foreground='#3d4a68'>Type phonetically, e.g.  ami  banglay  gan  gai</span>"
+                    "<span foreground='" + pal.faint + "'>Type phonetically, e.g.  ami  banglay  gan  gai</span>"
                 );
             }
             updatePreeditText("");
@@ -526,9 +419,9 @@ function runAvroPad(initialText) {
             let num = (i + 1).toString();
             let word = candidates[i].replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
             if (i === selectedIdx) {
-                parts.push('<span foreground="#00e5a0" weight="bold">[ ' + num + '.  ' + word + ' ]</span>');
+                parts.push('<span foreground="' + pal.accent + '" weight="bold">[ ' + num + '.  ' + word + ' ]</span>');
             } else {
-                parts.push('<span foreground="#6877aa">' + num + '.  ' + word + '</span>');
+                parts.push('<span foreground="' + pal.subtext + '">' + num + '.  ' + word + '</span>');
             }
         }
         candList.set_markup(parts.join('   '));
@@ -764,8 +657,10 @@ function showAbout(parent) {
             "Sarim Khan — ibus-avro",
             "Rifat Nabi — jsAvroPhonetic"
         ],
-        license_type: Gtk.License.MPL_2_0
+        license_type: Gtk.License.MPL_2_0,
+        logo_icon_name: "avro-pad"
     });
+    try { Theme.styleWindow(dialog); } catch (e) {}
     dialog.run();
     dialog.destroy();
 }

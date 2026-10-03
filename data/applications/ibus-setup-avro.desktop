@@ -2,6 +2,6 @@
 Name=IBus Avro Phonetic Preferences
 Type=Application
 Exec=/usr/share/avro-linux/preferences/pref.js --standalone
-Icon=avro-bangla
+Icon=avro-preferences
 NoDisplay=true
 StartupNotify=true

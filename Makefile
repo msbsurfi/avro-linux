@@ -64,6 +64,7 @@ install: build
 	install -d -m 0755 $(DESTDIR)$(datadir)/metainfo
 	install -d -m 0755 $(DESTDIR)$(datadir)/pixmaps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps
+	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/scalable/actions
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/16x16/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/22x22/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/24x24/apps
@@ -92,6 +93,7 @@ install: build
 
 	# Common & Engine scripts
 	install -m 0644 src/common/evars.js $(DESTDIR)$(pkgdatadir)/common/evars.js
+	install -m 0644 src/common/avrotheme.js $(DESTDIR)$(pkgdatadir)/common/avrotheme.js
 	install -m 0755 src/engine/main-gjs.js $(DESTDIR)$(pkgdatadir)/engine/main-gjs.js
 
 	# Standalone application suite
@@ -144,6 +146,13 @@ install: build
 	install -m 0644 data/icons/avro-bangla.png $(DESTDIR)$(pkgdatadir)/icons/avro-bangla.png
 	install -m 0644 data/icons/avro-bangla.png $(DESTDIR)$(datadir)/pixmaps/avro-bangla.png
 	install -m 0644 data/icons/avro-bangla.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps/avro-bangla.svg
+	install -m 0644 data/icons/avro-pad.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps/avro-pad.svg
+	install -m 0644 data/icons/avro-preferences.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps/avro-preferences.svg
+	install -m 0644 data/icons/avro-converter.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps/avro-converter.svg
+	install -m 0644 data/icons/avro-layout.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps/avro-layout.svg
+	install -m 0644 data/icons/avro-mouse.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps/avro-mouse.svg
+	install -m 0644 data/icons/avro-doctor.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/apps/avro-doctor.svg
+	install -m 0644 data/icons/symbolic/*-symbolic.svg $(DESTDIR)$(datadir)/icons/hicolor/scalable/actions/
 	install -m 0644 data/icons/16x16/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/16x16/apps/avro-bangla.png
 	install -m 0644 data/icons/22x22/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/22x22/apps/avro-bangla.png
 	install -m 0644 data/icons/24x24/avro-bangla.png $(DESTDIR)$(datadir)/icons/hicolor/24x24/apps/avro-bangla.png

@@ -163,6 +163,23 @@ try {
     assert(false, "CLI version check failed: " + e.message);
 }
 
+// 6. Test the shared modern theme and the per-app icon set
+try {
+    let themeSrc = GLib.file_get_contents("src/common/avrotheme.js")[1];
+    let themeText = String.fromCharCode.apply(null, themeSrc);
+    assert(themeText.indexOf("function headerBar") !== -1, "avrotheme.js exposes headerBar()");
+    assert(themeText.indexOf("function settingRow") !== -1, "avrotheme.js exposes settingRow()");
+    assert(themeText.indexOf("dark:") !== -1 && themeText.indexOf("light:") !== -1, "avrotheme.js ships light and dark palettes");
+} catch (e) {
+    assert(false, "Theme module check failed: " + e.message);
+}
+for (let icon of ["avro-pad", "avro-preferences", "avro-converter", "avro-layout", "avro-mouse", "avro-doctor"]) {
+    assert(GLib.file_test("data/icons/" + icon + ".svg", GLib.FileTest.EXISTS), "App icon exists: " + icon + ".svg");
+}
+for (let icon of ["avro-copy", "avro-typing", "avro-general", "avro-close", "avro-refresh"]) {
+    assert(GLib.file_test("data/icons/symbolic/" + icon + "-symbolic.svg", GLib.FileTest.EXISTS), "UI icon exists: " + icon + "-symbolic.svg");
+}
+
 print("\nStandalone Suite Test Summary:");
 print("  Total Passed: " + passedCount);
 print("  Total Failed: " + failedCount);

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Avro Linux — Layout Viewer icon. SPDX-License-Identifier: MPL-2.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2dd4bf"/>
+      <stop offset="1" stop-color="#0f766e"/>
+    </linearGradient>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect x="12" y="12" width="232" height="232" rx="58" fill="url(#bg)"/>
+  <rect x="12" y="12" width="232" height="116" rx="58" fill="url(#gloss)"/>
+  <rect x="38" y="74" width="180" height="108" rx="20" fill="#000" opacity="0.18" transform="translate(0 6)"/>
+  <rect x="38" y="74" width="180" height="108" rx="20" fill="#ffffff"/>
+  <rect x="60" y="94" width="16" height="16" rx="4" fill="#0f766e"/>
+  <rect x="84" y="94" width="16" height="16" rx="4" fill="#0f766e"/>
+  <rect x="108" y="94" width="16" height="16" rx="4" fill="#0f766e"/>
+  <rect x="132" y="94" width="16" height="16" rx="4" fill="#0f766e"/>
+  <rect x="156" y="94" width="16" height="16" rx="4" fill="#0f766e"/>
+  <rect x="180" y="94" width="16" height="16" rx="4" fill="#0f766e"/>
+  <rect x="72" y="118" width="16" height="16" rx="4" fill="#0f766e"/>
+  <rect x="96" y="118" width="16" height="16" rx="4" fill="#0f766e"/>
+  <rect x="120" y="118" width="16" height="16" rx="4" fill="#0f766e"/>
+  <rect x="144" y="118" width="16" height="16" rx="4" fill="#0f766e"/>
+  <rect x="168" y="118" width="16" height="16" rx="4" fill="#0f766e"/>
+  <rect x="84" y="142" width="88" height="16" rx="5" fill="#14b8a6"/>
+  <rect x="60" y="142" width="16" height="16" rx="4" fill="#0f766e"/>
+  <rect x="180" y="142" width="16" height="16" rx="4" fill="#0f766e"/>
+</svg>

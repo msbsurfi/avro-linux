@@ -12,6 +12,26 @@ const Gtk = imports.gi.Gtk;
 const Gdk = imports.gi.Gdk;
 const GLib = imports.gi.GLib;
 
+// Shared modern theme (src/common/avrotheme.js)
+let Theme = null;
+(function loadTheme() {
+    let dirs = ['/usr/share/avro-linux/common'];
+    try {
+        let m = new Error().stack.match(/(?:^|@|\()(?:file:\/\/)?([^\s:()@]+\.js):\d+/m);
+        if (m) {
+            let d = GLib.path_get_dirname(GLib.canonicalize_filename(m[1], GLib.get_current_dir()));
+            dirs.unshift(d + '/../common', d + '/../src/common');
+        }
+    } catch (e) {}
+    for (let d of dirs) {
+        if (GLib.file_test(d + '/avrotheme.js', GLib.FileTest.EXISTS)) {
+            imports.searchPath.unshift(d);
+            try { Theme = imports.avrotheme; } catch (e) { printerr('Avro theme: ' + e); }
+            break;
+        }
+    }
+})();
+
 // Mapping tables for Unicode <-> Bijoy (SutonnyMJ / ANSI)
 const DIGIT_MAP = {
     '০': '0', '১': '1', '২': '2', '৩': '3', '৪': '4',
@@ -229,53 +249,57 @@ function runConverterDialog(parentWindow) {
         GLib.set_application_name("Avro Unicode to Bijoy Converter");
     } catch (e) {}
 
+    Theme.apply();
+
     let dialog = new Gtk.Window({
         title: "Avro Unicode to Bijoy (ANSI) Converter",
-        default_width: 680,
-        default_height: 520,
+        default_width: 860,
+        default_height: 560,
         window_position: Gtk.WindowPosition.CENTER
     });
-    dialog.set_icon_name("avro-bangla");
+    dialog.set_icon_name("avro-converter");
     try { dialog.set_wmclass("avro-converter", "AvroConverter"); } catch (e) {}
-    try { Gtk.Window.set_default_icon_name("avro-bangla"); } catch (e) {}
+    try { Gtk.Window.set_default_icon_name("avro-converter"); } catch (e) {}
+    Theme.styleWindow(dialog);
+    dialog.set_size_request(640, 420);
 
     if (parentWindow) {
         dialog.set_transient_for(parentWindow);
     }
 
-    let mainBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 12, border_width: 14 });
+    dialog.set_titlebar(Theme.headerBar({
+        icon: "avro-converter",
+        title: "Unicode ↔ Bijoy Converter",
+        subtitle: "Convert between Unicode and legacy ANSI / SutonnyMJ"
+    }));
 
-    // Header
-    let headerBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
-    let title = new Gtk.Label({ label: "<b><big>Unicode ↔ Bijoy (SutonnyMJ) Converter</big></b>", use_markup: true, xalign: 0 });
-    let subtitle = new Gtk.Label({
-        label: "Convert Bengali text between standard Unicode and legacy ANSI / Bijoy font encoding.",
-        xalign: 0
-    });
-    subtitle.get_style_context().add_class("dim-label");
-    headerBox.pack_start(title, false, false, 0);
-    headerBox.pack_start(subtitle, false, false, 0);
-    mainBox.pack_start(headerBox, false, false, 0);
+    let mainBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 14, margin: 20 });
 
-    // Panes Grid
-    let grid = new Gtk.Grid({ column_spacing: 12, row_spacing: 8 });
+    // Panes
+    function makePane(titleText, subText) {
+        let pane = Theme.card();
+        let head = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8, margin_start: 16, margin_end: 10, margin_top: 10, margin_bottom: 8 });
+        let col = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 0, valign: Gtk.Align.CENTER });
+        col.pack_start(Theme.label(titleText, "avro-row-title"), false, false, 0);
+        col.pack_start(Theme.label(subText, "avro-row-sub"), false, false, 0);
+        head.pack_start(col, true, true, 0);
+        pane.pack_start(head, false, false, 0);
+        pane.pack_start(new Gtk.Separator({ orientation: Gtk.Orientation.HORIZONTAL }), false, false, 0);
+        let sw = new Gtk.ScrolledWindow({ hexpand: true, vexpand: true });
+        let tv = new Gtk.TextView({ wrap_mode: Gtk.WrapMode.WORD, left_margin: 14, right_margin: 14, top_margin: 12, bottom_margin: 12 });
+        sw.add(tv);
+        pane.pack_start(sw, true, true, 0);
+        return { pane: pane, head: head, textView: tv };
+    }
 
-    // Unicode side
-    let uniLabel = new Gtk.Label({ label: "<b>Unicode Bengali (Avro, Web, Modern Apps)</b>", use_markup: true, xalign: 0 });
-    let uniScrolled = new Gtk.ScrolledWindow({ shadow_type: Gtk.ShadowType.IN, hexpand: true, vexpand: true });
-    let uniTextView = new Gtk.TextView({ wrap_mode: Gtk.WrapMode.WORD, left_margin: 8, right_margin: 8, top_margin: 8, bottom_margin: 8 });
-    uniScrolled.add(uniTextView);
+    let uniPane = makePane("Unicode Bengali", "Avro, web and modern apps");
+    let bijPane = makePane("Bijoy / ANSI", "SutonnyMJ and legacy formats");
+    let uniTextView = uniPane.textView;
+    let bijTextView = bijPane.textView;
 
-    // Bijoy side
-    let bijLabel = new Gtk.Label({ label: "<b>Bijoy / ANSI (SutonnyMJ, Legacy Formats)</b>", use_markup: true, xalign: 0 });
-    let bijScrolled = new Gtk.ScrolledWindow({ shadow_type: Gtk.ShadowType.IN, hexpand: true, vexpand: true });
-    let bijTextView = new Gtk.TextView({ wrap_mode: Gtk.WrapMode.WORD, left_margin: 8, right_margin: 8, top_margin: 8, bottom_margin: 8 });
-    bijScrolled.add(bijTextView);
-
-    grid.attach(uniLabel, 0, 0, 1, 1);
-    grid.attach(uniScrolled, 0, 1, 1, 1);
-    grid.attach(bijLabel, 1, 0, 1, 1);
-    grid.attach(bijScrolled, 1, 1, 1, 1);
+    let grid = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 14, homogeneous: true });
+    grid.pack_start(uniPane.pane, true, true, 0);
+    grid.pack_start(bijPane.pane, true, true, 0);
     mainBox.pack_start(grid, true, true, 0);
 
     // Action Buttons
@@ -293,6 +317,7 @@ function runConverterDialog(parentWindow) {
     });
 
     let btnBijToUni = new Gtk.Button({ label: "⬅  Convert to Unicode" });
+    btnBijToUni.get_style_context().add_class("suggested-action");
     btnBijToUni.connect("clicked", function() {
         let buf = bijTextView.get_buffer();
         let start = buf.get_start_iter();
@@ -302,7 +327,19 @@ function runConverterDialog(parentWindow) {
         uniTextView.get_buffer().set_text(converted, -1);
     });
 
-    let btnCopyBijoy = new Gtk.Button({ label: "Copy Bijoy" });
+    function copyButton(text) {
+        let b = new Gtk.Button();
+        let box = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 6 });
+        box.pack_start(Gtk.Image.new_from_icon_name("avro-copy-symbolic", Gtk.IconSize.BUTTON), false, false, 0);
+        let lbl = new Gtk.Label({ label: text });
+        box.pack_start(lbl, false, false, 0);
+        b.add(box);
+        b._label = lbl;
+        b.get_style_context().add_class("flat");
+        return b;
+    }
+
+    let btnCopyBijoy = copyButton("Copy Bijoy");
     btnCopyBijoy.connect("clicked", function() {
         let buf = bijTextView.get_buffer();
         let start = buf.get_start_iter();
@@ -310,14 +347,14 @@ function runConverterDialog(parentWindow) {
         let text = buf.get_text(start, end, false);
         let clipboard = Gtk.Clipboard.get_default(Gdk.Display.get_default());
         clipboard.set_text(text, -1);
-        btnCopyBijoy.set_label("Copied!");
+        btnCopyBijoy._label.set_label("Copied!");
         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1500, () => {
-            btnCopyBijoy.set_label("Copy Bijoy");
+            btnCopyBijoy._label.set_label("Copy Bijoy");
             return GLib.SOURCE_REMOVE;
         });
     });
 
-    let btnCopyUni = new Gtk.Button({ label: "Copy Unicode" });
+    let btnCopyUni = copyButton("Copy Unicode");
     btnCopyUni.connect("clicked", function() {
         let buf = uniTextView.get_buffer();
         let start = buf.get_start_iter();
@@ -325,14 +362,18 @@ function runConverterDialog(parentWindow) {
         let text = buf.get_text(start, end, false);
         let clipboard = Gtk.Clipboard.get_default(Gdk.Display.get_default());
         clipboard.set_text(text, -1);
-        btnCopyUni.set_label("Copied!");
+        btnCopyUni._label.set_label("Copied!");
         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1500, () => {
-            btnCopyUni.set_label("Copy Unicode");
+            btnCopyUni._label.set_label("Copy Unicode");
             return GLib.SOURCE_REMOVE;
         });
     });
 
+    uniPane.head.pack_end(btnCopyUni, false, false, 0);
+    bijPane.head.pack_end(btnCopyBijoy, false, false, 0);
+
     let btnClear = new Gtk.Button({ label: "Clear All" });
+    btnClear.get_style_context().add_class("destructive-action");
     btnClear.connect("clicked", function() {
         uniTextView.get_buffer().set_text("", 0);
         bijTextView.get_buffer().set_text("", 0);
@@ -340,11 +381,9 @@ function runConverterDialog(parentWindow) {
 
     actionBox.pack_start(btnUniToBij, false, false, 0);
     actionBox.pack_start(btnBijToUni, false, false, 0);
-    actionBox.pack_start(btnCopyBijoy, false, false, 0);
-    actionBox.pack_start(btnCopyUni, false, false, 0);
     actionBox.pack_start(btnClear, false, false, 0);
 
-    mainBox.pack_start(actionBox, false, false, 4);
+    mainBox.pack_start(actionBox, false, false, 0);
 
     dialog.add(mainBox);
     dialog.connect("destroy", function() {

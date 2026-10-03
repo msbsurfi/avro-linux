@@ -12,6 +12,26 @@ const Gtk = imports.gi.Gtk;
 const Gdk = imports.gi.Gdk;
 const GLib = imports.gi.GLib;
 
+// Shared modern theme (src/common/avrotheme.js)
+let Theme = null;
+(function loadTheme() {
+    let dirs = ['/usr/share/avro-linux/common'];
+    try {
+        let m = new Error().stack.match(/(?:^|@|\()(?:file:\/\/)?([^\s:()@]+\.js):\d+/m);
+        if (m) {
+            let d = GLib.path_get_dirname(GLib.canonicalize_filename(m[1], GLib.get_current_dir()));
+            dirs.unshift(d + '/../common', d + '/../src/common');
+        }
+    } catch (e) {}
+    for (let d of dirs) {
+        if (GLib.file_test(d + '/avrotheme.js', GLib.FileTest.EXISTS)) {
+            imports.searchPath.unshift(d);
+            try { Theme = imports.avrotheme; } catch (e) { printerr('Avro theme: ' + e); }
+            break;
+        }
+    }
+})();
+
 const KEYBOARD_ROWS = [
     // Row 1 (Numbers)
     [
@@ -79,53 +99,92 @@ function runLayoutViewerDialog(parentWindow) {
         GLib.set_application_name("Avro Layout Viewer");
     } catch (e) {}
 
+    let pal = Theme.apply();
+
     let window = new Gtk.Window({
         title: "Avro Phonetic Keyboard Layout Viewer",
-        default_width: 760,
-        default_height: 540,
+        default_width: 880,
+        default_height: 640,
         window_position: Gtk.WindowPosition.CENTER
     });
-    window.set_icon_name("avro-bangla");
+    window.set_icon_name("avro-layout");
     try { window.set_wmclass("avro-layout", "AvroLayout"); } catch (e) {}
-    try { Gtk.Window.set_default_icon_name("avro-bangla"); } catch (e) {}
+    try { Gtk.Window.set_default_icon_name("avro-layout"); } catch (e) {}
+    Theme.styleWindow(window);
 
     if (parentWindow) {
         window.set_transient_for(parentWindow);
     }
 
-    let mainBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 10, border_width: 14 });
-
-    // Title
-    let headerBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
-    let title = new Gtk.Label({ label: "<b><big>Avro Phonetic Keyboard Layout Guide</big></b>", use_markup: true, xalign: 0 });
-    let subtitle = new Gtk.Label({
-        label: "Visual reference for keys, vowels, consonants, conjuncts (যুক্তবর্ণ), and typing shortcuts.",
-        xalign: 0
+    let header = Theme.headerBar({
+        icon: "avro-layout",
+        title: "Keyboard Layout Guide",
+        subtitle: "Avro Phonetic reference"
     });
-    subtitle.get_style_context().add_class("dim-label");
-    headerBox.pack_start(title, false, false, 0);
-    headerBox.pack_start(subtitle, false, false, 0);
-    mainBox.pack_start(headerBox, false, false, 0);
+    window.set_titlebar(header);
 
-    let notebook = new Gtk.Notebook();
+    let stack = new Gtk.Stack({ transition_type: Gtk.StackTransitionType.CROSSFADE, transition_duration: 140 });
+    let switcher = new Gtk.StackSwitcher({ stack: stack, valign: Gtk.Align.CENTER });
+    switcher.get_style_context().add_class("avro-switcher");
+    header.set_custom_title(switcher);
+
+    function pageBox() {
+        return new Gtk.Box({
+            orientation: Gtk.Orientation.VERTICAL, spacing: 12,
+            margin_start: 24, margin_end: 24, margin_top: 20, margin_bottom: 22
+        });
+    }
+
+    /* Striped reference table inside a card */
+    function buildTable(headers, data, bengaliCol) {
+        let tableCard = Theme.card();
+        let grid = new Gtk.Grid({ column_spacing: 0, row_spacing: 0, column_homogeneous: false, margin: 4 });
+        headers.forEach((h, c) => {
+            let l = new Gtk.Label({ label: h, xalign: 0, hexpand: c === headers.length - 1 });
+            l.get_style_context().add_class("avro-cell");
+            l.get_style_context().add_class("avro-cell-head");
+            grid.attach(l, c, 0, 1, 1);
+        });
+        data.forEach((row, i) => {
+            row.forEach((text, c) => {
+                let l = new Gtk.Label({ label: text, xalign: 0, hexpand: c === row.length - 1, selectable: true });
+                let ctx = l.get_style_context();
+                ctx.add_class("avro-cell");
+                if (i % 2 === 1) ctx.add_class("avro-cell-alt");
+                if (c === bengaliCol) ctx.add_class("avro-cell-bn");
+                grid.attach(l, c, i + 1, 1, 1);
+            });
+        });
+        tableCard.pack_start(grid, false, false, 0);
+        return tableCard;
+    }
+
+    function scrollPage(box) {
+        let sw = new Gtk.ScrolledWindow({ hscrollbar_policy: Gtk.PolicyType.NEVER });
+        sw.add(box);
+        return sw;
+    }
 
     /* ========================================================================= */
     /* 1. INTERACTIVE KEYBOARD TAB                                               */
     /* ========================================================================= */
-    let kbBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 12, border_width: 12 });
+    let kbBox = pageBox();
 
     let shiftBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12 });
-    let btnShift = new Gtk.ToggleButton({ label: "  Shift Key View  " });
+    let btnShift = new Gtk.ToggleButton({ label: "⇧  Shift view" });
+    btnShift.get_style_context().add_class("avro-pill");
     let hintLabel = new Gtk.Label({
         label: "Click any key to copy its Bengali character to clipboard",
         xalign: 0
     });
-    hintLabel.get_style_context().add_class("dim-label");
+    hintLabel.get_style_context().add_class("avro-sub");
     shiftBox.pack_start(btnShift, false, false, 0);
     shiftBox.pack_start(hintLabel, true, true, 0);
     kbBox.pack_start(shiftBox, false, false, 0);
 
-    let rowsContainer = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 6 });
+    let kbCard = Theme.card();
+    let rowsContainer = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 6, margin: 20, halign: Gtk.Align.CENTER });
+    kbCard.pack_start(rowsContainer, true, true, 0);
 
     let keyButtons = [];
 
@@ -138,7 +197,11 @@ function runLayoutViewerDialog(parentWindow) {
         keyButtons = [];
 
         for (let r = 0; r < KEYBOARD_ROWS.length; r++) {
-            let rowBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 6, halign: Gtk.Align.CENTER });
+            // Staggered rows like a real keyboard
+            let rowBox = new Gtk.Box({
+                orientation: Gtk.Orientation.HORIZONTAL, spacing: 6, halign: Gtk.Align.CENTER,
+                margin_start: r * 14
+            });
             let row = KEYBOARD_ROWS[r];
             for (let c = 0; c < row.length; c++) {
                 let k = row[c];
@@ -146,12 +209,14 @@ function runLayoutViewerDialog(parentWindow) {
                 let bn = isShift ? k.bnShift : k.bnNormal;
 
                 let btn = new Gtk.Button();
+                btn.get_style_context().add_class("avro-key");
                 let lbl = new Gtk.Label({
-                    label: "<small><span color='#888888'>" + latin + "</span></small>\n<b><big>" + bn + "</big></b>",
-                    use_markup: true
+                    label: "<small><span color='" + pal.faint + "'>" + Theme.esc(latin) + "</span></small>\n<b><big>" + Theme.esc(bn) + "</big></b>",
+                    use_markup: true,
+                    justify: Gtk.Justification.CENTER
                 });
                 btn.add(lbl);
-                btn.set_size_request(48, 48);
+                btn.set_size_request(52, 54);
 
                 let charToCopy = bn;
                 btn.connect("clicked", () => {
@@ -176,21 +241,13 @@ function runLayoutViewerDialog(parentWindow) {
     });
 
     renderKeyboard(false);
-    kbBox.pack_start(rowsContainer, true, true, 8);
-    notebook.append_page(kbBox, new Gtk.Label({ label: "Visual Keyboard" }));
+    kbBox.pack_start(kbCard, false, false, 4);
+    stack.add_titled(scrollPage(kbBox), "keyboard", "Visual Keyboard");
 
     /* ========================================================================= */
     /* 2. VOWELS & SIGNS TAB                                                     */
     /* ========================================================================= */
-    let vowelsBox = new Gtk.ScrolledWindow({ shadow_type: Gtk.ShadowType.IN, border_width: 10 });
-    let vGrid = new Gtk.Grid({ column_spacing: 24, row_spacing: 10, margin: 16 });
-
-    let vHeaders = ["English Key", "Full Vowel", "Kar Sign", "Example"];
-    for (let h = 0; h < vHeaders.length; h++) {
-        let hl = new Gtk.Label({ label: "<b>" + vHeaders[h] + "</b>", use_markup: true, xalign: 0 });
-        vGrid.attach(hl, h, 0, 1, 1);
-    }
-
+    let vowelsPage = pageBox();
     let vowelData = [
         ["o", "অ", "(inherent)", "onirban -> অনির্বাণ"],
         ["a / A", "আ", "া (a)", "amake -> আমাকে"],
@@ -204,29 +261,13 @@ function runLayoutViewerDialog(parentWindow) {
         ["O / w", "ও", "ো (O)", "Oporadh -> অপরাধ"],
         ["OU", "ঔ", "ৌ (OU)", "OUshodh -> ঔষধ"]
     ];
-
-    for (let i = 0; i < vowelData.length; i++) {
-        let row = vowelData[i];
-        for (let j = 0; j < row.length; j++) {
-            let l = new Gtk.Label({ label: row[j], xalign: 0 });
-            vGrid.attach(l, j, i + 1, 1, 1);
-        }
-    }
-    vowelsBox.add(vGrid);
-    notebook.append_page(vowelsBox, new Gtk.Label({ label: "Vowels (স্বরবর্ণ)" }));
+    vowelsPage.pack_start(buildTable(["English Key", "Full Vowel", "Kar Sign", "Example"], vowelData, 1), false, false, 0);
+    stack.add_titled(scrollPage(vowelsPage), "vowels", "Vowels (স্বরবর্ণ)");
 
     /* ========================================================================= */
     /* 3. CONJUNCTS & SPECIAL RULES TAB                                          */
     /* ========================================================================= */
-    let conjBox = new Gtk.ScrolledWindow({ shadow_type: Gtk.ShadowType.IN, border_width: 10 });
-    let cGrid = new Gtk.Grid({ column_spacing: 24, row_spacing: 10, margin: 16 });
-
-    let cHeaders = ["Rule / Feature", "Keys", "Bengali", "Example"];
-    for (let h = 0; h < cHeaders.length; h++) {
-        let hl = new Gtk.Label({ label: "<b>" + cHeaders[h] + "</b>", use_markup: true, xalign: 0 });
-        cGrid.attach(hl, h, 0, 1, 1);
-    }
-
+    let conjPage = pageBox();
     let conjData = [
         ["Reph (র্)", "rr", "র্", "korrmo -> কর্ম, shorrm -> শর্ম"],
         ["Z-Fola (্য)", "y / Z", "্য", "baky -> বাক্য, bZaboshta -> ব্যবস্থা"],
@@ -243,20 +284,10 @@ function runLayoutViewerDialog(parentWindow) {
         ["t + r (ত্র)", "tr", "ত্র", "ratri -> রাত্রি"],
         ["s + th (স্থ)", "sth", "স্থ", "sthan -> স্থান"]
     ];
+    conjPage.pack_start(buildTable(["Rule / Feature", "Keys", "Bengali", "Example"], conjData, 2), false, false, 0);
+    stack.add_titled(scrollPage(conjPage), "conjuncts", "Conjuncts (যুক্তবর্ণ)");
 
-    for (let i = 0; i < conjData.length; i++) {
-        let row = conjData[i];
-        for (let j = 0; j < row.length; j++) {
-            let l = new Gtk.Label({ label: row[j], xalign: 0 });
-            cGrid.attach(l, j, i + 1, 1, 1);
-        }
-    }
-    conjBox.add(cGrid);
-    notebook.append_page(conjBox, new Gtk.Label({ label: "Conjuncts (যুক্তবর্ণ)" }));
-
-    mainBox.pack_start(notebook, true, true, 0);
-
-    window.add(mainBox);
+    window.add(stack);
     window.connect("destroy", () => {
         if (!parentWindow) {
             Gtk.main_quit();
@@ -264,6 +295,8 @@ function runLayoutViewerDialog(parentWindow) {
     });
 
     window.show_all();
+    let startPage = GLib.getenv("AVRO_LAYOUT_PAGE");
+    if (startPage && stack.get_child_by_name(startPage)) stack.set_visible_child_name(startPage);
     if (!parentWindow) {
         Gtk.main();
     }
