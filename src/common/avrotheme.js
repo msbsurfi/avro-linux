@@ -3,7 +3,7 @@
     Avro Linux — Shared Modern Theme (Fluent / Windows 11 inspired)
     SPDX-License-Identifier: MPL-2.0
     Part of Avro Linux
-    Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)
+    Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (CSE 21, BUET)
 
     One look for every Avro window: rounded cards, an accent colour, a clean
     header bar, sidebar navigation and automatic light / dark palettes.

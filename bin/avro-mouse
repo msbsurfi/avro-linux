@@ -1,7 +1,7 @@
 #!/bin/sh
 # Launcher script for Avro Mouse
 # SPDX-License-Identifier: MPL-2.0
-# Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)
+# Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (CSE 21, BUET)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 if [ -f "${SCRIPT_DIR}/src/standalone/avromouse.js" ]; then

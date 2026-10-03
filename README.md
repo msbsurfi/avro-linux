@@ -25,7 +25,7 @@
 
 **Avro Linux (Remastered)** brings the beloved OmicronLab **Avro Keyboard** experience natively to Linux desktops. Whether you are using Ubuntu, Debian, Linux Mint, Pop!_OS, or any Debian-based distribution, this remastered release delivers the comfort and familiarity of Windows Avro Keyboard across both **Wayland** and **X11** sessions.
 
-* **Remastered by**: **MD Shifat Bin Siddique Urfi (DMC, K-79)** and **MD Mehedi Hasan (BUET, 2021-22)**
+* **Remastered by**: **MD Shifat Bin Siddique Urfi (DMC, K-79)** and **MD Mehedi Hasan (CSE 21, BUET)**
 * **Original Avro Keyboard**: Created by **Dr. Mehdi Hasan Khan (OmicronLab)**
 * **Original ibus-avro**: Developed by **Sarim Khan**
 * **License**: Mozilla Public License 2.0 ([MPL-2.0](LICENSE))

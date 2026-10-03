@@ -66,7 +66,7 @@ try { PrefApp = imports.pref; } catch (e) {}
 
 function printHelp() {
     print("Avro Linux (Remastered Edition) — Standalone Bengali Input Suite");
-    print("Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)");
+    print("Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (CSE 21, BUET)");
     print("Version: " + appVersion());
     print("");
     print("Usage: avro [OPTION...]");
@@ -90,7 +90,7 @@ function main() {
 
     if (args.indexOf('--version') !== -1 || args.indexOf('-v') !== -1) {
         print("Avro Linux (Remastered Edition) v" + appVersion());
-        print("Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)");
+        print("Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (CSE 21, BUET)");
         print("License: MPL-2.0");
         return;
     }

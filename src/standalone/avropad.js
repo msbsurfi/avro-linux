@@ -3,7 +3,7 @@
     =============================================================================
     Avro Linux — Avro Pad (Standalone Bengali Text Editor)
     SPDX-License-Identifier: MPL-2.0
-    Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)
+    Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (CSE 21, BUET)
     =============================================================================
 
     ARCHITECTURE NOTE — Preedit / Commit Model
@@ -354,7 +354,7 @@ function runAvroPad(initialText) {
     let statusBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 0, border_width: 0 });
     statusBox.get_style_context().add_class("avro-statusbar");
 
-    let statusLeft  = new Gtk.Label({ label: "Avro Pad • Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) & MD Mehedi Hasan (BUET, 2021-22)", xalign: 0 });
+    let statusLeft  = new Gtk.Label({ label: "Avro Pad • Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) & MD Mehedi Hasan (CSE 21, BUET)", xalign: 0 });
     let statusRight = new Gtk.Label({ label: "F12 = Toggle Bangla/English", xalign: 1 });
     statusLeft .get_style_context().add_class("status-left");
     statusRight.get_style_context().add_class("status-right");
@@ -611,7 +611,7 @@ function runAvroPad(initialText) {
         cb.set_text(text, -1);
         statusLeft.set_text("✓ Text copied to clipboard!");
         GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2500, () => {
-            statusLeft.set_text("Avro Pad • Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) & MD Mehedi Hasan (BUET, 2021-22)");
+            statusLeft.set_text("Avro Pad • Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) & MD Mehedi Hasan (CSE 21, BUET)");
             return GLib.SOURCE_REMOVE;
         });
     });
@@ -649,11 +649,11 @@ function showAbout(parent) {
         modal: true,
         program_name: "Avro Pad (Remastered Edition)",
         version: (() => { try { return imports.evars.get_version(); } catch (e) { return ""; } })(),
-        comments: "A full-featured standalone Bengali text editor with live\nAvro Phonetic composition.\n\nRemastered for Linux by MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22).",
+        comments: "A full-featured standalone Bengali text editor with live\nAvro Phonetic composition.\n\nRemastered for Linux by MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (CSE 21, BUET).",
         website: "https://github.com/msbsurfi/avro-linux",
         authors: [
             "Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79)",
-            "and MD Mehedi Hasan (BUET, 2021-22)",
+            "and MD Mehedi Hasan (CSE 21, BUET)",
             "Dr. Mehdi Hasan Khan — Avro Keyboard / OmicronLab",
             "Sarim Khan — ibus-avro",
             "Rifat Nabi — jsAvroPhonetic"

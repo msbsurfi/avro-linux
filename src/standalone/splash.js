@@ -3,7 +3,7 @@
     =============================================================================
     Avro Linux — Windows-Style Authentic Splash Screen
     SPDX-License-Identifier: MPL-2.0
-    Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)
+    Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (CSE 21, BUET)
     Original Avro Keyboard by Dr. Mehdi Hasan Khan (OmicronLab) & Sarim Khan
     Artwork directly from upstream OmicronLab Avro Keyboard (mugli/Avro-Keyboard)
 

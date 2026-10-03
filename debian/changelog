@@ -1,7 +1,7 @@
 avro-linux (1.3.0-1) unstable; urgency=medium
 
   * Attribution updated: "Remastered by MD Shifat Bin Siddique Urfi
-    (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)" across all apps, splash,
+    (DMC, K-79) and MD Mehedi Hasan (CSE 21, BUET)" across all apps, splash,
     About dialogs, status bars, CLI output, and headers.
   * Version bumped to 1.3.0 across all packages, launchers, and documentation.
   * The fixed keyboard layouts of Avro Keyboard 5, typed by the Avro engine

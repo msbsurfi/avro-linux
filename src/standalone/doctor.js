@@ -3,7 +3,7 @@
     =============================================================================
     Avro Linux — Avro Doctor (Remastered Diagnostic & Health Check Tool)
     SPDX-License-Identifier: MPL-2.0
-    Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)
+    Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (CSE 21, BUET)
     =============================================================================
 */
 
@@ -235,7 +235,7 @@ function formatReportText(report) {
     let lines = [];
     lines.push("==================================================");
     lines.push("          AVRO LINUX SYSTEM DIAGNOSTIC REPORT     ");
-    lines.push("  Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) & MD Mehedi Hasan (BUET, 2021-22)  ");
+    lines.push("  Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) & MD Mehedi Hasan (CSE 21, BUET)  ");
     lines.push("==================================================");
     lines.push("Timestamp:           " + report.timestamp);
     lines.push("Operating System:    " + report.os);

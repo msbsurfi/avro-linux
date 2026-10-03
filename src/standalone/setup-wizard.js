@@ -4,7 +4,7 @@
     Avro Linux — Windows-Style Graphical Setup & Installation Wizard
     SPDX-License-Identifier: MPL-2.0
     Part of Avro Linux Standalone Suite
-    Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)
+    Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (CSE 21, BUET)
     =============================================================================
 */
 

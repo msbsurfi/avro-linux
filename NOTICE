@@ -6,7 +6,7 @@ This software is licensed under the Mozilla Public License, Version 2.0 (MPL-2.0
 A copy of the license is included in the LICENSE file.
 
 REMASTERED LINUX EDITION:
-Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) <hello@msbsu.com> and MD Mehedi Hasan (BUET, 2021-22)
+Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) <hello@msbsu.com> and MD Mehedi Hasan (CSE 21, BUET)
 for modern Linux distributions including Ubuntu 24.04, 26.04, Debian 12 (Bookworm), and Debian 13 (Trixie).
 Features standalone Windows-style floating sticky TopBar, standalone Avro Pad with live phonetic
 composition, Unicode <-> Bijoy converter, visual layout viewer, and resilient IBus integration.

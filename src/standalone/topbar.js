@@ -3,7 +3,7 @@
     =============================================================================
     Avro Linux — Avro TopBar
     SPDX-License-Identifier: MPL-2.0
-    Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)
+    Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (CSE 21, BUET)
 
     A Linux re-creation of the Avro Keyboard (Windows) TopBar: the small
     floating, always-on-top bar with the Avro menu, the বাংলা / English mode
@@ -2346,11 +2346,11 @@ var AvroTopBar = class AvroTopBar {
             comments: "The Avro Phonetic Bengali input method for Linux, with a\n" +
                       "Windows-style TopBar and Preview Window.\n\n" +
                       "Avro Keyboard and Avro Phonetic by Dr. Mehdi Hasan Khan (OmicronLab).\n" +
-                      "ibus-avro by Sarim Khan. Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22).",
+                      "ibus-avro by Sarim Khan. Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (CSE 21, BUET).",
             website: "https://github.com/msbsurfi/avro-linux",
             authors: [
                 "Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79)",
-                "and MD Mehedi Hasan (BUET, 2021-22)",
+                "and MD Mehedi Hasan (CSE 21, BUET)",
                 "Sarim Khan — ibus-avro",
                 "Dr. Mehdi Hasan Khan — Avro Keyboard / OmicronLab",
                 "Rifat Nabi — jsAvroPhonetic"

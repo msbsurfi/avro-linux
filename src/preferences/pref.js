@@ -678,7 +678,7 @@ function runpref() {
     let creditsLabel = new Gtk.Label({
         label: "<b>Remastered by</b>\n" +
                "MD Shifat Bin Siddique Urfi (DMC, K-79)\n" +
-               "and MD Mehedi Hasan (BUET, 2021-22)\n\n" +
+               "and MD Mehedi Hasan (CSE 21, BUET)\n\n" +
                "<b>Original Authors &amp; Historical Attribution</b>\n" +
                "OmicronLab (Dr. Mehdi Hasan Khan &amp; Rifat Nabi)\n" +
                "Sarim Khan (ibus-avro)\n" +
