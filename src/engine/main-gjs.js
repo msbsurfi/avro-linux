@@ -33,7 +33,6 @@ if (GLib.getenv("DISPLAY")) {
 
 const IBus = imports.gi.IBus;
 const Gio = imports.gi.Gio;
-
 // Determine base directory and configure module search paths
 let baseDir = '/usr/share/avro-linux';
 try {
@@ -577,6 +576,9 @@ if (bus.is_connected()) {
         }
         engine.altGrDown = false;
         engine.cursorRect = null;
+        if (previewUI && typeof previewUI.resetCursor === 'function') {
+            previewUI.resetCursor();
+        }
         if ((engine.buffertext && engine.buffertext.length > 0) || (engine.typer && !engine.typer.isEmpty())) {
             // Debounce by 80ms: in Wayland/KWin environments where a window maps or
             // focus momentarily bounces, focus_in cancels this timer before composition is aborted.
@@ -651,6 +653,9 @@ if (bus.is_connected()) {
             GLib.source_remove(focusOutTimeoutId);
             focusOutTimeoutId = 0;
         }
+        if (previewUI && typeof previewUI.resetCursor === 'function') {
+            previewUI.resetCursor();
+        }
         engine.register_properties(proplist);
         updateEngineProperty(engine);
         if (engine.buffertext && engine.buffertext.length > 0) {
@@ -705,8 +710,27 @@ if (bus.is_connected()) {
     // look the schema up first.
     function newAvroSettings() {
         try {
+            let schemaDir = GLib.getenv("GSETTINGS_SCHEMA_DIR");
             let source = Gio.SettingsSchemaSource.get_default();
             let schema = source ? source.lookup("com.omicronlab.avro", true) : null;
+            if (!schema) {
+                let candidates = [
+                    schemaDir,
+                    baseDir + "/data/gsettings",
+                    baseDir + "/../data/gsettings",
+                    GLib.get_current_dir() + "/data/gsettings",
+                    "/usr/share/glib-2.0/schemas"
+                ];
+                for (let dir of candidates) {
+                    if (dir && GLib.file_test(dir + "/gschemas.compiled", GLib.FileTest.EXISTS)) {
+                        try {
+                            let customSource = Gio.SettingsSchemaSource.new_from_directory(dir, Gio.SettingsSchemaSource.get_default(), false);
+                            schema = customSource ? customSource.lookup("com.omicronlab.avro", true) : null;
+                            if (schema) break;
+                        } catch (err) {}
+                    }
+                }
+            }
             return schema ? new Gio.Settings({ settings_schema: schema }) : null;
         } catch (e) {
             return null;
@@ -1138,6 +1162,7 @@ if (bus.is_connected()) {
         bus.request_name("org.freedesktop.IBus.Avro", 0);
     } else {
         bus.register_component(component);
+        bus.request_name("org.freedesktop.IBus.Avro", 0);
     }
 
     // Ensure IBus floating property panel is disabled (prevents unwanted 8.8x32.8 window)

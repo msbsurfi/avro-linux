@@ -25,8 +25,8 @@ GLib.mkdir_with_parents(tmpDir + "/components", 0o700);
 
 let [, xmlBytes] = GLib.file_get_contents(rootDir + "/data/ibus/ibus-avro.xml");
 let xmlStr = (new TextDecoder().decode(xmlBytes)).replace(
-    "/usr/share/avro-linux/engine/main-gjs.js",
-    rootDir + "/src/engine/main-gjs.js"
+    /<exec>.*<\/exec>/,
+    "<exec>" + rootDir + "/bin/avro-engine --ibus</exec>"
 );
 GLib.file_set_contents(tmpDir + "/components/ibus-avro.xml", xmlStr);
 
@@ -131,7 +131,7 @@ if (!bus || !bus.is_connected()) {
     finish(0);
 }
 
-spawn(["gjs", rootDir + "/src/engine/main-gjs.js"]);
+spawn(["gjs", rootDir + "/src/engine/main-gjs.js", "--ibus"]);
 
 let ic = bus.create_input_context("avro-live-test");
 let committed = "";

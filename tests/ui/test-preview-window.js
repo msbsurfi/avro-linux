@@ -100,6 +100,27 @@ if (GLib.getenv("DISPLAY")) {
         ui.setTheme("no-such-theme");
         assertTrue(true, "Theme switching (including unknown names) does not throw");
 
+        // 10. Kickoff / Plasma applet dynamic caret placement
+        ui.setPinned(false, -1, -1);
+        ui._setActiveWindow(0, 378, 819, 648, "org.kde.plasmashell", 1.25);
+        ui.update("a", ["অ"], 0, null);
+        let [kx1, ky1] = ui._window.get_position();
+        ui.update("amader", ["আমাদের"], 0, null);
+        let [kx2, ky2] = ui._window.get_position();
+        assertTrue(kx1 >= 200 && kx1 < 500 && ky1 >= 400 && ky1 <= 550, "Kickoff preview appears near search box");
+        assertTrue(kx2 > kx1, "Preview dynamically moves forward as more text is typed");
+
+        // 11. Surface-local coordinate translation
+        ui._setActiveWindow(100, 200, 800, 600, "kate", 1.0);
+        ui.update("b", ["ব"], 0, { x: 30, y: 40, w: 2, h: 18 });
+        let [lx, ly] = ui._window.get_position();
+        assertTrue(lx >= 130 && ly >= 235, "Surface-local coordinates are mapped to global active window space");
+
+        // 12. Reset cursor
+        ui.resetCursor();
+        assertEqual(ui._cursor, null, "resetCursor clears active cursor");
+        assertEqual(ui._lastValidCursor, null, "resetCursor clears last valid cursor");
+
         ui.update("", [], 0, null);
         assertTrue(!ui.isVisible(), "Window hides when the composition is empty");
         ui.destroy();

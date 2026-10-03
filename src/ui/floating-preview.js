@@ -213,6 +213,10 @@ var PreviewWindow = class PreviewWindow {
         this._pinPos = (opts.pinX >= 0 && opts.pinY >= 0) ? { x: opts.pinX, y: opts.pinY } : null;
         this._cursor = null;
         this._lastValidCursor = null;
+        this._activeWindow = null;
+        this._dbusOwnerId = 0;
+        this._kwinScriptId = null;
+        this._lastRoman = "";
         this._rows = [];
         this._count = 0;
         this._drag = null;
@@ -224,6 +228,7 @@ var PreviewWindow = class PreviewWindow {
         this.setTheme(opts.theme || "classic");
 
         this._buildWindow(findIcon(opts.iconPath));
+        this._initFocusTracker();
     }
 
     _buildWindow(iconFile) {
@@ -364,6 +369,7 @@ var PreviewWindow = class PreviewWindow {
             this.hide();
             return;
         }
+        this._lastRoman = roman || "";
         if (cursor && isUsableCursor(cursor)) {
             this._cursor = cursor;
             this._lastValidCursor = cursor;
@@ -408,6 +414,11 @@ var PreviewWindow = class PreviewWindow {
         }
     }
 
+    resetCursor() {
+        this._cursor = null;
+        this._lastValidCursor = null;
+    }
+
     hide() {
         this._drag = null;
         if (this._visible) {
@@ -418,7 +429,148 @@ var PreviewWindow = class PreviewWindow {
 
     destroy() {
         this.hide();
+        if (this._kwinScriptId !== null) {
+            try {
+                let bus = Gio.bus_get_sync(Gio.BusType.SESSION, null);
+                let kwinProxy = Gio.DBusProxy.new_sync(bus, Gio.DBusProxyFlags.NONE, null, "org.kde.KWin", "/Scripting", "org.kde.kwin.Scripting", null);
+                kwinProxy.call_sync("unloadScript", new GLib.Variant("(s)", ["avro-kwin-tracker"]), Gio.DBusCallFlags.NONE, 500, null);
+            } catch (e) {}
+            this._kwinScriptId = null;
+        }
+        if (this._dbusOwnerId) {
+            try { Gio.bus_unown_name(this._dbusOwnerId); } catch (e) {}
+            this._dbusOwnerId = 0;
+        }
         this._window.destroy();
+    }
+
+    /* ── active window & compositor integration ───────────────────────── */
+
+    _initFocusTracker() {
+        this._activeWindow = null;
+        this._dbusOwnerId = 0;
+        this._kwinScriptId = null;
+
+        let session = (GLib.getenv("XDG_SESSION_TYPE") || "").toLowerCase();
+        let isWayland = session === "wayland" || !!GLib.getenv("WAYLAND_DISPLAY");
+        if (!isWayland) return;
+
+        try {
+            let bus = Gio.bus_get_sync(Gio.BusType.SESSION, null);
+            if (!bus) return;
+
+            let nodeInfo = Gio.DBusNodeInfo.new_for_xml(`
+<node>
+  <interface name="org.avro.ActiveWindow">
+    <method name="Set">
+      <arg type="i" name="x" direction="in"/>
+      <arg type="i" name="y" direction="in"/>
+      <arg type="i" name="w" direction="in"/>
+      <arg type="i" name="h" direction="in"/>
+      <arg type="s" name="cls" direction="in"/>
+      <arg type="i" name="scaleHundredths" direction="in"/>
+    </method>
+  </interface>
+</node>
+`);
+            this._dbusOwnerId = Gio.bus_own_name(
+                Gio.BusType.SESSION,
+                "org.avro.ActiveWindow",
+                Gio.BusNameOwnerFlags.REPLACE_EXISTING,
+                (conn) => {
+                    try {
+                        conn.register_object(
+                            "/org/avro/ActiveWindow",
+                            nodeInfo.interfaces[0],
+                            (c, sender, path, iface, method, params, invocation) => {
+                                let [x, y, w, h, cls, scaleH] = params.deep_unpack();
+                                let scale = (scaleH > 0) ? (scaleH / 100.0) : 1.0;
+                                this._setActiveWindow(x, y, w, h, cls, scale);
+                                invocation.return_value(null);
+                            },
+                            null,
+                            null
+                        );
+                    } catch (e) {}
+                },
+                null,
+                null
+            );
+
+            this._setupKWinScript(bus);
+        } catch (e) {}
+    }
+
+    _setupKWinScript(bus) {
+        try {
+            let kwinProxy = Gio.DBusProxy.new_sync(
+                bus,
+                Gio.DBusProxyFlags.NONE,
+                null,
+                "org.kde.KWin",
+                "/Scripting",
+                "org.kde.kwin.Scripting",
+                null
+            );
+            if (!kwinProxy) return;
+
+            try {
+                kwinProxy.call_sync("unloadScript", new GLib.Variant("(s)", ["avro-kwin-tracker"]), Gio.DBusCallFlags.NONE, 500, null);
+            } catch (e) {}
+
+            let scriptContent = `
+                function sendActive() {
+                    var w = workspace.activeWindow;
+                    if (w) {
+                        var s = (workspace.screens && workspace.screens.length > 0) ? (workspace.screens[0].devicePixelRatio || 1) : 1;
+                        callDBus("org.avro.ActiveWindow", "/org/avro/ActiveWindow", "org.avro.ActiveWindow", "Set",
+                                 Math.round(w.x * s), Math.round(w.y * s), Math.round(w.width * s), Math.round(w.height * s),
+                                 String(w.resourceClass || ""), Math.round(s * 100));
+                    }
+                }
+                workspace.windowActivated.connect(sendActive);
+                sendActive();
+            `;
+            let tmpPath = GLib.get_user_runtime_dir() + "/avro-kwin-tracker.js";
+            GLib.file_set_contents(tmpPath, scriptContent);
+
+            let res = kwinProxy.call_sync(
+                "loadScript",
+                new GLib.Variant("(ss)", [tmpPath, "avro-kwin-tracker"]),
+                Gio.DBusCallFlags.NONE,
+                1000,
+                null
+            );
+            let id = res.deep_unpack()[0];
+            this._kwinScriptId = id;
+            let scriptProxy = Gio.DBusProxy.new_sync(
+                bus,
+                Gio.DBusProxyFlags.NONE,
+                null,
+                "org.kde.KWin",
+                "/Scripting/Script" + id,
+                "org.kde.kwin.Script",
+                null
+            );
+            scriptProxy.call_sync("run", null, Gio.DBusCallFlags.NONE, 1000, null);
+        } catch (e) {}
+    }
+
+    _setActiveWindow(x, y, w, h, cls, scale) {
+        this._activeWindow = {
+            x: x,
+            y: y,
+            w: w,
+            h: h,
+            cls: cls || "",
+            scale: scale || 1.0
+        };
+        this._cursor = null;
+        this._lastValidCursor = null;
+
+        if (this._visible && !this._pinned && !this._drag) {
+            this._place();
+        }
     }
 
     /* ── placement ─────────────────────────────────────────────────────── */
@@ -455,19 +607,92 @@ var PreviewWindow = class PreviewWindow {
         }
     }
 
+    _resolveCursor() {
+        let cursor = null;
+        let win = this._activeWindow;
+        let mon = this._monitorAt(win ? win.x : 0, win ? win.y : 0);
+
+        if (this._cursor && isUsableCursor(this._cursor)) {
+            cursor = { x: this._cursor.x, y: this._cursor.y, w: this._cursor.w || 2, h: this._cursor.h || 20 };
+        }
+
+        if (win) {
+            if (cursor) {
+                // If cursor coordinates from IBus are surface-local (i.e. y is small while window starts lower down),
+                // map them to global screen space.
+                if (win.y >= 50 && cursor.y < win.y) {
+                    cursor.y = win.y + cursor.y;
+                }
+                if (win.x >= 50 && cursor.x < win.x) {
+                    cursor.x = win.x + cursor.x;
+                }
+            } else {
+                // Application did not report cursor location (or sent 0,0,0,0)
+                let textAdvance = (this._lastRoman ? this._lastRoman.length * 9 : 0);
+                if (win.cls && win.cls.indexOf("plasmashell") !== -1) {
+                    // KDE Kickoff launcher / Plasma panel search:
+                    // Search box is located in the upper portion of the launcher (~55px below top)
+                    let baseX = win.x + Math.min(Math.round(win.w * 0.35), 260);
+                    cursor = {
+                        x: Math.min(baseX + textAdvance, win.x + win.w - 120),
+                        y: win.y + Math.round(55 * (win.scale || 1)),
+                        w: 2,
+                        h: 24
+                    };
+                } else {
+                    // Check if pointer is within this active window and not parked in top panel
+                    let ptr = this._pointer();
+                    if (ptr.x >= win.x && ptr.x <= win.x + win.w &&
+                        ptr.y >= win.y && ptr.y <= win.y + win.h &&
+                        ptr.y >= 60) {
+                        cursor = ptr;
+                    } else {
+                        // Place near the top-left typing area of the active window
+                        cursor = {
+                            x: Math.min(win.x + Math.max(40, Math.round(win.w * 0.08)) + textAdvance, win.x + win.w - 120),
+                            y: win.y + Math.min(Math.round(win.h * 0.15), 100),
+                            w: 2,
+                            h: 20
+                        };
+                    }
+                }
+            }
+        } else if (!cursor) {
+            if (this._lastValidCursor && isUsableCursor(this._lastValidCursor)) {
+                cursor = { x: this._lastValidCursor.x, y: this._lastValidCursor.y, w: this._lastValidCursor.w || 2, h: this._lastValidCursor.h || 20 };
+            } else {
+                let ptr = this._pointer();
+                // Never place under the TopBar / top panel (< 60px)
+                if (ptr.y >= 60) {
+                    cursor = ptr;
+                } else {
+                    cursor = { x: mon.x + 80, y: mon.y + 120, w: 2, h: 20 };
+                }
+            }
+        }
+
+        // Apply scale factor if IBus reported device pixels and monitor has scale > 1
+        let scale = mon.scale || 1;
+        if (scale > 1) {
+            cursor = { x: cursor.x / scale, y: cursor.y / scale, w: cursor.w / scale, h: cursor.h / scale };
+        }
+
+        // Clamp cursor within monitor bounds as initial sanity check
+        cursor.x = Math.max(mon.x, Math.min(cursor.x, mon.x + mon.width - 20));
+        cursor.y = Math.max(mon.y, Math.min(cursor.y, mon.y + mon.height - 20));
+
+        return cursor;
+    }
+
     _place() {
         let size = this._size();
         let pos;
         if (this._pinned && this._pinPos) {
             pos = clampToMonitor(this._pinPos, size, this._monitorAt(this._pinPos.x, this._pinPos.y));
         } else {
-            let cursor = isUsableCursor(this._cursor) ? this._cursor : (this._lastValidCursor || this._pointer());
-            // IBus reports device pixels; GTK positions windows in logical pixels.
-            let scale = this._monitorAt(cursor.x, cursor.y).scale;
-            if (scale > 1) {
-                cursor = { x: cursor.x / scale, y: cursor.y / scale, w: cursor.w / scale, h: cursor.h / scale };
-            }
-            pos = computePopupPosition(cursor, size, this._monitorAt(cursor.x, cursor.y));
+            let cursor = this._resolveCursor();
+            let mon = this._monitorAt(cursor.x, cursor.y);
+            pos = computePopupPosition(cursor, size, mon);
         }
         this._window.move(pos.x, pos.y);
     }
