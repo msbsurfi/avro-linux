@@ -17,7 +17,7 @@ avro-linux (1.3.0-1) unstable; urgency=medium
   * Full clean build verified: make clean && make succeeds, deb builds and
     installs without errors, all tests pass.
 
- -- MD Shifat Bin Siddique Urfi <msbsu@github.com>  Sat, 03 Oct 2026 20:30:00 +0600
+ -- MD Shifat Bin Siddique Urfi <hello@msbsu.com>  Sat, 03 Oct 2026 20:30:00 +0600
 
 avro-linux (1.2.0-1) unstable; urgency=medium
 
@@ -42,7 +42,7 @@ avro-linux (1.2.0-1) unstable; urgency=medium
   * Launchers no longer load modules from ./src of the current directory.
   * Recommends gkbd-capplet for the fixed-layout Layout Viewer.
 
- -- MD Shifat Bin Siddique Urfi <msbsu@github.com>  Sat, 03 Oct 2026 18:00:00 +0600
+ -- MD Shifat Bin Siddique Urfi <hello@msbsu.com>  Sat, 03 Oct 2026 18:00:00 +0600
 
 avro-linux (1.1.0-1) unstable; urgency=medium
 
@@ -68,7 +68,7 @@ avro-linux (1.1.0-1) unstable; urgency=medium
     process; avro-preview is now a helper to turn the preview on/off or show
     a demo (avro-preview --demo).
 
- -- MD Shifat Bin Siddique Urfi <msbsu@github.com>  Sat, 03 Oct 2026 12:00:00 +0600
+ -- MD Shifat Bin Siddique Urfi <hello@msbsu.com>  Sat, 03 Oct 2026 12:00:00 +0600
 
 avro-linux (1.0.0-1) unstable; urgency=medium
 
@@ -88,4 +88,4 @@ avro-linux (1.0.0-1) unstable; urgency=medium
   * Comprehensive developer and architecture documentation (windows-avro-behavior.md, linux-input-architecture.md, desktop-integration.md, compatibility-matrix.md).
   * Expanded automated test suite with 11 passing suites and 0 failures.
 
- -- MD Shifat Bin Siddique Urfi <msbsu@github.com>  Fri, 02 Oct 2026 12:40:00 +0600
+ -- MD Shifat Bin Siddique Urfi <hello@msbsu.com>  Fri, 02 Oct 2026 12:40:00 +0600

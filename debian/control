@@ -1,7 +1,7 @@
 Source: avro-linux
 Section: utils
 Priority: optional
-Maintainer: MD Shifat Bin Siddique Urfi and MD Mehedi Hasan <msbsu@github.com>
+Maintainer: MD Shifat Bin Siddique Urfi and MD Mehedi Hasan <hello@msbsu.com>
 Build-Depends: make
 Standards-Version: 4.7.0
 Homepage: https://github.com/sarim/ibus-avro
