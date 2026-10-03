@@ -245,6 +245,27 @@ if (GLib.getenv("DISPLAY")) {
     bar.handleCommand("sys");
     assertTrue(!bar.bangla, "'sys' command switches to English");
 
+    // 9. Drawing and SNI integration tests
+    let Cairo = imports.cairo;
+    let surface = new Cairo.ImageSurface(Cairo.Format.ARGB32, 285, 30);
+    let cr = new Cairo.Context(surface);
+    bar.bangla = false;
+    let drawEngOk = false;
+    try { bar._draw(cr); drawEngOk = true; } catch (e) { print("Error drawing EN: " + e); }
+    assertTrue(drawEngOk, "TopBar _draw renders English mode without error");
+
+    bar.bangla = true;
+    let drawBnOk = false;
+    try {
+        let cr2 = new Cairo.Context(surface);
+        bar._draw(cr2);
+        drawBnOk = true;
+    } catch (e) { print("Error drawing BN: " + e); }
+    assertTrue(drawBnOk, "TopBar _draw renders Bangla mode without error");
+
+    let pixmap = bar._getSniPixmap();
+    assertTrue(pixmap && pixmap.get_type_string() === "a(iiay)", "StatusNotifierItem IconPixmap generates a(iiay)");
+
     bar.start(null);
     assertTrue(bar.window.get_visible(), "Bar is shown at start-up");
     bar.dockToTop();

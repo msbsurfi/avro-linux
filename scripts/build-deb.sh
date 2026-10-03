@@ -40,7 +40,7 @@ Architecture: ${ARCH}
 Installed-Size: ${INSTALLED_SIZE}
 Maintainer: MD Shifat Bin Siddique Urfi and MD Mehedi Hasan <hello@msbsu.com>
 Depends: gjs (>= 1.70.0), ibus (>= 1.5.0), gir1.2-ibus-1.0, gir1.2-gtk-3.0, dconf-gsettings-backend | gsettings-backend
-Recommends: im-config, fonts-noto-core | fonts-beng, ibus-wayland, gkbd-capplet
+Recommends: im-config, fonts-noto-core | fonts-beng, ibus-wayland, gkbd-capplet, dconf-cli
 Conflicts: ibus-avro
 Replaces: ibus-avro
 Homepage: https://github.com/msbsurfi/avro-linux

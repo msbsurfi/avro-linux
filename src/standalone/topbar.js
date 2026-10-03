@@ -251,6 +251,34 @@ function setUpStartOnLogin(settings) {
     return ok;
 }
 
+function ensureIBusConfigured() {
+    try {
+        let source = Gio.SettingsSchemaSource.get_default();
+        if (source && source.lookup('org.gnome.desktop.input-sources', true)) {
+            let gnomeSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.input-sources' });
+            let sourcesVal = gnomeSettings.get_value('sources');
+            let sources = sourcesVal.deep_unpack();
+            let hasAvro = false;
+            for (let s of sources) {
+                if (s[1] === 'ibus-avro') { hasAvro = true; break; }
+            }
+            if (!hasAvro) {
+                let newSources = [['ibus', 'ibus-avro']].concat(sources);
+                gnomeSettings.set_value('sources', new GLib.Variant('a(ss)', newSources));
+            }
+        }
+        if (source && source.lookup('org.freedesktop.ibus.general', true)) {
+            let ibusSettings = new Gio.Settings({ schema_id: 'org.freedesktop.ibus.general' });
+            let peVal = ibusSettings.get_value('preload-engines');
+            let pe = peVal.deep_unpack();
+            if (pe.indexOf('ibus-avro') === -1) {
+                pe.push('ibus-avro');
+                ibusSettings.set_value('preload-engines', new GLib.Variant('as', pe));
+            }
+        }
+    } catch (e) {}
+}
+
 /* Avro Keyboard command-line switches: toggle, bn, sys, minimize, restore —
    bare or prefixed with /, - or --. */
 function parseTopBarCommand(args) {
@@ -726,6 +754,32 @@ function iconTile(cr, text, family, c0, c1) {
     PangoCairo.show_layout(cr, layout);
 }
 
+function iconBadge(cr, mainText, isBangla) {
+    let g = new Cairo.LinearGradient(2, 2, 2, 22);
+    if (isBangla) {
+        g.addColorStopRGBA(0, 0.05, 0.45, 0.85, 1);
+        g.addColorStopRGBA(1, 0.02, 0.28, 0.62, 1);
+    } else {
+        g.addColorStopRGBA(0, 0.35, 0.39, 0.46, 1);
+        g.addColorStopRGBA(1, 0.18, 0.21, 0.26, 1);
+    }
+    roundedRect(cr, 1.5, 1.5, 21, 21, 4.5);
+    cr.setSource(g);
+    cr.fillPreserve();
+    cr.setSourceRGBA(isBangla ? 0.35 : 0.60, isBangla ? 0.70 : 0.65, isBangla ? 1.0 : 0.75, 0.85);
+    cr.setLineWidth(1.0);
+    cr.stroke();
+
+    let lMain = textLayout(cr, mainText, 'Noto Sans Bold', 11);
+    let [ox, oy] = centeredOrigin(lMain, 2, 2, 20, 20);
+    cr.setSourceRGBA(0, 0, 0, 0.55);
+    cr.moveTo(ox + 0.8, oy + 0.8);
+    PangoCairo.show_layout(cr, lMain);
+    cr.setSourceRGBA(1, 1, 1, 1);
+    cr.moveTo(ox, oy);
+    PangoCairo.show_layout(cr, lMain);
+}
+
 var ICONS = {
     keyboard: iconKeyboard,
     mouse: iconMouse,
@@ -738,8 +792,8 @@ var ICONS = {
     document: (cr, v) => iconDocument(cr, v, false),
     pdf: (cr, v) => iconDocument(cr, v, true),
     doctor: (cr) => iconDoctor(cr),
-    bangla: (cr) => iconTile(cr, 'অ', 'Noto Sans Bengali Bold', [1.0, 0.72, 0.15, 1], [0.95, 0.42, 0.0, 1]),
-    english: (cr) => iconTile(cr, 'A', 'Sans Bold', [0.45, 0.58, 0.70, 1], [0.22, 0.33, 0.44, 1])
+    bangla: (cr) => iconBadge(cr, 'BN', true),
+    english: (cr) => iconBadge(cr, 'EN', false)
 };
 
 function drawIcon(cr, name, x, y, size, variant) {
@@ -757,7 +811,6 @@ function iconPixbuf(name, size, variant) {
     let surface = new Cairo.ImageSurface(Cairo.Format.ARGB32, size, size);
     let cr = new Cairo.Context(surface);
     drawIcon(cr, name, 0, 0, size, variant || 'dark');
-    cr.$dispose();
     let pixbuf = Gdk.pixbuf_get_from_surface(surface, 0, 0, size, size);
     surface.finish();
     return pixbuf;
@@ -791,7 +844,7 @@ function drawModeLabel(cr, el, bangla, skin) {
     let radius = 4;
 
     // Pill badge outline
-    cr.new_sub_path();
+    cr.newSubPath();
     cr.arc(bx + bw - radius, by + radius, radius, -Math.PI / 2, 0);
     cr.arc(bx + bw - radius, by + bh - radius, radius, 0, Math.PI / 2);
     cr.arc(bx + radius, by + bh - radius, radius, Math.PI / 2, Math.PI);
@@ -910,6 +963,7 @@ var AvroTopBar = class AvroTopBar {
     constructor(app, opts) {
         opts = opts || {};
         this.app = app;
+        try { ensureIBusConfigured(); } catch (e) {}
         this.settings = new SafeSettings(SCHEMA_ID);
         this.ibusSettings = new SafeSettings('org.freedesktop.ibus.general');
         this.scale = 1;
@@ -1047,10 +1101,11 @@ var AvroTopBar = class AvroTopBar {
             } else {
                 drawFrame(cr, el, isExit ? skin.exitHover : skin.hover, this.alpha[el.id] || 0);
             }
-            this._drawElement(cr, el, skin);
+            try {
+                this._drawElement(cr, el, skin);
+            } catch (e) {}
         }
         cr.restore();
-        cr.$dispose();
         return true;
     }
 
@@ -1911,6 +1966,8 @@ var AvroTopBar = class AvroTopBar {
     <property name="IconName" type="s" access="read"/>
     <property name="IconThemePath" type="s" access="read"/>
     <property name="ItemIsMenu" type="b" access="read"/>
+    <property name="IconPixmap" type="a(iiay)" access="read"/>
+    <property name="ToolTip" type="(sa(iiay)ss)" access="read"/>
     <method name="ContextMenu">
       <arg type="i" name="x" direction="in"/>
       <arg type="i" name="y" direction="in"/>
@@ -1977,9 +2034,15 @@ var AvroTopBar = class AvroTopBar {
                 if (prop === "Id") return new GLib.Variant("s", "avro-topbar");
                 if (prop === "Title") return new GLib.Variant("s", "Avro Keyboard");
                 if (prop === "Status") return new GLib.Variant("s", "Active");
-                if (prop === "IconName") return new GLib.Variant("s", "avro-bangla");
+                if (prop === "IconName") return new GLib.Variant("s", this.bangla ? "avro-bn" : "avro-en");
                 if (prop === "IconThemePath") return new GLib.Variant("s", "/usr/share/icons/hicolor");
                 if (prop === "ItemIsMenu") return new GLib.Variant("b", false);
+                if (prop === "ToolTip") {
+                    let title = "Avro Keyboard (" + (this.bangla ? "BN" : "EN") + ")";
+                    let desc = this.bangla ? "Bangla Keyboard Mode (Click to switch to English)" : "English Keyboard Mode (Click to switch to Bangla)";
+                    return new GLib.Variant("(sa(iiay)ss)", [this.bangla ? "avro-bn" : "avro-en", [], title, desc]);
+                }
+                if (prop === "IconPixmap") return this._getSniPixmap();
                 return null;
             },
             null
@@ -2001,6 +2064,34 @@ var AvroTopBar = class AvroTopBar {
         } catch (e) {
             this.sniRegistered = false;
         }
+    }
+
+    _getSniPixmap() {
+        try {
+            let px = 24;
+            let pixbuf = iconPixbuf(this.bangla ? 'bangla' : 'english', px, 'dark');
+            if (pixbuf) {
+                let pixels = pixbuf.get_pixels();
+                let w = pixbuf.get_width();
+                let h = pixbuf.get_height();
+                let nChannels = pixbuf.get_n_channels();
+                let rowstride = pixbuf.get_rowstride();
+                let argbBytes = [];
+                for (let y = 0; y < h; y++) {
+                    let rowOffset = y * rowstride;
+                    for (let x = 0; x < w; x++) {
+                        let offset = rowOffset + x * nChannels;
+                        let r = pixels[offset];
+                        let g = pixels[offset + 1];
+                        let b = pixels[offset + 2];
+                        let a = nChannels >= 4 ? pixels[offset + 3] : 255;
+                        argbBytes.push(a, r, g, b);
+                    }
+                }
+                return new GLib.Variant('a(iiay)', [[w, h, argbBytes]]);
+            }
+        } catch (e) {}
+        return new GLib.Variant('a(iiay)', []);
     }
 
     /* Click: toggle the mode. Double-click: restore the bar; its first click
@@ -2032,8 +2123,8 @@ var AvroTopBar = class AvroTopBar {
             this.tray.set_from_pixbuf(iconPixbuf(this.bangla ? 'bangla' : 'english', px, 'dark'));
             let f12 = this._f12Works();
             let text = this.bangla
-                ? "Avro Keyboard.\nRunning Bangla Keyboard Mode.\n" + (f12 ? "Press F12 to switch to English." : "Click to switch to English.")
-                : "Avro Keyboard.\nRunning English Keyboard Mode.\n" + (f12 ? "Press F12 to switch to Bangla." : "Click to switch to Bangla.");
+                ? "Avro Keyboard (BN).\nRunning Bangla Keyboard Mode.\n" + (f12 ? "Press F12 to switch to English." : "Click to switch to English.")
+                : "Avro Keyboard (EN).\nRunning English Keyboard Mode.\n" + (f12 ? "Press F12 to switch to Bangla." : "Click to switch to Bangla.");
             this.tray.set_tooltip_text(text);
         }
         if (this._sniBus && this.sniRegistered) {

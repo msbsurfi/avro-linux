@@ -1,0 +1,5 @@
+[org.gnome.desktop.input-sources]
+sources=[('ibus', 'ibus-avro'), ('xkb', 'us')]
+
+[org.freedesktop.ibus.general]
+preload-engines=['xkb:us::eng', 'ibus-avro']

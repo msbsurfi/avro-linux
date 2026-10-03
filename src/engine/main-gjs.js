@@ -30,6 +30,10 @@ const IBus = imports.gi.IBus;
 const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 
+if (GLib.getenv("DISPLAY")) {
+    GLib.setenv("GDK_BACKEND", "x11", false);
+}
+
 // Determine base directory and configure module search paths
 let baseDir = '/usr/share/avro-linux';
 try {
@@ -174,13 +178,13 @@ if (bus.is_connected()) {
     function updateEngineProperty(engine) {
         if (!engine.mode_bangla) {
             prop_mode.set_label(IBus.Text.new_from_string("English"));
-            prop_mode.set_symbol(IBus.Text.new_from_string("En"));
-            try { prop_mode.set_icon("input-keyboard"); } catch (e) {}
+            prop_mode.set_symbol(IBus.Text.new_from_string("EN"));
+            try { prop_mode.set_icon("avro-en"); } catch (e) {}
         } else {
             let name = engine.layout ? engine.layout.name : "Avro";
             prop_mode.set_label(IBus.Text.new_from_string("বাংলা (" + name + ")"));
-            prop_mode.set_symbol(IBus.Text.new_from_string("বা"));
-            try { prop_mode.set_icon("avro-bangla"); } catch (e) {}
+            prop_mode.set_symbol(IBus.Text.new_from_string("BN"));
+            try { prop_mode.set_icon("avro-bn"); } catch (e) {}
         }
         engine.update_property(prop_mode);
     }
@@ -799,10 +803,7 @@ if (bus.is_connected()) {
         if (style === 'system') {
             return systemPanelSafe ? 'system' : 'none';
         }
-        // GNOME Shell draws IBus candidates natively on Wayland
-        if (style === 'auto' && session.wayland && session.gnome) {
-            return 'system';
-        }
+        // Prefer Avro's Windows-style floating preview window beside the caret
         if (getPreviewUI()) {
             return 'classic';
         }
