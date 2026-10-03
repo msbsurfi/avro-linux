@@ -27,6 +27,7 @@ grep -q "Maintainer: MD Shifat Bin Siddique Urfi" "${TMP_DIR}/info.txt"
 grep -q "Depends:.*gjs" "${TMP_DIR}/info.txt"
 grep -q "Depends:.*ibus" "${TMP_DIR}/info.txt"
 grep -q "Recommends:.*fonts-noto-core" "${TMP_DIR}/info.txt"
+grep -q "Recommends:.*gkbd-capplet" "${TMP_DIR}/info.txt"
 echo "  ✓ Package control fields verified."
 
 # 2. Check essential file locations

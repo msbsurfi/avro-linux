@@ -9,42 +9,39 @@ This document specifies the exact user experience, behavioral expectations, and 
 ## 2. Windows Avro User Interface Concepts
 
 ### 2.1 The Floating TopBar
-On Windows, Avro Keyboard does not hide itself exclusively inside the system tray; it presents a prominent, elegant floating toolbar docked at the top-center of the screen.
+Avro Keyboard 5 for Windows shows a small floating toolbar, the TopBar (default skin 285×30 px). It is always on top, has no taskbar button, and docks to the top of the screen. Avro Linux re-creates it in `src/standalone/topbar.js` (`avro-topbar`) with the same layout, menus and behaviour, drawn with original artwork (the Windows skin contains Microsoft artwork, such as the Internet Explorer logo, so its images are not reused).
 
-Key characteristics:
-1. **Always-On-Top & Sticky**: The TopBar stays visible above all maximized and tiled application windows across all virtual desktops.
-2. **Non-Focus-Stealing**: Clicking controls on the TopBar (such as toggling between বাংলা and English, or choosing a layout) never steals keyboard focus from the active text document or editor. The user can click a button on the bar and immediately continue typing.
-3. **Draggable & Dockable**: The bar can be dragged freely to any screen edge or arbitrary position, and snaps back to top-center when pinned.
-4. **Collapsible / Mini-Mode**: A toggle button allows the user to collapse the full toolbar into an ultra-compact mode containing only the logo and mode toggle.
+### 2.2 TopBar elements (left to right)
+| Element | Windows tooltip / behaviour | Avro Linux |
+| :--- | :--- | :--- |
+| অ logo | "Drag to move TopBar. Click for menu." Press-and-drag moves the bar; click (any button) opens the main menu | Same |
+| Mode button (বাংলা / English) | Any click toggles Bangla / English (F12) | Same; shows the shared mode of the IBus engine |
+| ▼ strip under the mode button | "Select your Bangla keyboard layout." Opens the layout menu | Same; the tooltip also names the current layout |
+| Layout Viewer (keyboard) | Left click opens the Layout Viewer; other buttons open the layout menu | Same: Avro Phonetic opens `avro-layout`, fixed layouts open `gkbd-keyboard-display` |
+| Avro Mouse | Opens the on-screen keyboard | Same (`avro-mouse`, opened once) |
+| Tools (gear) | Tools menu | Same |
+| Web | Web menu (Windows shows the IE logo) | Same menu, original globe icon |
+| Help (?) | Help menu | Same |
+| Power | Setting: show menu (Jump to system tray / Exit), minimize, or exit; right click always shows the menu | Same |
 
-### 2.2 TopBar Component Breakdown
-* **Avro Logo Button ("অ Avro")**: Opens the master menu:
-  - Layout Selection submenu
-  - Avro Pad (dedicated Bengali text editor)
-  - Unicode to Bijoy Converter
-  - Keyboard Layout Viewer
-  - Skin / Theme selector
-  - Preferences
-  - Avro Doctor (diagnostic health check)
-  - About Avro (developer & contributor credits)
-  - Exit
-* **Mode Toggle Button**:
-  - Displays `বাংলা  [F12]` with vibrant green/emerald styling when Bengali mode is active.
-  - Displays `English  [F12]` with cool slate/navy styling when English mode is active.
-  - Globally bound to `F12` key.
-* **Layout Selector Button**:
-  - Displays active layout name (`Phonetic ▼`).
-  - Allows 1-click switching between Avro Phonetic, Avro Easy, Bornona, National (Jatiya), and Probhat.
-* **Quick Tools**:
-  - 📝 Avro Pad
-  - 🔄 Unicode ↔ Bijoy Converter
-  - ⌨ Keyboard Layout Viewer
-  - ⚙ Preferences
-  - 🩺 Avro Doctor
-* **Window Controls**:
-  - 📌 Pin to top-center / Unpin to float
-  - ▲ / ▼ Collapse / Expand
-  - ✕ Close TopBar
+The bar background itself has no action, as on Windows.
+
+### 2.3 Menus
+Captions follow Avro Keyboard 5 (`Toggle keyboard mode`, `Dock to top`, `Jump to system tray`, `Select keyboard layout`, `Avro Mouse - Click 'n Type!`, `On the web`, `Options...`, `Help files`, `About Avro Keyboard...`, `Exit`; the Tools, Web, Help, power and tray menus likewise). Windows-only items are left out: Spell checker, Unicode/ANSI output, Keyboard Layout Editor, Skin Designer and Check update. Linux adds Avro Pad and Avro Doctor to Tools and Help.
+
+Keyboard layouts: Windows lists Avro Phonetic plus its installed fixed layouts. Linux lists Avro Phonetic plus the Bangla XKB layouts IBus provides, with the three that Windows Avro ships first: **National (Jatiya)** (`xkb:bd::ben`, the BCC national standard), **Probhat** (`xkb:bd:probhat:ben`) and **Bornona** (`xkb:in:ben_bornona:ben`). The other Bangla layouts are under "More Bangla keyboard layouts". Avro Easy and Munir Optima have no Linux equivalent and are not offered. When the TopBar switches to a fixed layout it also applies the X keyboard layout, like the `ibus engine` command, unless IBus is set to use the system keyboard layout.
+
+### 2.4 Behaviour
+* **Always on top, all workspaces, no taskbar entry**, re-asserted every second.
+* **Never takes focus** (an improvement over Windows, where the bar is activated and Avro tracks the last application window instead): click the bar and keep typing.
+* **Drag** by the logo only, with a **32 px magnetic snap** to the screen edges and the bar kept below any top panel.
+* **Position**: default at the top, 250 px left of the right edge; as on Windows only the X position is remembered and the bar docks to the top at start-up. `Dock to top` puts it back.
+* **Hover**: glassy blue frames fade in and out over 150 ms (red for the power button); pressed buttons show a dark frame; menus open at the button's bottom-left corner.
+* **Transparency**: after 5 s without mouse activity or mode changes, the bar fades to the transparency level (default 80 of 255) in steps of 50; a mode change or the mouse makes it fully visible again. Needs a compositing window manager.
+* **System tray**: the tray icon is shown only while the bar is hidden. Click toggles the mode; double-click restores the bar (mode unchanged); right click opens the tray menu. The icon and its tooltip show the mode.
+* **Start-up**: one TopBar per session. Running `avro-topbar` again restores it. Commands: `toggle`, `bn`, `sys`, `minimize`, `restore` (bare or with `/`, `-` or `--`). The start-up mode can be Top Bar, tray icon or the last used one.
+* **First runs**: a balloon "Click here to start Bangla typing or Press F12" points at the mode button the first two times; "Avro Keyboard is running here." is shown the first two times the bar goes to the tray.
+* **Options** (Preferences → TopBar): skin (Classic, Royal Blue, Flat Mint, Paper Light), transparency on/off and level, power button action, start-up mode, start when logging in.
 
 ---
 

@@ -827,7 +827,7 @@ if (bus.is_connected()) {
         component = new IBus.Component({
             name: "org.freedesktop.IBus.Avro",
             description: "Avro Phonetic Bengali Input Method",
-            version: "1.1.0",
+            version: eevars.get_version(),
             license: "MPL-2.0",
             author: "Sarim Khan <sarim2005@gmail.com>",
             homepage: "https://github.com/sarim/ibus-avro",
@@ -838,7 +838,7 @@ if (bus.is_connected()) {
         component = new IBus.Component({
             name: "org.freedesktop.IBus.Avro",
             description: "Avro Phonetic Bengali Input Method",
-            version: "1.1.0",
+            version: eevars.get_version(),
             license: "MPL-2.0",
             author: "Sarim Khan <sarim2005@gmail.com>",
             homepage: "https://github.com/sarim/ibus-avro",

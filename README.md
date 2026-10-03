@@ -13,10 +13,12 @@ Remastered by **MD Shifat Bin Siddique Urfi**, this release delivers full Window
 
 ## 🌟 Features at a Glance
 
-* **Classic Floating Sticky TopBar**:
-  * Stays pinned on top across all virtual desktops and workspaces (`keep_above`, `dock`, `sticky`).
-  * Non-focus-stealing controls: toggling Bangla/English or changing layout never interrupts your active document.
-  * Windows-identical interface: Logo, Mode toggle (Bangla / English), Layout selector, Tools menu, Doctor, Candidate preview toggle, and Exit.
+* **Avro TopBar** (`avro-topbar`), re-created from Avro Keyboard 5 for Windows:
+  * The same 285×30 bar and elements: অ menu, বাংলা / English mode button with the keyboard-layout strip under it, Layout Viewer, Avro Mouse, Tools, Web, Help and power button, with the Windows menus and tooltips. Original artwork, scaled to your screen DPI.
+  * Real keyboard layouts: Avro Phonetic plus the Bangla XKB layouts in IBus, National (Jatiya), Probhat and Bornona first.
+  * Always on top on every workspace, and never takes focus: click it and keep typing.
+  * Drag by the logo with magnetic edge snap, fades when idle, hides to the system tray (click to switch mode, double-click to restore), one bar per session, and the commands `avro-topbar toggle | bn | sys | minimize | restore`.
+  * Four skins and the Windows TopBar options under Preferences → TopBar.
 * **Windows-Style Preview Window**:
   * The classic Avro Keyboard preview: a small window at the text cursor with the English text you type (yellow row) and the Bangla suggestions below it, the selected word in blue.
   * Drawn by the engine itself on every key press, as a focus-less popup that never takes focus from the app you are typing in.

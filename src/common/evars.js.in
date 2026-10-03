@@ -16,6 +16,10 @@ function get_libexecdir() {
     return "@libexecdir@";
 }
 
+function get_version() {
+    return "@version@";
+}
+
 /**
  * Configure imports.searchPath to include all necessary module directories.
  * If baseDir is provided, uses that base; otherwise defaults to get_pkgdatadir().

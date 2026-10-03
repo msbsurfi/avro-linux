@@ -2,28 +2,35 @@
 # SPDX-License-Identifier: MPL-2.0
 
 SHELL := /bin/bash
+# The one place the version number lives; everything else reads it from here.
+VERSION := 1.2.0
 prefix ?= /usr
 pkgdatadir ?= $(prefix)/share/avro-linux
 libexecdir ?= $(prefix)/libexec/avro-linux
 datadir ?= $(prefix)/share
 sysconfdir ?= /etc
 
-.PHONY: all build test package install clean
+.PHONY: all build test package install clean print-version
 
 all: build
 
 build: src/common/evars.js data/ibus/ibus-avro.xml data/gsettings/gschemas.compiled
 
-src/common/evars.js: src/common/evars.js.in
+print-version:
+	@echo $(VERSION)
+
+src/common/evars.js: src/common/evars.js.in Makefile
 	@mkdir -p src/common
 	sed -e 's|@pkgdatadir@|$(pkgdatadir)|g' \
 	    -e 's|@libexecdir@|$(libexecdir)|g' \
+	    -e 's|@version@|$(VERSION)|g' \
 	    $< > $@
 
-data/ibus/ibus-avro.xml: data/ibus/ibus-avro.xml.in
+data/ibus/ibus-avro.xml: data/ibus/ibus-avro.xml.in Makefile
 	@mkdir -p data/ibus
 	sed -e 's|@pkgdatadir@|$(pkgdatadir)|g' \
 	    -e 's|@libexecdir@|$(libexecdir)|g' \
+	    -e 's|@version@|$(VERSION)|g' \
 	    $< > $@
 
 data/gsettings/gschemas.compiled: data/gsettings/com.omicronlab.avro.gschema.xml

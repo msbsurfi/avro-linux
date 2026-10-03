@@ -157,7 +157,7 @@ var runAvroMouse = function runAvroMouse(parentWindow) {
     headerBox.get_style_context().add_class("avro-mouse-header");
 
     let titleVBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 2 });
-    let lblTitle = new Gtk.Label({ label: "🖱️ Avro Mouse — On-Screen Keyboard", xalign: 0 });
+    let lblTitle = new Gtk.Label({ label: "Avro Mouse — On-Screen Keyboard", xalign: 0 });
     lblTitle.get_style_context().add_class("avro-mouse-title");
     let lblSub = new Gtk.Label({ label: "Click any Bengali letter or sign to type • Remastered by MD Shifat Bin Siddique Urfi", xalign: 0 });
     lblSub.get_style_context().add_class("avro-mouse-subtitle");
@@ -187,7 +187,7 @@ var runAvroMouse = function runAvroMouse(parentWindow) {
     // 3. Actions Row (Copy, Space, Backspace, Clear)
     let actionRow = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8 });
 
-    let btnCopy = new Gtk.Button({ label: "📋 Copy Text" });
+    let btnCopy = new Gtk.Button({ label: "Copy Text" });
     btnCopy.get_style_context().add_class("avro-copy-btn");
     btnCopy.get_style_context().add_class("avro-action-btn");
     btnCopy.connect("clicked", () => {
@@ -197,7 +197,7 @@ var runAvroMouse = function runAvroMouse(parentWindow) {
             clipboard.set_text(text, -1);
             btnCopy.set_label("✓ Copied!");
             GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1500, () => {
-                btnCopy.set_label("📋 Copy Text");
+                btnCopy.set_label("Copy Text");
                 return false;
             });
         }

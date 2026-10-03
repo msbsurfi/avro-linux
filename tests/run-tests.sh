@@ -53,6 +53,9 @@ run_test "IBus Engine Live Integration" "gjs ${ROOT_DIR}/tests/engine/test-ibus-
 # 6. Windows-style Preview Window (placement; live window when DISPLAY is set)
 run_test "Preview Window" "gjs ${ROOT_DIR}/tests/ui/test-preview-window.js"
 
+# Avro TopBar (geometry, mode/layout logic, menus; live bar when DISPLAY is set)
+run_test "Avro TopBar" "gjs ${ROOT_DIR}/tests/ui/test-topbar.js"
+
 # 7. Preferences & GSettings integration test
 run_test "Preferences & GSettings Integration" "gjs ${ROOT_DIR}/tests/integration/test-preferences.js"
 

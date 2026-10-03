@@ -8,13 +8,15 @@
 */
 
 imports.gi.versions.Gtk = '3.0';
+imports.gi.versions.Gdk = '3.0';
 const Gtk = imports.gi.Gtk;
+const Gdk = imports.gi.Gdk;
 const GLib = imports.gi.GLib;
 
-// Base paths
+// Base paths (gjs does not put the script itself in ARGV)
 let baseDir = '/usr/share/avro-linux';
 try {
-    let scriptPath = ARGV[0] || '.';
+    let scriptPath = imports.system.programPath || imports.system.programInvocationName || '.';
     let scriptDir = GLib.path_get_dirname(scriptPath);
     if (GLib.file_test(scriptDir + '/../avro-core/phonetic/avrolib.js', GLib.FileTest.EXISTS)) {
         baseDir = GLib.path_get_dirname(scriptDir);
@@ -27,8 +29,20 @@ imports.searchPath.unshift(baseDir + '/standalone');
 imports.searchPath.unshift(baseDir + '/src/standalone');
 imports.searchPath.unshift(baseDir + '/preferences');
 imports.searchPath.unshift(baseDir + '/src/preferences');
-imports.searchPath.unshift('./src/standalone');
-imports.searchPath.unshift('./src/preferences');
+// No paths relative to the current directory: started from a folder that
+// happens to contain a source checkout, the installed launcher must still
+// load its own modules.
+imports.searchPath.unshift(baseDir + '/common');
+
+function appVersion() {
+    try {
+        return imports.evars.get_version();
+    } catch (e) {
+        return "";
+    }
+}
+
+const TOOL_FLAGS = ['--pad', '--converter', '--layout', '--mouse', '-m', '--preferences'];
 
 let TopBar = null;
 let AvroPad = null;
@@ -47,9 +61,10 @@ try { PrefApp = imports.pref; } catch (e) {}
 function printHelp() {
     print("Avro Linux (Remastered Edition) — Standalone Bengali Input Suite");
     print("Lead Developer & Maintainer: MD Shifat Bin Siddique Urfi");
-    print("Version: 1.0.0");
+    print("Version: " + appVersion());
     print("");
     print("Usage: avro [OPTION...]");
+    print("       avro-topbar [toggle | bn | sys | minimize | restore]");
     print("");
     print("Options:");
     print("  --topbar        Launch floating Windows-style Avro TopBar (default)");
@@ -67,7 +82,7 @@ function main() {
     let args = typeof ARGV !== 'undefined' ? ARGV : [];
 
     if (args.indexOf('--version') !== -1 || args.indexOf('-v') !== -1) {
-        print("Avro Linux (Remastered Edition) v1.0.0");
+        print("Avro Linux (Remastered Edition) v" + appVersion());
         print("Lead Developer & Remaster Maintainer: MD Shifat Bin Siddique Urfi");
         print("License: MPL-2.0");
         return;
@@ -76,6 +91,13 @@ function main() {
     if (args.indexOf('--help') !== -1 || args.indexOf('-h') !== -1) {
         printHelp();
         return;
+    }
+
+    // The TopBar must be able to place itself and stay on top: only X11
+    // (or XWayland) allows that, so it never uses a native Wayland connection.
+    let isTopBar = !args.some(a => TOOL_FLAGS.indexOf(a) !== -1);
+    if (isTopBar && GLib.getenv('DISPLAY')) {
+        try { Gdk.set_allowed_backends('x11'); } catch (e) {}
     }
 
     Gtk.init(null);
@@ -107,9 +129,9 @@ function main() {
         }
     }
 
-    // Default: Run TopBar
+    // Default: Run TopBar (remaining arguments are TopBar commands)
     if (TopBar && TopBar.runAvroTopBar) {
-        TopBar.runAvroTopBar();
+        TopBar.runAvroTopBar(args.filter(a => a !== '--topbar'));
     } else if (AvroPad && AvroPad.runAvroPad) {
         AvroPad.runAvroPad(null);
     }
