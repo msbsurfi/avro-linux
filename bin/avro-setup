@@ -1,0 +1,10 @@
+#!/bin/sh
+# Launcher script for Avro Keyboard Setup Wizard
+# SPDX-License-Identifier: MPL-2.0
+
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -f "${SCRIPT_DIR}/src/standalone/setup-wizard.js" ]; then
+    exec /usr/bin/env gjs "${SCRIPT_DIR}/src/standalone/setup-wizard.js" --standalone "$@"
+elif [ -f "/usr/share/avro-linux/standalone/setup-wizard.js" ]; then
+    exec /usr/bin/env gjs /usr/share/avro-linux/standalone/setup-wizard.js --standalone "$@"
+fi

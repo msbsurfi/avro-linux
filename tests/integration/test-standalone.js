@@ -98,6 +98,13 @@ try {
     assert(false, "Failed to load splash module: " + e.message);
 }
 
+try {
+    const sw = imports["setup-wizard"];
+    assert(sw && typeof sw.runSetupWizard === 'function', "setup-wizard exports runSetupWizard");
+} catch (e) {
+    assert(false, "Failed to load setup-wizard module: " + e.message);
+}
+
 // 2. Test Unicode <-> Bijoy conversions
 const bc = imports.bijoyconverter;
 if (bc && bc.unicodeToBijoy && bc.bijoyToUnicode) {
@@ -134,7 +141,8 @@ const BIN_FILES = [
     "bin/avro-doctor",
     "bin/avro-linux-doctor",
     "bin/avro-preview",
-    "bin/avro-splash"
+    "bin/avro-splash",
+    "bin/avro-setup"
 ];
 
 for (let i = 0; i < BIN_FILES.length; i++) {
@@ -158,7 +166,8 @@ const DESKTOP_FILES = [
     "data/applications/avro-mouse.desktop",
     "data/applications/avro-preferences.desktop",
     "data/applications/avro-doctor.desktop",
-    "data/applications/avro-preview.desktop"
+    "data/applications/avro-preview.desktop",
+    "data/applications/avro-setup.desktop"
 ];
 
 for (let i = 0; i < DESKTOP_FILES.length; i++) {

@@ -61,6 +61,7 @@ function init_search_paths(baseDir) {
         dir + "/avro-core/suggestions",
         dir + "/avro-core/fixed",
         dir + "/preferences",
+        dir + "/standalone",
         dir + "/ui",
         // Source tree fallback layout
         dir + "/src",
@@ -73,6 +74,7 @@ function init_search_paths(baseDir) {
         dir + "/src/avro-core/suggestions",
         dir + "/src/avro-core/fixed",
         dir + "/src/preferences",
+        dir + "/src/standalone",
         dir + "/src/ui"
     ];
 

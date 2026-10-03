@@ -95,6 +95,7 @@ install: build
 	install -m 0755 bin/avro-mouse $(DESTDIR)$(prefix)/bin/avro-mouse
 	install -m 0755 bin/avro-splash $(DESTDIR)$(prefix)/bin/avro-splash
 	install -m 0755 bin/avro-engine $(DESTDIR)$(prefix)/bin/avro-engine
+	install -m 0755 bin/avro-setup $(DESTDIR)$(prefix)/bin/avro-setup
 
 	# Common & Engine scripts
 	install -m 0644 src/common/evars.js $(DESTDIR)$(pkgdatadir)/common/evars.js
@@ -112,12 +113,14 @@ install: build
 	install -m 0755 src/standalone/layoutviewer.js $(DESTDIR)$(pkgdatadir)/standalone/layoutviewer.js
 	install -m 0755 src/standalone/avromouse.js $(DESTDIR)$(pkgdatadir)/standalone/avromouse.js
 	install -m 0755 src/standalone/doctor.js $(DESTDIR)$(pkgdatadir)/standalone/doctor.js
+	install -m 0755 src/standalone/setup-wizard.js $(DESTDIR)$(pkgdatadir)/standalone/setup-wizard.js
 	install -m 0755 src/ui/floating-preview.js $(DESTDIR)$(pkgdatadir)/ui/floating-preview.js
 
 	# Avro Core components
 	install -m 0644 src/avro-core/phonetic/avrolib.js $(DESTDIR)$(pkgdatadir)/avro-core/phonetic/avrolib.js
 	install -m 0644 src/avro-core/phonetic/avroregexlib.js $(DESTDIR)$(pkgdatadir)/avro-core/phonetic/avroregexlib.js
 	install -m 0644 src/avro-core/phonetic/utf8.js $(DESTDIR)$(pkgdatadir)/avro-core/phonetic/utf8.js
+	install -m 0644 src/avro-core/bijoyconverter.js $(DESTDIR)$(pkgdatadir)/avro-core/bijoyconverter.js
 	install -m 0644 src/avro-core/dictionary/avrodict.js $(DESTDIR)$(pkgdatadir)/avro-core/dictionary/avrodict.js
 	install -m 0644 src/avro-core/dictionary/suffixdict.js $(DESTDIR)$(pkgdatadir)/avro-core/dictionary/suffixdict.js
 	install -m 0644 src/avro-core/dictionary/dbsearch.js $(DESTDIR)$(pkgdatadir)/avro-core/dictionary/dbsearch.js
@@ -158,6 +161,7 @@ install: build
 	install -m 0644 data/applications/avro-mouse.desktop $(DESTDIR)$(datadir)/applications/avro-mouse.desktop
 	install -m 0644 data/applications/avro-doctor.desktop $(DESTDIR)$(datadir)/applications/avro-doctor.desktop
 	install -m 0644 data/applications/avro-preview.desktop $(DESTDIR)$(datadir)/applications/avro-preview.desktop
+	install -m 0644 data/applications/avro-setup.desktop $(DESTDIR)$(datadir)/applications/avro-setup.desktop
 	install -m 0644 data/applications/ibus-setup-avro.desktop $(DESTDIR)$(datadir)/applications/ibus-setup-avro.desktop
 	install -m 0644 data/metainfo/com.github.sarim.ibus.avro.metainfo.xml $(DESTDIR)$(datadir)/metainfo/com.github.sarim.ibus.avro.metainfo.xml
 

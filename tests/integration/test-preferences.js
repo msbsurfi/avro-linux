@@ -71,13 +71,15 @@ try {
         assert(schemaObj.has_key("lutable-size"), "Schema contains lutable-size");
         assert(schemaObj.has_key("cboxorient"), "Schema contains cboxorient");
         ["keyboard-layout", "fixed-typing-style", "fixed-old-reph", "fixed-vowel-forming",
-         "fixed-fix-chandra", "fixed-numpad-bangla", "topbar-autostart-done"].forEach(key => {
+         "fixed-fix-chandra", "fixed-numpad-bangla", "topbar-autostart-done", "output-encoding"].forEach(key => {
             assert(schemaObj.has_key(key), "Schema contains " + key);
         });
         assert(schemaObj.get_key("keyboard-layout").get_default_value().unpack() === "phonetic",
                "Avro Phonetic is the default keyboard layout");
         assert(schemaObj.get_key("fixed-typing-style").get_default_value().unpack() === "modern",
                "Modern Style Typing is the default, as in Avro Keyboard");
+        assert(schemaObj.get_key("output-encoding").get_default_value().unpack() === "unicode",
+               "Unicode is the default output encoding");
 
         let settings = new Gio.Settings({ settings_schema: schemaObj });
         assert(typeof settings.get_boolean("switch-preview") === 'boolean', "switch-preview returns boolean");

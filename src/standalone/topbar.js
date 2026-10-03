@@ -851,7 +851,7 @@ function drawLogo(cr, el) {
     cr.restore();
 }
 
-function drawModeLabel(cr, el, bangla, skin) {
+function drawModeLabel(cr, el, bangla, skin, isAnsi) {
     cr.save();
 
     let bx = el.x + 2;
@@ -869,19 +869,31 @@ function drawModeLabel(cr, el, bangla, skin) {
     cr.closePath();
 
     if (bangla) {
-        // Avro Bangla active mode: rich Avro Blue gradient
         let g = new Cairo.LinearGradient(bx, by, bx, by + bh);
-        g.addColorStopRGBA(0, 0.05, 0.45, 0.85, 0.95);
-        g.addColorStopRGBA(1, 0.02, 0.28, 0.62, 0.95);
+        if (isAnsi) {
+            // ANSI mode: distinctive ruby / amber glow
+            g.addColorStopRGBA(0, 0.78, 0.22, 0.12, 0.95);
+            g.addColorStopRGBA(1, 0.48, 0.10, 0.05, 0.95);
+        } else {
+            // Avro Bangla active mode: rich Avro Blue gradient
+            g.addColorStopRGBA(0, 0.05, 0.45, 0.85, 0.95);
+            g.addColorStopRGBA(1, 0.02, 0.28, 0.62, 0.95);
+        }
         cr.setSource(g);
         cr.fillPreserve();
 
-        cr.setSourceRGBA(0.35, 0.70, 1.0, 0.75);
+        if (isAnsi) {
+            cr.setSourceRGBA(1.0, 0.75, 0.25, 0.90);
+        } else {
+            cr.setSourceRGBA(0.35, 0.70, 1.0, 0.75);
+        }
         cr.setLineWidth(1.0);
         cr.stroke();
 
-        let lMain = textLayout(cr, 'BN', 'Noto Sans Bold', 9.5);
-        let lSub = textLayout(cr, 'বাং', 'Noto Sans Bengali Bold', 8.5);
+        let lMain = textLayout(cr, 'BN', 'Noto Sans Bold', 9.0);
+        let lSub = isAnsi
+            ? textLayout(cr, 'ANSI', 'Noto Sans Bold', 7.0)
+            : textLayout(cr, 'বাং', 'Noto Sans Bengali Bold', 8.5);
 
         let [, mw, mh] = [0, lMain.get_pixel_size()[0], lMain.get_pixel_size()[1]];
         let [, sw, sh] = [0, lSub.get_pixel_size()[0], lSub.get_pixel_size()[1]];
@@ -901,8 +913,12 @@ function drawModeLabel(cr, el, bangla, skin) {
         cr.moveTo(startX, startY);
         PangoCairo.show_layout(cr, lMain);
 
-        // 'বাং' in warm Avro amber
-        cr.setSourceRGBA(1.0, 0.86, 0.38, 1.0);
+        // Sublabel: 'ANSI' in vibrant gold, or 'বাং' in warm Avro amber
+        if (isAnsi) {
+            cr.setSourceRGBA(1.0, 0.90, 0.35, 1.0);
+        } else {
+            cr.setSourceRGBA(1.0, 0.86, 0.38, 1.0);
+        }
         cr.moveTo(startX + mw + 3, startY + (mh - sh) / 2);
         PangoCairo.show_layout(cr, lSub);
     } else {
@@ -1129,7 +1145,7 @@ var AvroTopBar = class AvroTopBar {
     _drawElement(cr, el, skin) {
         switch (el.id) {
         case 'logo': drawLogo(cr, el); break;
-        case 'mode': drawModeLabel(cr, el, this.bangla, skin); break;
+        case 'mode': drawModeLabel(cr, el, this.bangla, skin, this.isAnsi()); break;
         case 'layout': drawLayoutArrow(cr, el, skin); break;
         case 'viewer': drawIcon(cr, 'keyboard', el.x + 3, el.y + 3, 24, skin.icons); break;
         case 'mouse': drawIcon(cr, 'mouse', el.x + 4, el.y + 4, 22, skin.icons); break;
@@ -1592,6 +1608,56 @@ var AvroTopBar = class AvroTopBar {
         this._refreshMode();
     }
 
+    isAnsi() {
+        return this.settings.get('output-encoding', 'unicode') === 'ansi';
+    }
+
+    setOutputEncoding(encoding) {
+        this.settings.set('output-encoding', encoding);
+        this.area.queue_draw();
+        this._updateTray();
+    }
+
+    promptSwitchToAnsi() {
+        if (this.isAnsi()) return;
+        let dlg = new Gtk.MessageDialog({
+            transient_for: this.window,
+            modal: true,
+            message_type: Gtk.MessageType.WARNING,
+            buttons: Gtk.ButtonsType.OK_CANCEL,
+            text: "Switch to ANSI (Bijoy Compatible) Output Mode?",
+            secondary_text: "In ANSI mode, Avro outputs legacy 8-bit characters (Bijoy format).\n\nIMPORTANT: You MUST select an ANSI font (such as SutonnyMJ) in your target application to view the text properly.\n\nDo you want to switch to ANSI output mode?"
+        });
+        dlg.set_title("Avro Keyboard - Output as ANSI");
+        let res = dlg.run();
+        dlg.destroy();
+        if (res === Gtk.ResponseType.OK) {
+            this.setOutputEncoding('ansi');
+            this._notify("Avro Keyboard", "Switched to ANSI output mode.\nRemember to select an ANSI font (e.g. SutonnyMJ) in your application.");
+        }
+    }
+
+    _appendEncodingItems(menu) {
+        let isAnsi = this.isAnsi();
+        let encMenu = new Gtk.Menu();
+        this._radios(encMenu, [
+            {
+                label: "Output as Unicode (Standard / Recommended)",
+                active: !isAnsi,
+                callback: () => {
+                    this.setOutputEncoding('unicode');
+                    this._notify("Avro Keyboard", "Switched back to Unicode output mode.");
+                }
+            },
+            {
+                label: "Output as ANSI (Bijoy Compatible)...",
+                active: isAnsi,
+                callback: () => this.promptSwitchToAnsi()
+            }
+        ]);
+        menu.append(this._submenu("Output Text Encoding", 'toggle', encMenu));
+    }
+
     /* Pick a layout by its catalog id ('ibus-avro', 'avro:national', 'xkb:...'). */
     selectLayout(id) {
         let entry = null;
@@ -1825,6 +1891,8 @@ var AvroTopBar = class AvroTopBar {
         menu.append(this._item("Avro Pad : Bangla text editor", 'document', () => this.launchTool('avro-pad', '--pad')));
         menu.append(this._item("Avro Doctor : Check your system", 'doctor', () => this.launchTool('avro-doctor', null)));
         this._sep(menu);
+        this._appendEncodingItems(menu);
+        this._sep(menu);
         menu.append(this._submenu("Avro Phonetic Options", null, this._phoneticOptions()));
         menu.append(this._submenu("Fixed Keyboard Layout Options", null, this._fixedOptions()));
         this._sep(menu);
@@ -1834,6 +1902,14 @@ var AvroTopBar = class AvroTopBar {
     _mainMenu() {
         let menu = new Gtk.Menu();
         menu.append(this._item("Toggle keyboard mode", 'toggle', () => this.toggleMode()));
+        if (this.isAnsi()) {
+            menu.append(this._item("Output: ANSI (Revert to Unicode)", 'toggle', () => {
+                this.setOutputEncoding('unicode');
+                this._notify("Avro Keyboard", "Switched back to Unicode output mode.");
+            }));
+        } else {
+            menu.append(this._item("Output as ANSI (Bijoy Compatible)...", 'toggle', () => this.promptSwitchToAnsi()));
+        }
         menu.append(this._item("Dock to top", null, () => this.dockToTop()));
         menu.append(this._item("Jump to system tray", null, () => this.hideToTray()));
         this._sep(menu);
@@ -1893,6 +1969,14 @@ var AvroTopBar = class AvroTopBar {
     _trayMenu() {
         let menu = new Gtk.Menu();
         menu.append(this._item("Toggle keyboard mode", 'toggle', () => this.toggleMode()));
+        if (this.isAnsi()) {
+            menu.append(this._item("Output: ANSI (Revert to Unicode)", 'toggle', () => {
+                this.setOutputEncoding('unicode');
+                this._notify("Avro Keyboard", "Switched back to Unicode output mode.");
+            }));
+        } else {
+            menu.append(this._item("Output as ANSI (Bijoy Compatible)...", 'toggle', () => this.promptSwitchToAnsi()));
+        }
         menu.append(this._item("Restore Avro Top Bar", null, () => this.restoreBar()));
         this._sep(menu);
         menu.append(this._submenu("Select keyboard layout", 'keyboard', this._layoutSubmenu()));
@@ -2055,8 +2139,11 @@ var AvroTopBar = class AvroTopBar {
                 if (prop === "IconThemePath") return new GLib.Variant("s", "/usr/share/icons/hicolor");
                 if (prop === "ItemIsMenu") return new GLib.Variant("b", false);
                 if (prop === "ToolTip") {
-                    let title = "Avro Keyboard (" + (this.bangla ? "BN" : "EN") + ")";
-                    let desc = this.bangla ? "Bangla Keyboard Mode (Click to switch to English)" : "English Keyboard Mode (Click to switch to Bangla)";
+                    let isAnsi = this.isAnsi();
+                    let title = "Avro Keyboard (" + (this.bangla ? (isAnsi ? "BN [ANSI]" : "BN") : "EN") + ")";
+                    let desc = this.bangla
+                        ? (isAnsi ? "Bangla Keyboard Mode [ANSI / SutonnyMJ] (Click to switch to English)" : "Bangla Keyboard Mode (Click to switch to English)")
+                        : "English Keyboard Mode (Click to switch to Bangla)";
                     return new GLib.Variant("(sa(iiay)ss)", [this.bangla ? "avro-bn" : "avro-en", [], title, desc]);
                 }
                 if (prop === "IconPixmap") return this._getSniPixmap();
@@ -2139,8 +2226,11 @@ var AvroTopBar = class AvroTopBar {
             let px = this._traySize || 22;
             this.tray.set_from_pixbuf(iconPixbuf(this.bangla ? 'bangla' : 'english', px, 'dark'));
             let f12 = this._f12Works();
+            let isAnsi = this.isAnsi();
+            let modeTitle = isAnsi ? "BN [ANSI]" : "BN";
+            let modeDesc = isAnsi ? "Running Bangla Keyboard Mode [ANSI / SutonnyMJ]" : "Running Bangla Keyboard Mode";
             let text = this.bangla
-                ? "Avro Keyboard (BN).\nRunning Bangla Keyboard Mode.\n" + (f12 ? "Press F12 to switch to English." : "Click to switch to English.")
+                ? "Avro Keyboard (" + modeTitle + ").\n" + modeDesc + ".\n" + (f12 ? "Press F12 to switch to English." : "Click to switch to English.")
                 : "Avro Keyboard (EN).\nRunning English Keyboard Mode.\n" + (f12 ? "Press F12 to switch to Bangla." : "Click to switch to Bangla.");
             this.tray.set_tooltip_text(text);
         }
@@ -2281,6 +2371,10 @@ var AvroTopBar = class AvroTopBar {
         this.settings.connect('topbar-skin', () => this.area.queue_draw());
         this.settings.connect('topbar-transparent', () => this._markActive());
         this.settings.connect('topbar-transparency-level', () => this._markActive());
+        this.settings.connect('output-encoding', () => {
+            this.area.queue_draw();
+            this._updateTray();
+        });
     }
 
     /* Show according to the start-up setting (TopBar / tray / last used). */

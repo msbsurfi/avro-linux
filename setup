@@ -1,0 +1,5 @@
+#!/bin/bash
+# Avro Keyboard Setup Wizard Entrypoint
+# SPDX-License-Identifier: MPL-2.0
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+exec "$DIR/bin/avro-setup" "$@"

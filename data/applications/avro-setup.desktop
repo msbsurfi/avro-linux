@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=Avro Keyboard Setup
+GenericName=Debian Package Installer
+Comment=Install and configure Avro Keyboard for Linux
+Exec=avro-setup %f
+Icon=avro-bangla
+Terminal=false
+Type=Application
+MimeType=application/vnd.debian.binary-package;application/x-deb;application/x-debian-package;
+Categories=System;PackageManager;
+Keywords=avro;install;setup;package;deb;
+NoDisplay=false
+StartupNotify=true

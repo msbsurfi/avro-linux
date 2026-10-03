@@ -77,6 +77,7 @@ case "$1" in
                     # Allow ibus-daemon to register engine and switch active engine to ibus-avro
                     sleep 1
                     su "$uname" -s /bin/sh -c "$uenv ibus engine ibus-avro" 2>/dev/null || true
+                    su "$uname" -s /bin/sh -c "$uenv notify-send -i avro-bangla 'Avro Keyboard Installed' 'Installation successful! A system restart is recommended to finalize input method settings.'" 2>/dev/null || true
                 fi
             fi
         done

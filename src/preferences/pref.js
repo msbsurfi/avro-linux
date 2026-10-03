@@ -371,6 +371,7 @@ function runpref() {
             setting.reset("lutable-size");
             setting.reset("cboxorient");
             setting.reset("mode-bangla");
+            if (hasKey(setting, "output-encoding")) setting.reset("output-encoding");
             if (hasKey(setting, "switch-splash")) setting.reset("switch-splash");
             readFromSettings();
         }
@@ -392,6 +393,15 @@ function runpref() {
     addCard(typingBox, [
         Theme.settingRow("Insert a Newline after Commit", "Pressing Enter commits the candidate, then inserts a newline", switchNewline),
         Theme.settingRow("Maximum Suggestions", "Maximum number of candidate words shown in list (5 - 15)", spinSize)
+    ]);
+
+    let cboxEncoding = new Gtk.ComboBoxText({ valign: Gtk.Align.CENTER });
+    cboxEncoding.append("unicode", "Unicode (Standard - Recommended)");
+    cboxEncoding.append("ansi", "ANSI (Bijoy / SutonnyMJ Compatible)");
+
+    typingBox.pack_start(Theme.sectionTitle("Output Encoding"), false, false, 0);
+    addCard(typingBox, [
+        Theme.settingRow("Text Output Format", "Output standard Unicode UTF-8 or legacy ANSI characters (requires SutonnyMJ font)", cboxEncoding)
     ]);
 
     /* ========================================================================= */
@@ -724,6 +734,9 @@ function runpref() {
             if (hasKey(setting, "switch-splash")) {
                 switchSplash.set_active(setting.get_boolean("switch-splash"));
             }
+            if (hasKey(setting, "output-encoding")) {
+                cboxEncoding.set_active_id(setting.get_string("output-encoding"));
+            }
             updateSensitivities();
         } catch (e) {}
     }
@@ -739,6 +752,9 @@ function runpref() {
     }
 
     if (setting) {
+        if (hasKey(setting, "output-encoding")) {
+            setting.bind("output-encoding", cboxEncoding, "active-id", Gio.SettingsBindFlags.DEFAULT);
+        }
         setting.bind("switch-preview", switchPreview, "active", Gio.SettingsBindFlags.DEFAULT);
         setting.bind("switch-dict", switchDict, "active", Gio.SettingsBindFlags.DEFAULT);
         setting.bind("switch-newline", switchNewline, "active", Gio.SettingsBindFlags.DEFAULT);

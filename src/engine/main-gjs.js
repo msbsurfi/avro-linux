@@ -76,6 +76,26 @@ try {
     previewModule = null;
 }
 
+// Bijoy / ANSI legacy converter
+var bijoyConverter = null;
+try {
+    bijoyConverter = imports.bijoyconverter;
+} catch (e) {
+    bijoyConverter = null;
+}
+
+function formatOutput(engine, text) {
+    if (!text) return "";
+    if (engine && engine.output_encoding === 'ansi' && bijoyConverter && typeof bijoyConverter.unicodeToBijoy === 'function') {
+        try {
+            return bijoyConverter.unicodeToBijoy(text);
+        } catch (e) {
+            return text;
+        }
+    }
+    return text;
+}
+
 // X11 keysym values. These never change, unlike the IBus.KEY_* constants,
 // which are not exported by every IBus introspection version.
 const KEY = {
@@ -175,14 +195,16 @@ if (bus.is_connected()) {
     }
 
     function updateEngineProperty(engine) {
+        let isAnsi = engine && engine.output_encoding === 'ansi';
         if (!engine.mode_bangla) {
             prop_mode.set_label(IBus.Text.new_from_string("English"));
             prop_mode.set_symbol(IBus.Text.new_from_string("EN"));
             try { prop_mode.set_icon("avro-en"); } catch (e) {}
         } else {
             let name = engine.layout ? engine.layout.name : "Avro";
-            prop_mode.set_label(IBus.Text.new_from_string("বাংলা (" + name + ")"));
-            prop_mode.set_symbol(IBus.Text.new_from_string("BN"));
+            let suffix = isAnsi ? " [ANSI]" : "";
+            prop_mode.set_label(IBus.Text.new_from_string("বাংলা (" + name + ")" + suffix));
+            prop_mode.set_symbol(IBus.Text.new_from_string(isAnsi ? "BN [ANSI]" : "BN"));
             try { prop_mode.set_icon("avro-bn"); } catch (e) {}
         }
         engine.update_property(prop_mode);
@@ -360,7 +382,7 @@ if (bus.is_connected()) {
             if (hasBuffer) {
                 commitCandidateWithSuffix(engine, "।");
             } else {
-                engine.commit_text(IBus.Text.new_from_string("।"));
+                engine.commit_text(IBus.Text.new_from_string(formatOutput(engine, "।")));
             }
             return true;
 
@@ -485,14 +507,14 @@ if (bus.is_connected()) {
         if (typer.text.length > 64) {
             let done = typer.text.slice(0, typer.text.length - 16);
             typer.text = typer.text.slice(done.length);
-            engine.commit_text(IBus.Text.new_from_string(done));
+            engine.commit_text(IBus.Text.new_from_string(formatOutput(engine, done)));
         }
         showPreedit(engine, typer.text);
         return true;
     }
 
     function commitText(engine, text) {
-        engine.commit_text(IBus.Text.new_from_string(text));
+        engine.commit_text(IBus.Text.new_from_string(formatOutput(engine, text)));
         engine.hide_preedit_text();
     }
 
@@ -918,6 +940,7 @@ if (bus.is_connected()) {
         } catch (e) {
             // Default settings fallback if GSettings schema is not yet compiled
             engine.setting = null;
+            engine.output_encoding = 'unicode';
             engine.setting_switch_preview = true;
             engine.setting_switch_dict = true;
             engine.setting_switch_newline = false;
@@ -932,6 +955,12 @@ if (bus.is_connected()) {
     function readSetting(engine) {
         if (!engine.setting) return;
         try {
+            let prevEncoding = engine.output_encoding;
+            engine.output_encoding = hasKey(engine.setting, 'output-encoding')
+                ? engine.setting.get_string('output-encoding') : 'unicode';
+            if (prevEncoding !== undefined && prevEncoding !== engine.output_encoding) {
+                updateEngineProperty(engine);
+            }
             engine.setting_switch_preview = engine.setting.get_boolean('switch-preview');
             engine.setting_switch_dict = engine.setting.get_boolean('switch-dict');
             engine.setting_switch_newline = engine.setting.get_boolean('switch-newline');
@@ -1047,14 +1076,17 @@ if (bus.is_connected()) {
         if (engine.buffertext.length > 0 && engine.currentSuggestions.length > 0) {
             var selectedWord = engine.currentSuggestions[engine.currentSelection] || engine.buffertext;
             var textToCommit = selectedWord + (suffix !== undefined ? suffix : "");
-            var commitText = IBus.Text.new_from_string(textToCommit);
+            var formatted = formatOutput(engine, textToCommit);
+            var commitText = IBus.Text.new_from_string(formatted);
             engine.commit_text(commitText);
             suggestionBuilder.stringCommitted(engine.buffertext, selectedWord);
         } else if (engine.buffertext.length > 0) {
             // Preserve input even if an optional suggestion provider failed.
-            engine.commit_text(IBus.Text.new_from_string(engine.buffertext + (suffix || "")));
+            var formatted = formatOutput(engine, engine.buffertext + (suffix || ""));
+            engine.commit_text(IBus.Text.new_from_string(formatted));
         } else if (suffix) {
-            engine.commit_text(IBus.Text.new_from_string(suffix));
+            var formatted = formatOutput(engine, suffix);
+            engine.commit_text(IBus.Text.new_from_string(formatted));
         }
 
         resetAll(engine);

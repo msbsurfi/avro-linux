@@ -72,6 +72,15 @@
       <summary>Bangla keyboard</summary>
       <description>The IBus keyboard the TopBar switches to for Bangla: 'ibus-avro' (Avro, typing with the layout in "keyboard-layout") or a Bangla system (XKB) layout such as 'xkb:bd::ben' or 'xkb:bd:probhat:ben'</description>
     </key>
+    <key type="s" name="output-encoding">
+      <choices>
+        <choice value="unicode"/>
+        <choice value="ansi"/>
+      </choices>
+      <default>'unicode'</default>
+      <summary>Output Text Encoding</summary>
+      <description>Text output encoding: 'unicode' (standard UTF-8 for modern apps and web) or 'ansi' (Bijoy / SutonnyMJ legacy format)</description>
+    </key>
     <key type="s" name="keyboard-layout">
       <default>'phonetic'</default>
       <summary>Avro keyboard layout</summary>
