@@ -4,7 +4,7 @@ Priority: optional
 Maintainer: MD Shifat Bin Siddique Urfi and MD Mehedi Hasan <hello@msbsu.com>
 Build-Depends: make
 Standards-Version: 4.7.0
-Homepage: https://github.com/sarim/ibus-avro
+Homepage: https://github.com/msbsurfi/avro-linux
 
 Package: avro-linux
 Architecture: all

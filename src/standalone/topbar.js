@@ -782,18 +782,111 @@ function drawLogo(cr, el) {
 }
 
 function drawModeLabel(cr, el, bangla, skin) {
-    let layout = bangla
-        ? textLayout(cr, 'বাংলা', 'Noto Sans Bengali Bold', 13.5)
-        : textLayout(cr, 'English', 'Noto Sans Bold', 12);
-    let [ox, oy] = centeredOrigin(layout, el.x, el.y + 1, el.w, el.h - 1);
-    if (skin.icons === 'light') {
-        cr.setSourceRGBA(0, 0, 0, 0.6);
-        cr.moveTo(ox + 0.8, oy + 0.8);
-        PangoCairo.show_layout(cr, layout);
+    cr.save();
+
+    let bx = el.x + 2;
+    let by = el.y + 2;
+    let bw = el.w - 4;
+    let bh = el.h - 4;
+    let radius = 4;
+
+    // Pill badge outline
+    cr.new_sub_path();
+    cr.arc(bx + bw - radius, by + radius, radius, -Math.PI / 2, 0);
+    cr.arc(bx + bw - radius, by + bh - radius, radius, 0, Math.PI / 2);
+    cr.arc(bx + radius, by + bh - radius, radius, Math.PI / 2, Math.PI);
+    cr.arc(bx + radius, by + radius, radius, Math.PI, 3 * Math.PI / 2);
+    cr.closePath();
+
+    if (bangla) {
+        // Avro Bangla active mode: rich Avro Blue gradient
+        let g = new Cairo.LinearGradient(bx, by, bx, by + bh);
+        g.addColorStopRGBA(0, 0.05, 0.45, 0.85, 0.95);
+        g.addColorStopRGBA(1, 0.02, 0.28, 0.62, 0.95);
+        cr.setSource(g);
+        cr.fillPreserve();
+
+        cr.setSourceRGBA(0.35, 0.70, 1.0, 0.75);
+        cr.setLineWidth(1.0);
+        cr.stroke();
+
+        let lMain = textLayout(cr, 'BN', 'Noto Sans Bold', 9.5);
+        let lSub = textLayout(cr, 'বাং', 'Noto Sans Bengali Bold', 8.5);
+
+        let [, mw, mh] = [0, lMain.get_pixel_size()[0], lMain.get_pixel_size()[1]];
+        let [, sw, sh] = [0, lSub.get_pixel_size()[0], lSub.get_pixel_size()[1]];
+        let totalW = mw + 3 + sw;
+        let startX = bx + (bw - totalW) / 2;
+        let startY = by + (bh - mh) / 2;
+
+        // Shadow
+        cr.setSourceRGBA(0, 0, 0, 0.45);
+        cr.moveTo(startX + 0.8, startY + 0.8);
+        PangoCairo.show_layout(cr, lMain);
+        cr.moveTo(startX + mw + 3 + 0.8, startY + (mh - sh) / 2 + 0.8);
+        PangoCairo.show_layout(cr, lSub);
+
+        // BN in white
+        cr.setSourceRGBA(1.0, 1.0, 1.0, 1.0);
+        cr.moveTo(startX, startY);
+        PangoCairo.show_layout(cr, lMain);
+
+        // 'বাং' in warm Avro amber
+        cr.setSourceRGBA(1.0, 0.86, 0.38, 1.0);
+        cr.moveTo(startX + mw + 3, startY + (mh - sh) / 2);
+        PangoCairo.show_layout(cr, lSub);
+    } else {
+        // English mode: subtle frosted/neutral badge
+        let g = new Cairo.LinearGradient(bx, by, bx, by + bh);
+        if (skin.icons === 'light') {
+            g.addColorStopRGBA(0, 0.24, 0.27, 0.33, 0.85);
+            g.addColorStopRGBA(1, 0.16, 0.18, 0.23, 0.85);
+            cr.setSource(g);
+            cr.fillPreserve();
+
+            cr.setSourceRGBA(0.50, 0.55, 0.65, 0.5);
+            cr.setLineWidth(0.9);
+            cr.stroke();
+        } else {
+            g.addColorStopRGBA(0, 0.94, 0.95, 0.97, 0.95);
+            g.addColorStopRGBA(1, 0.84, 0.86, 0.90, 0.95);
+            cr.setSource(g);
+            cr.fillPreserve();
+
+            cr.setSourceRGBA(0.60, 0.65, 0.72, 0.7);
+            cr.setLineWidth(0.9);
+            cr.stroke();
+        }
+
+        let lMain = textLayout(cr, 'EN', 'Noto Sans Bold', 9.5);
+        let lSub = textLayout(cr, 'Eng', 'Noto Sans', 8.0);
+
+        let [, mw, mh] = [0, lMain.get_pixel_size()[0], lMain.get_pixel_size()[1]];
+        let [, sw, sh] = [0, lSub.get_pixel_size()[0], lSub.get_pixel_size()[1]];
+        let totalW = mw + 3 + sw;
+        let startX = bx + (bw - totalW) / 2;
+        let startY = by + (bh - mh) / 2;
+
+        if (skin.icons === 'light') {
+            cr.setSourceRGBA(0.95, 0.96, 0.98, 1.0);
+            cr.moveTo(startX, startY);
+            PangoCairo.show_layout(cr, lMain);
+
+            cr.setSourceRGBA(0.70, 0.75, 0.85, 0.9);
+            cr.moveTo(startX + mw + 3, startY + (mh - sh) / 2);
+            PangoCairo.show_layout(cr, lSub);
+        } else {
+            cr.setSourceRGBA(0.12, 0.15, 0.20, 1.0);
+            cr.moveTo(startX, startY);
+            PangoCairo.show_layout(cr, lMain);
+
+            cr.setSourceRGBA(0.35, 0.40, 0.48, 0.9);
+            cr.moveTo(startX + mw + 3, startY + (mh - sh) / 2);
+            PangoCairo.show_layout(cr, lSub);
+        }
     }
-    setColor(cr, skin.text);
-    cr.moveTo(ox, oy);
-    PangoCairo.show_layout(cr, layout);
+
+    cr.restore();
 }
 
 function drawLayoutArrow(cr, el, skin) {
@@ -1113,7 +1206,7 @@ var AvroTopBar = class AvroTopBar {
         if (!id) return false;
         let text = TOOLTIPS[id];
         if (id === 'mode') {
-            text = (this.bangla ? "Click to switch to English" : "Click to start typing Bangla") +
+            text = (this.bangla ? "Click to switch to English (EN)" : "Click to start typing Bangla (BN)") +
                    (this._f12Works() ? "\nor Press F12." : ".");
         } else if (id === 'layout') {
             text = "Select your Bangla keyboard layout.\nCurrent: " + this._banglaLayout().label;
@@ -1629,8 +1722,8 @@ var AvroTopBar = class AvroTopBar {
         menu.append(this._submenu("More Free Downloads", null, downloads));
         menu.append(this._item("Avro Keyboard on the web", 'globe', () => this.openUri("https://www.omicronlab.com/avro-keyboard.html")));
         menu.append(this._item("www.OmicronLab.com", 'globe', () => this.openUri("https://www.omicronlab.com")));
-        menu.append(this._item("ibus-avro (Avro for Linux) on GitHub", 'globe', () => this.openUri("https://github.com/sarim/ibus-avro")));
-        menu.append(this._item("Report an issue", null, () => this.openUri("https://github.com/sarim/ibus-avro/issues")));
+        menu.append(this._item("Avro Linux on GitHub", 'globe', () => this.openUri("https://github.com/msbsurfi/avro-linux")));
+        menu.append(this._item("Report an issue", null, () => this.openUri("https://github.com/msbsurfi/avro-linux/issues")));
         this._sep(menu);
         menu.append(this._item("Avro Keyboard on Facebook", null, () => this.openUri("https://www.omicronlab.com/go.php?id=39")));
         menu.append(this._item("OmicronLab on Twitter", null, () => this.openUri("https://www.omicronlab.com/go.php?id=40")));
@@ -2055,9 +2148,8 @@ var AvroTopBar = class AvroTopBar {
             comments: "The Avro Phonetic Bengali input method for Linux, with a\n" +
                       "Windows-style TopBar and Preview Window.\n\n" +
                       "Avro Keyboard and Avro Phonetic by Dr. Mehdi Hasan Khan (OmicronLab).\n" +
-                      "Avro Keyboard and Avro Phonetic by Dr. Mehdi Hasan Khan (OmicronLab).\n" +
                       "ibus-avro by Sarim Khan. Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22).",
-            website: "https://github.com/sarim/ibus-avro",
+            website: "https://github.com/msbsurfi/avro-linux",
             authors: [
                 "Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79)",
                 "and MD Mehedi Hasan (BUET, 2021-22)",

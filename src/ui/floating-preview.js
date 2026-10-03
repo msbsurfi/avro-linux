@@ -67,32 +67,68 @@ function buildCss(themeName) {
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Geometry (pure, unit-tested): place the window just below the caret,
-   flip it above when there is no room below, and keep it on the monitor.
+   Geometry (pure, unit-tested): place the window generously beside the caret,
+   so the typed text is completely visible, flip above when needed,
+   and clamp strictly within screen workarea to prevent any blind region.
    ═══════════════════════════════════════════════════════════════════════════ */
-var CURSOR_GAP = 4;
+var CURSOR_GAP = 6;
+var SIDE_GAP = 12;
+var SAFE_MARGIN = 12;
 
 function computePopupPosition(cursor, size, monitor) {
-    let x = cursor.x;
-    let y = cursor.y + Math.max(cursor.h, 0) + CURSOR_GAP;
+    monitor = monitor || { x: 0, y: 0, width: 1920, height: 1080 };
+    let careth = Math.max(cursor.h || 0, 18);
+    let caretw = Math.max(cursor.w || 0, 1);
 
-    if (x + size.width > monitor.x + monitor.width) {
-        x = monitor.x + monitor.width - size.width;
+    let maxAllowedX = monitor.x + Math.max(0, monitor.width - size.width);
+    let maxAllowedY = monitor.y + Math.max(0, monitor.height - size.height);
+
+    let minX = monitor.x + (maxAllowedX > monitor.x + SAFE_MARGIN ? SAFE_MARGIN : 0);
+    let maxX = Math.max(minX, maxAllowedX - (maxAllowedX > monitor.x + SAFE_MARGIN ? SAFE_MARGIN : 0));
+    let minY = monitor.y + (maxAllowedY > monitor.y + SAFE_MARGIN ? SAFE_MARGIN : 0);
+    let maxY = Math.max(minY, maxAllowedY - (maxAllowedY > monitor.y + SAFE_MARGIN ? SAFE_MARGIN : 0));
+
+    // Check if there is generous room to the right side of the caret
+    let rightX = cursor.x + caretw + SIDE_GAP;
+    let placeRight = (rightX <= maxX);
+
+    let x, y;
+    if (placeRight) {
+        // Place generously to the side of the caret, aligned with the text line
+        x = rightX;
+        y = cursor.y + 2;
+    } else {
+        // Not enough room to the right: place generously below the caret line
+        x = cursor.x;
+        y = cursor.y + careth + CURSOR_GAP;
     }
-    if (x < monitor.x) {
-        x = monitor.x;
+
+    // Horizontal boundary clamping
+    if (x > maxX) {
+        x = maxX;
     }
-    if (y + size.height > monitor.y + monitor.height) {
+    if (x < minX) {
+        x = minX;
+    }
+
+    // Vertical boundary check: flip above caret if overflowing bottom
+    if (y > maxY) {
         let above = cursor.y - CURSOR_GAP - size.height;
-        y = (above >= monitor.y) ? above : monitor.y + monitor.height - size.height;
+        y = (above >= minY) ? above : maxY;
     }
-    if (y < monitor.y) {
-        y = monitor.y;
+    if (y < minY) {
+        y = minY;
     }
+
+    // Strict safety clamp ensuring window never extends outside monitor bounds
+    x = Math.max(monitor.x, Math.min(x, maxAllowedX));
+    y = Math.max(monitor.y, Math.min(y, maxAllowedY));
+
     return { x: Math.round(x), y: Math.round(y) };
 }
 
 function clampToMonitor(pos, size, monitor) {
+    monitor = monitor || { x: 0, y: 0, width: 1920, height: 1080 };
     let x = Math.min(Math.max(pos.x, monitor.x), monitor.x + monitor.width - size.width);
     let y = Math.min(Math.max(pos.y, monitor.y), monitor.y + monitor.height - size.height);
     return { x: Math.round(x), y: Math.round(y) };
@@ -169,6 +205,7 @@ var PreviewWindow = class PreviewWindow {
         this._pinned = !!opts.pinned;
         this._pinPos = (opts.pinX >= 0 && opts.pinY >= 0) ? { x: opts.pinX, y: opts.pinY } : null;
         this._cursor = null;
+        this._lastValidCursor = null;
         this._rows = [];
         this._count = 0;
         this._drag = null;
@@ -320,8 +357,9 @@ var PreviewWindow = class PreviewWindow {
             this.hide();
             return;
         }
-        if (cursor) {
+        if (cursor && isUsableCursor(cursor)) {
             this._cursor = cursor;
+            this._lastValidCursor = cursor;
         }
         this._roman.set_text(roman || "");
 
@@ -354,7 +392,10 @@ var PreviewWindow = class PreviewWindow {
     }
 
     setCursorLocation(cursor) {
-        this._cursor = cursor;
+        if (cursor && isUsableCursor(cursor)) {
+            this._cursor = cursor;
+            this._lastValidCursor = cursor;
+        }
         if (this._visible && !this._pinned && !this._drag) {
             this._place();
         }
@@ -413,7 +454,7 @@ var PreviewWindow = class PreviewWindow {
         if (this._pinned && this._pinPos) {
             pos = clampToMonitor(this._pinPos, size, this._monitorAt(this._pinPos.x, this._pinPos.y));
         } else {
-            let cursor = isUsableCursor(this._cursor) ? this._cursor : this._pointer();
+            let cursor = isUsableCursor(this._cursor) ? this._cursor : (this._lastValidCursor || this._pointer());
             // IBus reports device pixels; GTK positions windows in logical pixels.
             let scale = this._monitorAt(cursor.x, cursor.y).scale;
             if (scale > 1) {
@@ -479,12 +520,12 @@ var PreviewWindow = class PreviewWindow {
         let moved = this._drag.moved;
         this._drag = null;
         if (moved) {
-            // Dragging the window somewhere means "keep it there", like Windows Avro.
             let [x, y] = this._window.get_position();
             this._pinPos = { x: x, y: y };
-            this._pinned = true;
-            this._pinArea.queue_draw();
-            this._notifyPin();
+            if (this._pinned) {
+                this._pinArea.queue_draw();
+                this._notifyPin();
+            }
         }
         return true;
     }

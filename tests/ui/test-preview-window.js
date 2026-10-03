@@ -39,18 +39,18 @@ print("=== Running Preview Window Tests ===");
 const monitor = { x: 0, y: 0, width: 1920, height: 1080 };
 const size = { width: 160, height: 120 };
 
-// 1. Placement just below the caret
+// 1. Placement generously beside the caret
 let p = fp.computePopupPosition({ x: 300, y: 200, w: 2, h: 20 }, size, monitor);
-assertEqual(p.x, 300, "Window starts at the caret column");
-assertEqual(p.y, 200 + 20 + fp.CURSOR_GAP, "Window sits just below the caret");
+assertEqual(p.x, 300 + 2 + fp.SIDE_GAP, "Window sits generously beside the caret");
+assertEqual(p.y, 200 + 2, "Window aligns comfortably with the text line");
 
 // 2. No room below: flip above the caret
 p = fp.computePopupPosition({ x: 300, y: 1000, w: 2, h: 20 }, size, monitor);
 assertEqual(p.y, 1000 - fp.CURSOR_GAP - 120, "Window flips above the caret near the bottom edge");
 
-// 3. Right edge
+// 3. Right edge: kept inside safe monitor bounds
 p = fp.computePopupPosition({ x: 1900, y: 200, w: 2, h: 20 }, size, monitor);
-assertEqual(p.x, 1920 - 160, "Window is kept inside the right edge");
+assertEqual(p.x, 1920 - 160 - fp.SAFE_MARGIN, "Window is kept safely inside the right edge");
 
 // 4. Caret on a second monitor
 const monitor2 = { x: 1920, y: 0, width: 1280, height: 1024 };

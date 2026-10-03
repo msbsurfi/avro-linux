@@ -686,7 +686,7 @@ function runpref() {
     aboutPage.pack_start(licenseLabel, false, false, 0);
 
     let btnWebsite = new Gtk.LinkButton({
-        uri: "https://github.com/avro-linux/avro-linux",
+        uri: "https://github.com/msbsurfi/avro-linux",
         label: "Visit Project Repository",
         halign: Gtk.Align.CENTER
     });

@@ -20,8 +20,8 @@
       interface.
     </p>
   </description>
-  <url type="homepage">https://github.com/sarim/ibus-avro</url>
-  <url type="bugtracker">https://github.com/sarim/ibus-avro/issues</url>
+  <url type="homepage">https://github.com/msbsurfi/avro-linux</url>
+  <url type="bugtracker">https://github.com/msbsurfi/avro-linux/issues</url>
   <developer id="com.github.avro-linux">
     <name>Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79), MD Mehedi Hasan (BUET, 2021-22), and Avro Linux Contributors</name>
   </developer>

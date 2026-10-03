@@ -23,6 +23,13 @@ GLib.setenv("IBUS_ADDRESS", "unix:path=" + tmpDir + "/ibus-socket", true);
 GLib.setenv("IBUS_COMPONENT_PATH", tmpDir + "/components", true);
 GLib.mkdir_with_parents(tmpDir + "/components", 0o700);
 
+let [, xmlBytes] = GLib.file_get_contents(rootDir + "/data/ibus/ibus-avro.xml");
+let xmlStr = (new TextDecoder().decode(xmlBytes)).replace(
+    "/usr/share/avro-linux/engine/main-gjs.js",
+    rootDir + "/src/engine/main-gjs.js"
+);
+GLib.file_set_contents(tmpDir + "/components/ibus-avro.xml", xmlStr);
+
 const IBus = imports.gi.IBus;
 
 let passed = 0;
@@ -111,7 +118,7 @@ settings.set_boolean("mode-bangla", true);
 Gio.Settings.sync();
 
 // A private IBus daemon (on a private D-Bus session) and the engine from the source tree
-spawn(["dbus-run-session", "--", "ibus-daemon", "--address=" + GLib.getenv("IBUS_ADDRESS"),
+spawn(["ibus-daemon", "--address=" + GLib.getenv("IBUS_ADDRESS"),
        "--panel=disable", "--config=disable", "--emoji-extension=disable", "--cache=none", "--single"]);
 
 IBus.init();
@@ -156,23 +163,17 @@ function activeEngineName() {
     waitFor(() => done, 2000);
     return name;
 }
+
 let engineReady = waitFor(() => {
     let cur = activeEngineName();
-    print("DEBUG current activeEngineName:", cur);
     if (cur === "ibus-avro") return true;
-    ic.set_engine("ibus-avro");
-    return waitFor(() => {
-        let n = activeEngineName();
-        print("DEBUG waiting for ibus-avro, got:", n);
-        return n === "ibus-avro";
-    }, 3000);
+    try { bus.set_global_engine_async("ibus-avro", -1, null, () => {}); } catch (e) {}
+    try { ic.set_engine("ibus-avro"); } catch (e) {}
+    try { ic.focus_out(); pump(50); ic.focus_in(); pump(50); } catch (e) {}
+    return waitFor(() => activeEngineName() === "ibus-avro", 3000);
 }, 20000);
-print("DEBUG engineReady after set_engine:", engineReady);
 if (engineReady) {
-    engineReady = waitFor(() => {
-        print("DEBUG waiting for label, current label:", label);
-        return label !== "";
-    }, 20000);
+    engineReady = waitFor(() => label !== "", 20000);
     pump(300);
 }
 assertTrue(engineReady, "The engine starts and becomes the active engine");

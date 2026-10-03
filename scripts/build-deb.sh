@@ -43,7 +43,7 @@ Depends: gjs (>= 1.70.0), ibus (>= 1.5.0), gir1.2-ibus-1.0, gir1.2-gtk-3.0, dcon
 Recommends: im-config, fonts-noto-core | fonts-beng, ibus-wayland, gkbd-capplet
 Conflicts: ibus-avro
 Replaces: ibus-avro
-Homepage: https://github.com/sarim/ibus-avro
+Homepage: https://github.com/msbsurfi/avro-linux
 Description: Avro Phonetic Bengali input method for IBus
  Avro Linux provides offline Avro Phonetic Bengali typing through the standard
  IBus input-method framework. It includes GTK preferences, dictionary

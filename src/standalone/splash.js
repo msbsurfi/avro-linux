@@ -223,7 +223,7 @@ var SplashScreen = class SplashScreen {
         });
 
         let verTag = new Gtk.Label({
-            label: "Avro Keyboard v" + appVersion() + " • Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) & MD Mehedi Hasan (BUET, 2021-22)",
+            label: "Avro Keyboard v" + appVersion(),
             xalign: 0
         });
         verTag.get_style_context().add_class('avro-splash-tag');
@@ -287,7 +287,7 @@ var SplashScreen = class SplashScreen {
         titleBox.pack_start(subtitleLabel, false, false, 0);
 
         let verLabel = new Gtk.Label({
-            label: "Version " + appVersion() + " • Remastered Linux Edition",
+            label: "Version " + appVersion() + " • Linux Edition",
             xalign: 0
         });
         verLabel.get_style_context().add_class('avro-splash-version');
@@ -301,7 +301,7 @@ var SplashScreen = class SplashScreen {
 
         let creditsLabel = new Gtk.Label({
             label: "<span foreground='#7c8594'>Original design: </span><span foreground='#93c5fd' weight='bold'>Dr. Mehdi Hasan Khan</span><span foreground='#7c8594'> (OmicronLab)\n" +
-                   "Engine: </span><span foreground='#93c5fd' weight='bold'>Sarim Khan</span><span foreground='#7c8594'> • Remastered by: </span><span foreground='#60a5fa' weight='bold'>MD Shifat Bin Siddique Urfi (DMC, K-79) &amp; MD Mehedi Hasan (BUET, 2021-22)</span>",
+                   "Engine: </span><span foreground='#93c5fd' weight='bold'>Sarim Khan</span>",
             use_markup: true,
             justify: Gtk.Justification.CENTER
         });

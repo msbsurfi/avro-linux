@@ -650,7 +650,7 @@ function showAbout(parent) {
         program_name: "Avro Pad (Remastered Edition)",
         version: (() => { try { return imports.evars.get_version(); } catch (e) { return ""; } })(),
         comments: "A full-featured standalone Bengali text editor with live\nAvro Phonetic composition.\n\nRemastered for Linux by MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22).",
-        website: "https://github.com/avro-linux/avro-linux",
+        website: "https://github.com/msbsurfi/avro-linux",
         authors: [
             "Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79)",
             "and MD Mehedi Hasan (BUET, 2021-22)",

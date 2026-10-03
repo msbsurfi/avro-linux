@@ -1,7 +1,7 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: Avro Linux (Remastered Edition)
 Upstream-Contact: MD Shifat Bin Siddique Urfi <hello@msbsu.com>
-Source: https://github.com/avro-linux/avro-linux
+Source: https://github.com/msbsurfi/avro-linux
 
 Files: *
 Copyright: 2026 MD Shifat Bin Siddique Urfi <hello@msbsu.com>

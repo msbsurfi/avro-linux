@@ -1086,7 +1086,7 @@ if (bus.is_connected()) {
             version: eevars.get_version(),
             license: "MPL-2.0",
             author: "Sarim Khan <sarim2005@gmail.com>",
-            homepage: "https://github.com/sarim/ibus-avro",
+            homepage: "https://github.com/msbsurfi/avro-linux",
             command_line: eevars.get_pkgdatadir() + "/engine/main-gjs.js --ibus",
             textdomain: "avro-linux"
         });
@@ -1097,7 +1097,7 @@ if (bus.is_connected()) {
             version: eevars.get_version(),
             license: "MPL-2.0",
             author: "Sarim Khan <sarim2005@gmail.com>",
-            homepage: "https://github.com/sarim/ibus-avro",
+            homepage: "https://github.com/msbsurfi/avro-linux",
             exec: eevars.get_pkgdatadir() + "/engine/main-gjs.js --ibus",
             textdomain: "avro-linux"
         });

@@ -7,7 +7,7 @@
 	<version>@version@</version>
 	<author>Sarim Khan &lt;sarim2005@gmail.com&gt;</author>
 	<license>MPL-2.0</license>
-	<homepage>https://github.com/avro-linux/avro-linux</homepage>
+	<homepage>https://github.com/msbsurfi/avro-linux</homepage>
 	<textdomain>avro-linux</textdomain>
 
 	<engines>
