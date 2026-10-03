@@ -13,6 +13,19 @@ const Gdk = imports.gi.Gdk;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 
+/* The Avro settings, or null when the schema is not installed. Looked up
+   first: Gio.Settings.new() aborts the whole program for a missing schema,
+   which is exactly one of the problems the Doctor has to report. */
+function avroSettings() {
+    try {
+        let source = Gio.SettingsSchemaSource.get_default();
+        let schema = source ? source.lookup("com.omicronlab.avro", true) : null;
+        return schema ? new Gio.Settings({ settings_schema: schema }) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
 // Shared modern theme (src/common/avrotheme.js)
 let Theme = null;
 (function loadTheme() {
@@ -104,35 +117,12 @@ function runDiagnosticCheck() {
         }
     } catch (e) {}
 
-    // Check GSettings schema safely without triggering fatal GLib-GIO abort
-    try {
-        let schemaSource = Gio.SettingsSchemaSource.get_default();
-        let schemaObj = schemaSource ? schemaSource.lookup("com.omicronlab.avro", true) : null;
-        if (!schemaObj) {
-            // Check local build / source directories (useful during CI and test runs)
-            let candidateDirs = [
-                "./data/gsettings",
-                GLib.get_current_dir() + "/data/gsettings",
-                "/usr/share/avro-linux/gsettings"
-            ];
-            for (let d of candidateDirs) {
-                if (GLib.file_test(d + "/gschemas.compiled", GLib.FileTest.EXISTS)) {
-                    try {
-                        let localSource = Gio.SettingsSchemaSource.new_from_directory(d, schemaSource, false);
-                        schemaObj = localSource ? localSource.lookup("com.omicronlab.avro", true) : null;
-                        if (schemaObj) break;
-                    } catch (e) {}
-                }
-            }
-        }
-        if (schemaObj && schemaObj.list_keys().indexOf("mode-bangla") !== -1) {
-            report.schemaValid = true;
-        } else {
-            report.issues.push("GSettings schema 'com.omicronlab.avro' is missing or incomplete.");
-            report.recommendations.push("Run 'sudo glib-compile-schemas /usr/share/glib-2.0/schemas'.");
-        }
-    } catch (e) {
-        report.issues.push("GSettings schema 'com.omicronlab.avro' is not installed.");
+    // Check GSettings schema
+    let settings = avroSettings();
+    if (settings && settings.settings_schema.has_key("mode-bangla")) {
+        report.schemaValid = true;
+    } else {
+        report.issues.push("GSettings schema 'com.omicronlab.avro' is " + (settings ? "incomplete." : "not installed."));
         report.recommendations.push("Run 'sudo glib-compile-schemas /usr/share/glib-2.0/schemas'.");
     }
 
@@ -333,17 +323,14 @@ function autoFixIssues() {
         return false;
     });
 
-    try {
-        let schemaSource = Gio.SettingsSchemaSource.get_default();
-        let schemaObj = schemaSource ? schemaSource.lookup("com.omicronlab.avro", true) : null;
-        if (schemaObj) {
-            let schema = new Gio.Settings({ settings_schema: schemaObj });
-            if (schema) {
-                schema.set_boolean("mode-bangla", true);
-                fixed.push("Set GSettings mode-bangla to true.");
-            }
-        }
-    } catch (e) {}
+    let settings = avroSettings();
+    if (settings) {
+        try {
+            settings.set_boolean("mode-bangla", true);
+            Gio.Settings.sync();
+            fixed.push("Set GSettings mode-bangla to true.");
+        } catch (e) {}
+    }
 
     return fixed;
 }

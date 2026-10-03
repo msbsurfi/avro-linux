@@ -14,6 +14,7 @@ imports.searchPath.unshift('./src/avro-core/phonetic');
 imports.searchPath.unshift('./src/avro-core/dictionary');
 imports.searchPath.unshift('./src/avro-core/autocorrect');
 imports.searchPath.unshift('./src/avro-core/suggestions');
+imports.searchPath.unshift('./src/avro-core/fixed');
 imports.searchPath.unshift('./src/preferences');
 
 let passedCount = 0;
@@ -43,8 +44,21 @@ try {
 try {
     const lv = imports.layoutviewer;
     assert(lv && typeof lv.runLayoutViewerDialog === 'function', "layoutviewer exports runLayoutViewerDialog");
+    // The Layout Viewer draws every fixed layout, in the Normal and the AltGr view
+    const Cairo = imports.cairo;
+    const FL = imports.fixedlayout;
+    for (let id of FL.layoutIds()) {
+        let surface = new Cairo.ImageSurface(Cairo.Format.ARGB32, 900, 320);
+        let cr = new Cairo.Context(surface);
+        lv.drawKeyboard(cr, 900, 320, FL.getLayout(id), false);
+        lv.drawKeyboard(cr, 900, 320, FL.getLayout(id), true);
+        cr.$dispose();
+        surface.flush();
+        assert(true, "Layout Viewer draws " + FL.getLayout(id).name);
+    }
+    assert(lv.hasAltGr(FL.getLayout("national")), "National (Jatiya) has an AltGr view");
 } catch (e) {
-    assert(false, "Failed to load layoutviewer module: " + e.message);
+    assert(false, "Failed to load or draw with the layoutviewer module: " + e.message);
 }
 
 try {

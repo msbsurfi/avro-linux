@@ -17,7 +17,7 @@ Avro Keyboard 5 for Windows shows a small floating toolbar, the TopBar (default 
 | অ logo | "Drag to move TopBar. Click for menu." Press-and-drag moves the bar; click (any button) opens the main menu | Same |
 | Mode button (বাংলা / English) | Any click toggles Bangla / English (F12) | Same; shows the shared mode of the IBus engine |
 | ▼ strip under the mode button | "Select your Bangla keyboard layout." Opens the layout menu | Same; the tooltip also names the current layout |
-| Layout Viewer (keyboard) | Left click opens the Layout Viewer; other buttons open the layout menu | Same: Avro Phonetic opens `avro-layout`, fixed layouts open `gkbd-keyboard-display` |
+| Layout Viewer (keyboard) | Left click opens the Layout Viewer; other buttons open the layout menu | Same: `avro-layout` for Avro's layouts, `gkbd-keyboard-display` for a system (XKB) layout |
 | Avro Mouse | Opens the on-screen keyboard | Same (`avro-mouse`, opened once) |
 | Tools (gear) | Tools menu | Same |
 | Web | Web menu (Windows shows the IE logo) | Same menu, original globe icon |
@@ -27,9 +27,9 @@ Avro Keyboard 5 for Windows shows a small floating toolbar, the TopBar (default 
 The bar background itself has no action, as on Windows.
 
 ### 2.3 Menus
-Captions follow Avro Keyboard 5 (`Toggle keyboard mode`, `Dock to top`, `Jump to system tray`, `Select keyboard layout`, `Avro Mouse - Click 'n Type!`, `On the web`, `Options...`, `Help files`, `About Avro Keyboard...`, `Exit`; the Tools, Web, Help, power and tray menus likewise). Windows-only items are left out: Spell checker, Unicode/ANSI output, Keyboard Layout Editor, Skin Designer and Check update. Linux adds Avro Pad and Avro Doctor to Tools and Help.
+Captions follow Avro Keyboard 5 (`Toggle keyboard mode`, `Dock to top`, `Jump to system tray`, `Select keyboard layout`, `Avro Mouse - Click 'n Type!`, `On the web`, `Options...`, `Help files`, `About Avro Keyboard...`, `Exit`; the Tools menu with `Avro Phonetic Options` and `Fixed Keyboard Layout Options`; the Web, Help, power and tray menus likewise). Windows-only items are left out: Spell checker, Unicode/ANSI output, Keyboard Layout Editor, Skin Designer and Check update. Linux adds Avro Pad and Avro Doctor to Tools and Help.
 
-Keyboard layouts: Windows lists Avro Phonetic plus its installed fixed layouts. Linux lists Avro Phonetic plus the Bangla XKB layouts IBus provides, with the three that Windows Avro ships first: **National (Jatiya)** (`xkb:bd::ben`, the BCC national standard), **Probhat** (`xkb:bd:probhat:ben`) and **Bornona** (`xkb:in:ben_bornona:ben`). The other Bangla layouts are under "More Bangla keyboard layouts". Avro Easy and Munir Optima have no Linux equivalent and are not offered. When the TopBar switches to a fixed layout it also applies the X keyboard layout, like the `ibus engine` command, unless IBus is set to use the system keyboard layout.
+Keyboard layouts: as on Windows, the menu lists **Avro Phonetic (English to Bangla)** and the fixed layouts that Avro Keyboard ships, in its (alphabetical) order: **Avro Easy**, **Bornona**, **Munir Optima (uni)**, **National (Jatiya)** and **Probhat** (see section 2.5). Avro types all of them itself. The Bangla XKB layouts of the system follow in the submenu "System Bangla keyboard layouts"; choosing one switches IBus to that keyboard and applies the X keyboard layout, like the `ibus engine` command, unless IBus is set to use the system keyboard layout. "About current keyboard layout..." shows the credits stored in the layout file.
 
 ### 2.4 Behaviour
 * **Always on top, all workspaces, no taskbar entry**, re-asserted every second.
@@ -40,8 +40,22 @@ Keyboard layouts: Windows lists Avro Phonetic plus its installed fixed layouts. 
 * **Transparency**: after 5 s without mouse activity or mode changes, the bar fades to the transparency level (default 80 of 255) in steps of 50; a mode change or the mouse makes it fully visible again. Needs a compositing window manager.
 * **System tray**: the tray icon is shown only while the bar is hidden. Click toggles the mode; double-click restores the bar (mode unchanged); right click opens the tray menu. The icon and its tooltip show the mode.
 * **Start-up**: one TopBar per session. Running `avro-topbar` again restores it. Commands: `toggle`, `bn`, `sys`, `minimize`, `restore` (bare or with `/`, `-` or `--`). The start-up mode can be Top Bar, tray icon or the last used one.
+* **Start on login**: Avro Keyboard starts with Windows unless that is turned off. The TopBar adds itself to the programs that start on login (`~/.config/autostart/avro-topbar.desktop`) the first time it runs; afterwards only the user's choice counts (Preferences → TopBar), and an entry the desktop switched off (`Hidden=true`) counts as off.
 * **First runs**: a balloon "Click here to start Bangla typing or Press F12" points at the mode button the first two times; "Avro Keyboard is running here." is shown the first two times the bar goes to the tray.
 * **Options** (Preferences → TopBar): skin (Classic, Royal Blue, Flat Mint, Paper Light), transparency on/off and level, power button action, start-up mode, start when logging in.
+
+### 2.5 Fixed keyboard layouts
+The five fixed layouts of Avro Keyboard 5 are converted from its `.avrolayout` files (`scripts/import-avrolayout.py`, data in `src/avro-core/fixed/layoutdata.js`) and typed by the Avro engine, so they work wherever Avro Phonetic works, Wayland included, and **F12** switches Bangla / English with all of them. The typing rules are a port of `clsGenericLayoutModern.pas` and `clsGenericLayoutOld.pas` (`src/avro-core/fixed/fixedtyper.js`):
+
+* **Modern Style Typing** (default): kars are typed after their consonant.
+  * *Old Style Reph* (on): reph typed after a consonant (cluster, with its kar and chandrabindu) moves before it: ক + র্ = র্ক.
+  * *Automatic Vowel Forming* (on): a kar typed where no consonant can take it (after Space, Enter, Tab, a vowel, a sign or punctuation) becomes the full vowel; hasanta + kar also types the full vowel; hasanta twice keeps a visible hasanta (ZWNJ).
+  * *Automatically fix Chandrabindu position* (on): a kar typed after chandrabindu goes before it: ক + ঁ + া = কাঁ.
+* **Old Style Typing** (type writer / Bijoy style): the e, i and oi kars are typed *before* the consonant and wait for it (also across a conjunct: ি + ক + ্ + ম = ক্মি); e-kar + a-kar = o-kar; reph after the consonant; য-ফলা and র-ফলা typed after a kar go before it.
+* **Keys**: the main key block by physical key (whatever the X keyboard layout), Caps Lock shifts letter keys only, Right Alt (or Ctrl+Alt) types the AltGr characters, and the number pad types Bangla digits (*Enable Bangla in NumberPad*, on).
+* **Linux specifics**: Windows types each character at once and corrects earlier ones with backspaces. Here the word being typed is the IBus preedit; the same rearrangements happen inside it and the word is committed at Space, Enter, Tab, keys outside the layout, focus and mode changes. Small Windows slips are fixed: the o-kar counts as a kar, "&" and "॥" count as punctuation, and Backspace first takes back a kar that waits for its consonant.
+* **Layout Viewer** (`avro-layout`): draws the keyboard of the active layout with a *Normal View* (normal and Shift characters) and an *AltGr View*, *Show on Top* and *About layout...*, and follows layout changes.
+* **Options**: Preferences → Keyboard Layouts, or Tools → Fixed Keyboard Layout Options in the TopBar, with the Avro Keyboard captions.
 
 ---
 

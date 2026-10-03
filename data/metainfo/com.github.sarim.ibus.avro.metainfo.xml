@@ -15,7 +15,9 @@
     <p>
       Features include rich phonetic transliteration rules, dictionary-based
       suggestions, suffix inflection handling, customizable preview windows,
-      and an integrated GTK preferences interface.
+      the fixed keyboard layouts of Avro Keyboard (National (Jatiya), Probhat,
+      Bornona, Avro Easy and Munir Optima), and an integrated GTK preferences
+      interface.
     </p>
   </description>
   <url type="homepage">https://github.com/sarim/ibus-avro</url>
@@ -30,6 +32,11 @@
   </provides>
   <content_rating type="oars-1.1" />
   <releases>
+    <release version="1.3.0" date="2026-10-03">
+      <description>
+        <p>The fixed keyboard layouts of Avro Keyboard (Avro Easy, Bornona, Munir Optima, National (Jatiya), Probhat) with its Modern and Old Style Typing, a Layout Viewer for them, TopBar start on login, and an Avro Doctor fix.</p>
+      </description>
+    </release>
     <release version="1.2.0" date="2026-10-03">
       <description>
         <p>New Avro TopBar re-created from Avro Keyboard 5 for Windows, with real Bangla keyboard layouts, system tray, transparency, skins and command-line control.</p>

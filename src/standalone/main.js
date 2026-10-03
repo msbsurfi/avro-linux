@@ -76,7 +76,8 @@ function printHelp() {
     print("  --topbar        Launch floating Windows-style Avro TopBar (default)");
     print("  --pad           Launch Avro Pad (standalone Bengali text editor)");
     print("  --converter     Launch Unicode to Bijoy (SutonnyMJ) Converter");
-    print("  --layout        Launch Visual Keyboard Layout Viewer & Rules Guide");
+    print("  --layout [NAME] Launch the Layout Viewer (active layout, or phonetic, avro-easy,");
+    print("                  bornona, munir-optima, national, probhat)");
     print("  --mouse         Launch Avro Mouse (on-screen click-and-type keyboard)");
     print("  --preferences   Launch Avro Preferences configuration dialog");
     print("  --version, -v   Display version and maintainer information");
@@ -136,7 +137,9 @@ function main() {
         }
     } else if (args.indexOf('--layout') !== -1) {
         if (LayoutViewer && LayoutViewer.runLayoutViewerDialog) {
-            LayoutViewer.runLayoutViewerDialog(null);
+            // avro-layout [LAYOUT]: a layout to show instead of the active one
+            let layoutId = args.filter(a => a.indexOf('-') !== 0)[0] || null;
+            LayoutViewer.runLayoutViewerDialog(null, layoutId);
             return;
         }
     } else if (args.indexOf('--mouse') !== -1 || args.indexOf('-m') !== -1) {

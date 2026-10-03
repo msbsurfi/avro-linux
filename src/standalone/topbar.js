@@ -17,8 +17,9 @@
       * The bar never takes keyboard focus, so clicking it never interrupts
         typing in the application you are working in.
       * Bangla / English mode is shared with the IBus engine (GSettings
-        "mode-bangla", F12) and the fixed keyboard layouts are the Bangla XKB
-        layouts IBus provides (National (Jatiya), Probhat, Bornona, ...).
+        "mode-bangla", F12). Avro types with Avro Phonetic or one of the
+        fixed keyboard layouts of Avro Keyboard ("keyboard-layout"); the
+        Bangla XKB layouts of the system are offered as well.
     =============================================================================
 */
 
@@ -52,7 +53,18 @@ try {
     }
 } catch (e) {}
 
-imports.searchPath.unshift(baseDir + '/common');
+// The modules of this tree; the installed ones are the last resort (a
+// program that imports the TopBar may have its own in its search path)
+if (baseDir !== '/usr/share/avro-linux') {
+    imports.searchPath.unshift(baseDir + '/common');
+    imports.searchPath.unshift(baseDir + '/avro-core/fixed');
+}
+imports.searchPath.push('/usr/share/avro-linux/common');
+imports.searchPath.push('/usr/share/avro-linux/avro-core/fixed');
+
+// Names and credits of the fixed keyboard layouts
+let FixedLayout = null;
+try { FixedLayout = imports.fixedlayout; } catch (e) {}
 
 function appVersion() {
     try {
@@ -186,46 +198,57 @@ function xkbLayoutFor(engine) {
     return null;
 }
 
-/* Windows-style names for the Bangla XKB layouts that IBus provides. */
-const FIXED_LAYOUT_LABELS = {
-    'xkb:bd::ben': 'National (Jatiya)',
-    'xkb:bd:probhat:ben': 'Probhat',
-    'xkb:in:ben_bornona:ben': 'Bornona',
-    'xkb:in:ben_gitanjali:ben': 'Gitanjali',
-    'xkb:in:ben_baishakhi:ben': 'Baishakhi',
-    'xkb:in:ben_inscript:ben': 'Baishakhi InScript',
-    'xkb:in:ben_probhat:ben': 'Probhat (India)',
-    'xkb:in:ben:ben': 'Bangla (India)',
-    'xkb:in:ben-kagapa:ben': 'KaGaPa Phonetic (India)'
-};
-const PRIMARY_FIXED = ['xkb:bd::ben', 'xkb:bd:probhat:ben', 'xkb:in:ben_bornona:ben'];
 var AVRO_LAYOUT_LABEL = 'Avro Phonetic (English to Bangla)';
 
-/* Avro Phonetic first, then the Bangla XKB layouts: the three Windows Avro
-   ships (National, Probhat, Bornona) as primary entries, the rest after.
+/* The keyboard layouts the TopBar offers. Avro's own come first, as in
+   Avro Keyboard: Avro Phonetic, then its fixed layouts (Avro Easy, Bornona,
+   Munir Optima, National (Jatiya), Probhat), all typed by the Avro engine.
+   The Bangla XKB layouts of the system follow (another IBus keyboard each).
+   Entry: { id, name (IBus engine), avroLayout ("keyboard-layout" value or
+   null), label, avro, primary, ... }.
    `descs`: [{ name, language, longname, layout, variant, description }]. */
 function buildLayoutCatalog(descs) {
-    let catalog = [{ name: 'ibus-avro', label: AVRO_LAYOUT_LABEL, avro: true, primary: true }];
-    let fixed = [];
+    let catalog = [{ id: 'ibus-avro', name: 'ibus-avro', avroLayout: 'phonetic',
+                     label: AVRO_LAYOUT_LABEL, avro: true, primary: true }];
+    if (FixedLayout) {
+        for (let id of FixedLayout.layoutIds()) {
+            let info = FixedLayout.getLayout(id);
+            catalog.push({ id: 'avro:' + id, name: 'ibus-avro', avroLayout: id,
+                           label: info.name, avro: true, primary: true, info: info });
+        }
+    }
+    let system = [];
     for (let d of descs || []) {
         if (!d || !d.name || isAvroEngine(d.name)) continue;
         if (d.name.indexOf('xkb:') !== 0 || d.language !== 'bn') continue;
-        fixed.push({
+        system.push({
+            id: d.name,
             name: d.name,
-            label: FIXED_LAYOUT_LABELS[d.name] || d.longname || d.name,
+            avroLayout: null,
+            label: d.longname || d.name,
             avro: false,
-            primary: PRIMARY_FIXED.indexOf(d.name) !== -1,
+            primary: false,
             layout: d.layout || '',
             variant: d.variant || '',
             description: d.description || d.longname || ''
         });
     }
-    fixed.sort((a, b) => {
-        let ia = PRIMARY_FIXED.indexOf(a.name), ib = PRIMARY_FIXED.indexOf(b.name);
-        if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
-        return a.label.localeCompare(b.label);
-    });
-    return catalog.concat(fixed);
+    system.sort((a, b) => a.label.localeCompare(b.label));
+    return catalog.concat(system);
+}
+
+/* Avro Keyboard starts with Windows unless the user turns that off. The
+   TopBar does the same: the first time it runs it adds itself to the
+   programs that start on login; after that only the user's choice counts. */
+function setUpStartOnLogin(settings) {
+    if (!settings.has('topbar-autostart-done') || settings.get('topbar-autostart-done', true)) {
+        return false;
+    }
+    let autostart = null;
+    try { autostart = imports.autostart; } catch (e) { return false; }
+    let ok = autostart.hasEntry() || autostart.setEnabled(true);
+    if (ok) settings.set('topbar-autostart-done', true);
+    return ok;
 }
 
 /* Avro Keyboard command-line switches: toggle, bn, sys, minimize, restore —
@@ -1090,9 +1113,8 @@ var AvroTopBar = class AvroTopBar {
         if (!id) return false;
         let text = TOOLTIPS[id];
         if (id === 'mode') {
-            let f12 = (!this.engine || isAvroEngine(this.engine)) && isAvroEngine(this._banglaLayout().name);
             text = (this.bangla ? "Click to switch to English" : "Click to start typing Bangla") +
-                   (f12 ? "\nor Press F12." : ".");
+                   (this._f12Works() ? "\nor Press F12." : ".");
         } else if (id === 'layout') {
             text = "Select your Bangla keyboard layout.\nCurrent: " + this._banglaLayout().label;
         }
@@ -1341,14 +1363,27 @@ var AvroTopBar = class AvroTopBar {
         return this.layoutCatalog().filter(l => !l.avro).map(l => l.name);
     }
 
-    /* The Bangla keyboard the mode button switches to (default Avro Phonetic). */
+    /* The Bangla keyboard the mode button switches to (default Avro Phonetic):
+       Avro with its layout, or a system layout. */
     _banglaLayout() {
         let name = this.settings.get('bangla-layout', 'ibus-avro');
         let catalog = this.layoutCatalog();
+        if (isAvroEngine(name)) {
+            let layout = this.settings.get('keyboard-layout', 'phonetic');
+            for (let l of catalog) {
+                if (l.avro && l.avroLayout === layout) return l;
+            }
+            return catalog[0];
+        }
         for (let l of catalog) {
-            if (l.name === name) return l;
+            if (l.id === name) return l;
         }
         return catalog[0];
+    }
+
+    /* F12 is handled by the Avro engine, in all of its layouts. */
+    _f12Works() {
+        return (!this.engine || isAvroEngine(this.engine)) && this._banglaLayout().avro;
     }
 
     isBangla() {
@@ -1392,8 +1427,19 @@ var AvroTopBar = class AvroTopBar {
         this._refreshMode();
     }
 
-    selectLayout(name) {
-        this.settings.set('bangla-layout', name);
+    /* Pick a layout by its catalog id ('ibus-avro', 'avro:national', 'xkb:...'). */
+    selectLayout(id) {
+        let entry = null;
+        for (let l of this.layoutCatalog()) {
+            if (l.id === id) entry = l;
+        }
+        if (!entry) return;
+        if (entry.avro) {
+            this.settings.set('keyboard-layout', entry.avroLayout);
+            this.settings.set('bangla-layout', 'ibus-avro');
+        } else {
+            this.settings.set('bangla-layout', entry.name);
+        }
         this.setBangla();
     }
 
@@ -1514,21 +1560,21 @@ var AvroTopBar = class AvroTopBar {
 
     _fillLayouts(menu) {
         let catalog = this.layoutCatalog();
-        let current = this._banglaLayout().name;
+        let current = this._banglaLayout().id;
         let entries = [];
         let more = catalog.filter(l => !l.primary);
         let moreMenu = more.length ? new Gtk.Menu() : null;
         for (let l of catalog) {
             entries.push({
-                label: l.label, active: l.name === current, menu: l.primary ? menu : moreMenu,
-                callback: () => this.selectLayout(l.name)
+                label: l.label, active: l.id === current, menu: l.primary ? menu : moreMenu,
+                callback: () => this.selectLayout(l.id)
             });
         }
-        // One radio group across the menu and the "More" submenu, so exactly
-        // one layout is ever checked. Primary layouts come first, then "More".
+        // One radio group across the menu and the system layouts submenu, so
+        // exactly one layout is ever checked. Avro's layouts come first.
         this._radios(menu, entries);
         if (moreMenu) {
-            menu.append(this._submenu("More Bangla keyboard layouts", null, moreMenu));
+            menu.append(this._submenu("System Bangla keyboard layouts", null, moreMenu));
         }
         this._sep(menu);
         menu.append(this._item("Show active keyboard layout...", 'keyboard', () => this.showLayoutViewer()));
@@ -1542,7 +1588,7 @@ var AvroTopBar = class AvroTopBar {
 
     _phoneticOptions() {
         let sub = new Gtk.Menu();
-        let phonetic = this._banglaLayout().avro;
+        let phonetic = this._banglaLayout().avroLayout === 'phonetic';
         sub.append(this._check("Show Preview Window", this.settings.get('switch-preview', true),
                                (on) => this.settings.set('switch-preview', on), phonetic));
         let dict = this.settings.get('switch-dict', true);
@@ -1552,6 +1598,27 @@ var AvroTopBar = class AvroTopBar {
             { label: "Classic phonetic (no suggestion)", active: !dict, sensitive: phonetic,
               callback: () => this.settings.set('switch-dict', false) }
         ]);
+        return sub;
+    }
+
+    /* "Fixed Keyboard Layout Options" of the Avro Keyboard Tools menu */
+    _fixedOptions() {
+        let sub = new Gtk.Menu();
+        let modern = this.settings.get('fixed-typing-style', 'modern') !== 'old';
+        this._radios(sub, [
+            { label: 'Use "Modern Style Typing" in fixed keyboard layouts', active: modern,
+              callback: () => this.settings.set('fixed-typing-style', 'modern') },
+            { label: 'Use "Old Style Typing" in fixed keyboard layouts', active: !modern,
+              callback: () => this.settings.set('fixed-typing-style', 'old') }
+        ]);
+        this._sep(sub);
+        let check = (label, key) => {
+            sub.append(this._check(label, this.settings.get(key, true), (on) => this.settings.set(key, on)));
+        };
+        check('Enable "Old Style Reph" (In Modern Typing Style)', 'fixed-old-reph');
+        check('Enable "Automatic Vowel Forming" (In Modern Typing Style)', 'fixed-vowel-forming');
+        check('Automatically fix "Chandrabindu" position (In Modern Typing Style)', 'fixed-fix-chandra');
+        check('Enable Bangla in NumberPad (In Fixed keyboard Layouts)', 'fixed-numpad-bangla');
         return sub;
     }
 
@@ -1594,6 +1661,7 @@ var AvroTopBar = class AvroTopBar {
         menu.append(this._item("Avro Doctor : Check your system", 'doctor', () => this.launchTool('avro-doctor', null)));
         this._sep(menu);
         menu.append(this._submenu("Avro Phonetic Options", null, this._phoneticOptions()));
+        menu.append(this._submenu("Fixed Keyboard Layout Options", null, this._fixedOptions()));
         this._sep(menu);
         menu.append(this._item("Options...", 'gear', () => this.launchTool('avro-preferences', '--preferences')));
     }
@@ -1869,7 +1937,7 @@ var AvroTopBar = class AvroTopBar {
             if (size) this._traySize = size;
             let px = this._traySize || 22;
             this.tray.set_from_pixbuf(iconPixbuf(this.bangla ? 'bangla' : 'english', px, 'dark'));
-            let f12 = (!this.engine || isAvroEngine(this.engine)) && isAvroEngine(this._banglaLayout().name);
+            let f12 = this._f12Works();
             let text = this.bangla
                 ? "Avro Keyboard.\nRunning Bangla Keyboard Mode.\n" + (f12 ? "Press F12 to switch to English." : "Click to switch to English.")
                 : "Avro Keyboard.\nRunning English Keyboard Mode.\n" + (f12 ? "Press F12 to switch to Bangla." : "Click to switch to Bangla.");
@@ -1952,7 +2020,13 @@ var AvroTopBar = class AvroTopBar {
     aboutLayout() {
         let l = this._banglaLayout();
         let version = appVersion();
-        if (l.avro) {
+        if (l.avro && l.info) {
+            // The credits stored in the Avro Keyboard layout file
+            this._info("About...", "Internal Name : " + l.info.name,
+                       "Version : " + l.info.version + "\n" +
+                       "Developer : " + l.info.developer + "\n\n" +
+                       "Developer's comment :\n" + l.info.comment);
+        } else if (l.avro) {
             this._info("About...", "Internal Name : " + AVRO_LAYOUT_LABEL,
                        "Version : " + (version || "—") + "\n" +
                        "Developer : OmicronLab (Avro Phonetic), Avro Linux contributors\n\n" +
@@ -2003,6 +2077,7 @@ var AvroTopBar = class AvroTopBar {
     _connectSettings() {
         this.settings.connect('mode-bangla', () => this._refreshMode());
         this.settings.connect('bangla-layout', () => this._refreshMode());
+        this.settings.connect('keyboard-layout', () => this._refreshMode());
         this.settings.connect('topbar-skin', () => this.area.queue_draw());
         this.settings.connect('topbar-transparent', () => this._markActive());
         this.settings.connect('topbar-transparency-level', () => this._markActive());
@@ -2088,6 +2163,7 @@ function runAvroTopBar(args) {
         if (!bar) {
             bar = new AvroTopBar(application);
             bar.start(command);
+            setUpStartOnLogin(bar.settings);
         } else {
             bar.handleCommand(command || 'restore');
         }

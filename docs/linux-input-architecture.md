@@ -81,10 +81,13 @@ The engine updates the preedit first, then the preview, on every key, in the sam
 | `preview-style` = `system` | The desktop IBus candidate panel (not on non-GNOME Wayland, where it steals focus) |
 | `switch-preview` = false | Inline preedit only |
 
-Preview settings (`com.omicronlab.avro`): `switch-preview`, `preview-style` (`auto`/`classic`/`system`), `preview-theme` (`classic`/`dark`), `preview-pinned`, `preview-pin-x`, `preview-pin-y`. The TopBar's 👁 button and `avro-preview` toggle `switch-preview`; `avro-preview --demo` shows the window with sample suggestions.
+Preview settings (`com.omicronlab.avro`): `switch-preview`, `preview-style` (`auto`/`classic`/`system`), `preview-theme` (`classic`/`dark`), `preview-pinned`, `preview-pin-x`, `preview-pin-y`. The TopBar's Tools → Avro Phonetic Options → Show Preview Window and `avro-preview` toggle `switch-preview`; `avro-preview --demo` shows the window with sample suggestions.
 
 ### 3.1 Focus changes keep the word in the right field
 The preedit is sent with `IBus.PreeditFocusMode.COMMIT`. When focus moves or the application resets the input context (for example a click elsewhere in the text), the client (GTK, Qt, Chromium) or ibus-daemon keeps the visible word in the field it was typed in, at that moment. The engine then only clears its own state. It must not call `commit_text()` itself: with IBus' global engine the same engine object is attached to the next input context immediately after `focus-out`, so a late commit would land in the newly focused field.
+
+### 3.2 Fixed keyboard layouts
+The fixed layouts of Avro Keyboard (National (Jatiya), Probhat, Bornona, Avro Easy, Munir Optima) are typed by the same engine, chosen with `keyboard-layout` (`phonetic` or a layout id); the TopBar keeps `bangla-layout` = `ibus-avro` for them. A key is looked up by its physical key code (`src/avro-core/fixed/fixedlayout.js`), and the typing rules of Avro Keyboard (`fixedtyper.js`) build the word, which is the preedit until Space, Enter, Tab, a key outside the layout or a focus change commits it. No X keyboard layout is switched, so nothing depends on the display server: the layouts work on Wayland as on X11. Options: `fixed-typing-style` (`modern`/`old`), `fixed-old-reph`, `fixed-vowel-forming`, `fixed-fix-chandra`, `fixed-numpad-bangla`.
 
 ---
 

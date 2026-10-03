@@ -7,13 +7,17 @@
 const GLib = imports.gi.GLib;
 const rootDir = GLib.get_current_dir();
 
-// Use the schema from the source tree and keep every setting in memory.
+// Use the schema from the source tree, keep every setting in memory and the
+// autostart entry in a temporary configuration directory.
 GLib.setenv("GSETTINGS_SCHEMA_DIR", rootDir + "/data/gsettings", true);
 GLib.setenv("GSETTINGS_BACKEND", "memory", true);
+GLib.setenv("XDG_CONFIG_HOME", GLib.dir_make_tmp("avro-topbar-test-XXXXXX"), true);
 imports.searchPath.unshift(rootDir + "/src/common");
+imports.searchPath.unshift(rootDir + "/src/avro-core/fixed");
 imports.searchPath.unshift(rootDir + "/src/standalone");
 
 const tb = imports.topbar;
+const autostart = imports.autostart;
 
 let passed = 0;
 let failed = 0;
@@ -125,16 +129,37 @@ let catalog = tb.buildLayoutCatalog([
     { name: "ibus-avro", language: "bn", longname: "Avro Phonetic" },
     { name: "xkb:in:ben_bornona:ben", language: "bn", longname: "Bangla (India, Bornona)" }
 ]);
-assertEqual(catalog.map(l => l.name).join(","),
-            "ibus-avro,xkb:bd::ben,xkb:bd:probhat:ben,xkb:in:ben_bornona:ben,xkb:in:ben_gitanjali:ben",
-            "Avro Phonetic first, then National, Probhat, Bornona, then the rest");
+assertEqual(catalog.map(l => l.id).join(","),
+            "ibus-avro,avro:avro-easy,avro:bornona,avro:munir-optima,avro:national,avro:probhat," +
+            "xkb:bd::ben,xkb:in:ben_bornona:ben,xkb:in:ben_gitanjali:ben,xkb:bd:probhat:ben",
+            "Avro Phonetic and Avro's fixed layouts first, then the system's Bangla layouts by name");
 assertEqual(catalog[0].label, tb.AVRO_LAYOUT_LABEL, "Avro Phonetic uses the Windows caption");
-assertEqual(catalog[1].label, "National (Jatiya)", "xkb:bd::ben is National (Jatiya)");
-assertEqual(catalog[2].label, "Probhat", "xkb:bd:probhat:ben is Probhat");
-assertEqual(catalog[3].label, "Bornona", "xkb:in:ben_bornona:ben is Bornona");
-assertTrue(catalog[1].primary && catalog[2].primary && catalog[3].primary && !catalog[4].primary,
-           "The three Windows Avro layouts are primary entries");
-assertEqual(tb.buildLayoutCatalog([]).length, 1, "Without IBus only Avro Phonetic is offered");
+assertEqual(catalog.slice(1, 6).map(l => l.label).join("|"),
+            "Avro Easy|Bornona|Munir Optima (uni)|National (Jatiya)|Probhat", "Avro Keyboard's fixed layouts");
+assertTrue(catalog.slice(0, 6).every(l => l.avro && l.primary && l.name === "ibus-avro"),
+           "Avro's layouts are typed by the Avro engine and listed first");
+assertEqual(catalog[4].avroLayout, "national", "National (Jatiya) is keyboard-layout 'national'");
+assertTrue(catalog.slice(6).every(l => !l.avro && !l.primary), "System layouts go in the submenu");
+assertEqual(catalog[6].label, "Bangla", "System layouts keep their desktop names");
+assertEqual(tb.buildLayoutCatalog([]).length, 6, "Without IBus, Avro's own layouts are offered");
+
+// 6b. Start on login, once, as Avro Keyboard starts with Windows
+let fakeSettings = {
+    values: { "topbar-autostart-done": false },
+    has: function(key) { return key in this.values; },
+    get: function(key, fallback) { return key in this.values ? this.values[key] : fallback; },
+    set: function(key, value) { this.values[key] = value; }
+};
+assertTrue(!autostart.hasEntry(), "No autostart entry at first");
+assertTrue(tb.setUpStartOnLogin(fakeSettings), "First run adds the TopBar to the login programs");
+assertTrue(autostart.isEnabled() && fakeSettings.values["topbar-autostart-done"], "Autostart entry written and remembered");
+autostart.setEnabled(false);
+assertTrue(!tb.setUpStartOnLogin(fakeSettings) && !autostart.hasEntry(), "Turned off by the user, it stays off");
+GLib.file_set_contents(autostart.entryPath(), autostart.ENTRY.replace("X-GNOME-Autostart-enabled=true", "Hidden=true"));
+assertTrue(!autostart.isEnabled(), "An entry switched off by the desktop (Hidden=true) counts as off");
+fakeSettings.values["topbar-autostart-done"] = false;
+assertTrue(tb.setUpStartOnLogin(fakeSettings) && !autostart.isEnabled(), "An existing entry of the user is never overwritten");
+autostart.setEnabled(false);
 
 // 7. Avro Keyboard command-line switches
 assertEqual(tb.parseTopBarCommand(["toggle"]), "toggle", "toggle");
@@ -190,6 +215,24 @@ if (GLib.getenv("DISPLAY")) {
                "Help menu has the About current layout / skin entries");
     let tray = labels(bar._trayMenu());
     assertTrue(tray.indexOf("Restore Avro Top Bar") !== -1 && tray.indexOf("Tools") !== -1, "Tray menu has Restore and Tools");
+    assertTrue(tools.indexOf("Fixed Keyboard Layout Options") !== -1, "Tools menu has the Fixed Keyboard Layout Options");
+    let fixedOptions = labels(bar._fixedOptions());
+    assertTrue(fixedOptions.indexOf('Use "Old Style Typing" in fixed keyboard layouts') !== -1 &&
+               fixedOptions.indexOf('Enable "Old Style Reph" (In Modern Typing Style)') !== -1,
+               "Fixed layout options use the Avro Keyboard captions");
+    assertEqual(layoutMenu.slice(0, 6).map(i => itemLabel(i, Gtk)).join("|"),
+                tb.AVRO_LAYOUT_LABEL + "|Avro Easy|Bornona|Munir Optima (uni)|National (Jatiya)|Probhat",
+                "Layout menu lists Avro Phonetic and the fixed layouts");
+
+    bar.selectLayout("avro:national");
+    assertEqual(bar.settings.get("keyboard-layout", ""), "national", "Choosing National sets the Avro layout");
+    assertEqual(bar.settings.get("bangla-layout", ""), "ibus-avro", "National is typed by the Avro engine");
+    assertTrue(bar.settings.get("mode-bangla", false) && bar.bangla, "Choosing a layout switches to Bangla");
+    assertEqual(bar._banglaLayout().label, "National (Jatiya)", "The current layout is National (Jatiya)");
+    assertTrue(bar._f12Works(), "F12 works with Avro's fixed layouts");
+    assertTrue(bar._layoutMenu().get_children()[4].get_active(), "National (Jatiya) is checked in the menu");
+    bar.selectLayout("ibus-avro");
+    assertEqual(bar.settings.get("keyboard-layout", ""), "phonetic", "Back to Avro Phonetic");
 
     bar.settings.set("mode-bangla", true);
     bar._refreshMode();

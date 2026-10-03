@@ -12,6 +12,21 @@ FAILED=0
 USER_DICT_TMP="$(mktemp -d)"
 trap 'rm -rf "${USER_DICT_TMP}"' EXIT
 
+# IBus clients find the daemon through a file under XDG_CONFIG_HOME, which is
+# replaced below: pass its address on directly (the daemon may still be
+# starting when the tests begin).
+if [ -z "${IBUS_ADDRESS:-}" ] && command -v ibus >/dev/null 2>&1; then
+    for _ in $(seq 1 30); do
+        addr="$(ibus address 2>/dev/null || true)"
+        if [ -n "${addr}" ] && [ "${addr}" != "(null)" ]; then
+            export IBUS_ADDRESS="${addr}"
+            break
+        fi
+        pgrep -x ibus-daemon >/dev/null 2>&1 || break
+        sleep 0.2
+    done
+fi
+
 # Keep the developer's real Avro configuration (learned word choices, personal
 # dictionary, dconf settings) out of the tests, in both directions.
 export XDG_CONFIG_HOME="${USER_DICT_TMP}"
@@ -42,6 +57,9 @@ run_test "Dictionary & Suggestions" "gjs ${ROOT_DIR}/tests/core/test-dictionary.
 # 3. Autocorrect test
 run_test "Autocorrect" "gjs ${ROOT_DIR}/tests/core/test-autocorrect.js"
 
+# Fixed keyboard layouts of Avro Keyboard (key data, Modern and Old Style Typing)
+run_test "Fixed Keyboard Layouts" "gjs ${ROOT_DIR}/tests/core/test-fixed-layouts.js"
+
 # 4. Per-user dictionary (isolated from the developer's actual configuration)
 run_test "Personal Dictionary" "XDG_CONFIG_HOME='${USER_DICT_TMP}' gjs ${ROOT_DIR}/tests/core/test-user-dictionary.js"
 
@@ -50,6 +68,9 @@ run_test "Engine Buffer & Lifecycle Logic" "gjs ${ROOT_DIR}/tests/engine/test-en
 
 # 5. Live IBus Engine Integration test
 run_test "IBus Engine Live Integration" "gjs ${ROOT_DIR}/tests/engine/test-ibus-engine-integration.js"
+
+# The real engine on a private IBus daemon: Avro Phonetic and fixed layouts
+run_test "Live Engine Typing" "gjs ${ROOT_DIR}/tests/engine/test-engine-live.js"
 
 # 6. Windows-style Preview Window (placement; live window when DISPLAY is set)
 run_test "Preview Window" "gjs ${ROOT_DIR}/tests/ui/test-preview-window.js"

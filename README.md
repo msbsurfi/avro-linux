@@ -15,10 +15,15 @@ Remastered by **MD Shifat Bin Siddique Urfi (DMC, K-79)** and **MD Mehedi Hasan 
 
 * **Avro TopBar** (`avro-topbar`), re-created from Avro Keyboard 5 for Windows:
   * The same 285×30 bar and elements: অ menu, বাংলা / English mode button with the keyboard-layout strip under it, Layout Viewer, Avro Mouse, Tools, Web, Help and power button, with the Windows menus and tooltips. Original artwork, scaled to your screen DPI.
-  * Real keyboard layouts: Avro Phonetic plus the Bangla XKB layouts in IBus, National (Jatiya), Probhat and Bornona first.
+  * All the keyboard layouts of Avro Keyboard: Avro Phonetic and the fixed layouts (see below); the Bangla layouts of your system are in a submenu.
   * Always on top on every workspace, and never takes focus: click it and keep typing.
   * Drag by the logo with magnetic edge snap, fades when idle, hides to the system tray (click to switch mode, double-click to restore), one bar per session, and the commands `avro-topbar toggle | bn | sys | minimize | restore`.
+  * Starts on login, like Avro Keyboard starts with Windows (it adds itself the first time it runs; turn it off under Preferences → TopBar).
   * Four skins and the Windows TopBar options under Preferences → TopBar.
+* **Fixed Keyboard Layouts of Avro Keyboard**: **National (Jatiya)**, **Probhat**, **Bornona**, **Avro Easy** and **Munir Optima**, taken from the Avro Keyboard layout files and typed by the Avro engine itself:
+  * The typing rules of Avro Keyboard: *Modern Style Typing* (kars after the consonant) with *Old Style Reph*, *Automatic Vowel Forming* and the *Chandrabindu* fix, or *Old Style Typing* (e, i and oi kars before the consonant, as on a typewriter or Bijoy).
+  * F12 switches Bangla / English with every layout; Right Alt types the AltGr characters; Bangla digits on the number pad.
+  * Work wherever Avro Phonetic works, Wayland included. Choose a layout in the TopBar (▼ under the mode button) or in Preferences → Keyboard Layouts.
 * **Windows-Style Preview Window**:
   * The classic Avro Keyboard preview: a small window at the text cursor with the English text you type (yellow row) and the Bangla suggestions below it, the selected word in blue.
   * Drawn by the engine itself on every key press, as a focus-less popup that never takes focus from the app you are typing in.
@@ -36,9 +41,9 @@ Remastered by **MD Shifat Bin Siddique Urfi (DMC, K-79)** and **MD Mehedi Hasan 
   * **Avro Pad (`avro-pad`)**: Dedicated Bengali text editor with Unicode and Bijoy copy support, word counts, and Bangla font styling.
   * **Avro Mouse (`avro-mouse`)**: On-screen click-and-type virtual Bengali keyboard for typing vowels, consonants, numbers, and conjuncts with the mouse.
   * **Bijoy ↔ Unicode Converter (`avro-converter`)**: Two-way bulk text conversion between legacy Bijoy (ANSI) and Unicode.
-  * **Keyboard Layout Viewer (`avro-layout`)**: Interactive keyboard layout visualizer for Avro Phonetic, National (Jatiya), Bornona, and more.
-  * **TopBar Themes & Skins**: Switch between Royal Dark, Classic Windows Avro, Obsidian Black, and Paper Light themes.
-  * **Auto-Start on Login**: One-click autostart configuration from the TopBar menu.
+  * **Layout Viewer (`avro-layout`)**: Shows the active keyboard layout: the Avro Phonetic guide, or the keyboard of a fixed layout with a Normal and an AltGr view.
+  * **TopBar Skins**: Avro Classic, Royal Blue, Flat Mint and Paper Light.
+  * **Start on Login**: the TopBar starts with your desktop session; switch it off or on under Preferences → TopBar.
   * **Avro Preferences (`avro-preferences`)**: Full GSettings configuration UI for candidate counts, auto-correction, and personal dictionary management.
   * **Avro Doctor (`avro-doctor` / `avro-linux-doctor`)**: Comprehensive diagnostic self-test utility for system readiness, fonts, IBus health, and instant one-click auto-fix.
 * **100% Privacy & Offline Guarantee**:
@@ -56,7 +61,7 @@ Download the latest `.deb` package from the repository or build artifacts:
 ```bash
 # Install the package and dependencies
 sudo apt update
-sudo apt install ./avro-linux_1.0.0-1_all.deb
+sudo apt install ./avro-linux_1.3.0-1_all.deb
 ```
 
 ### Enable Avro Phonetic in Your Desktop
@@ -116,7 +121,7 @@ sudo apt install -y \
 # Build schemas, desktop files, and permissions
 make all
 
-# Run the complete test suite (12 test suites; run under Xvfb to include the live Preview Window checks)
+# Run the complete test suite (15 test suites; run under Xvfb to include the live Preview Window and TopBar checks)
 make test
 
 # Build the Debian (.deb) package
