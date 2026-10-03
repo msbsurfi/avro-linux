@@ -1,2 +1,14 @@
 #!/bin/sh
-exec gjs /usr/share/avro-linux/ui/floating-preview.js "$@"
+# Launcher script for Avro Preview
+# SPDX-License-Identifier: MPL-2.0
+# Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)
+
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -f "${SCRIPT_DIR}/src/ui/floating-preview.js" ]; then
+    exec gjs "${SCRIPT_DIR}/src/ui/floating-preview.js" "$@"
+elif [ -f "/usr/share/avro-linux/ui/floating-preview.js" ]; then
+    exec gjs /usr/share/avro-linux/ui/floating-preview.js "$@"
+else
+    echo "Error: floating-preview.js not found" >&2
+    exit 1
+fi

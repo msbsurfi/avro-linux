@@ -28,7 +28,20 @@ print("Running Avro Doctor Integration Tests...");
 try {
     let [res, stdout, stderr, exitCode] = GLib.spawn_command_line_sync("gjs src/standalone/doctor.js --cli");
     assert(res === true, "doctor.js --cli runs successfully");
-    let outStr = String.fromCharCode.apply(null, stdout);
+    let outStr = "";
+    if (stdout && stdout.length > 0) {
+        try {
+            outStr = imports.byteArray.toString(stdout);
+        } catch (e) {
+            outStr = String.fromCharCode.apply(null, stdout);
+        }
+    }
+    if (!outStr || outStr.indexOf("AVRO LINUX SYSTEM DIAGNOSTIC REPORT") === -1) {
+        let errStr = stderr ? (imports.byteArray ? imports.byteArray.toString(stderr) : String.fromCharCode.apply(null, stderr)) : "";
+        printerr("  DEBUG: doctor.js stdout: " + outStr);
+        printerr("  DEBUG: doctor.js stderr: " + errStr);
+        printerr("  DEBUG: doctor.js exitCode: " + exitCode);
+    }
     assert(outStr.indexOf("AVRO LINUX SYSTEM DIAGNOSTIC REPORT") !== -1, "Report contains header");
     assert(outStr.indexOf("MD Shifat Bin Siddique Urfi") !== -1, "Report credits MD Shifat Bin Siddique Urfi");
     assert(outStr.indexOf("MD Mehedi Hasan") !== -1, "Report credits MD Mehedi Hasan");

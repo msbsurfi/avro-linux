@@ -1,2 +1,14 @@
 #!/bin/sh
-exec gjs /usr/share/avro-linux/standalone/doctor.js "$@"
+# Launcher script for Avro Linux Doctor
+# SPDX-License-Identifier: MPL-2.0
+# Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)
+
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -f "${SCRIPT_DIR}/src/standalone/doctor.js" ]; then
+    exec gjs "${SCRIPT_DIR}/src/standalone/doctor.js" "$@"
+elif [ -f "/usr/share/avro-linux/standalone/doctor.js" ]; then
+    exec gjs /usr/share/avro-linux/standalone/doctor.js "$@"
+else
+    echo "Error: doctor.js not found" >&2
+    exit 1
+fi

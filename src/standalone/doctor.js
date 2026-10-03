@@ -104,10 +104,28 @@ function runDiagnosticCheck() {
         }
     } catch (e) {}
 
-    // Check GSettings schema
+    // Check GSettings schema safely without triggering fatal GLib-GIO abort
     try {
-        let schema = Gio.Settings.new("com.omicronlab.avro");
-        if (schema && schema.list_keys().indexOf("mode-bangla") !== -1) {
+        let schemaSource = Gio.SettingsSchemaSource.get_default();
+        let schemaObj = schemaSource ? schemaSource.lookup("com.omicronlab.avro", true) : null;
+        if (!schemaObj) {
+            // Check local build / source directories (useful during CI and test runs)
+            let candidateDirs = [
+                "./data/gsettings",
+                GLib.get_current_dir() + "/data/gsettings",
+                "/usr/share/avro-linux/gsettings"
+            ];
+            for (let d of candidateDirs) {
+                if (GLib.file_test(d + "/gschemas.compiled", GLib.FileTest.EXISTS)) {
+                    try {
+                        let localSource = Gio.SettingsSchemaSource.new_from_directory(d, schemaSource, false);
+                        schemaObj = localSource ? localSource.lookup("com.omicronlab.avro", true) : null;
+                        if (schemaObj) break;
+                    } catch (e) {}
+                }
+            }
+        }
+        if (schemaObj && schemaObj.list_keys().indexOf("mode-bangla") !== -1) {
             report.schemaValid = true;
         } else {
             report.issues.push("GSettings schema 'com.omicronlab.avro' is missing or incomplete.");
@@ -316,10 +334,14 @@ function autoFixIssues() {
     });
 
     try {
-        let schema = Gio.Settings.new("com.omicronlab.avro");
-        if (schema) {
-            schema.set_boolean("mode-bangla", true);
-            fixed.push("Set GSettings mode-bangla to true.");
+        let schemaSource = Gio.SettingsSchemaSource.get_default();
+        let schemaObj = schemaSource ? schemaSource.lookup("com.omicronlab.avro", true) : null;
+        if (schemaObj) {
+            let schema = new Gio.Settings({ settings_schema: schemaObj });
+            if (schema) {
+                schema.set_boolean("mode-bangla", true);
+                fixed.push("Set GSettings mode-bangla to true.");
+            }
         }
     } catch (e) {}
 
