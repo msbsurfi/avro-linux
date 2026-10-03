@@ -13,17 +13,24 @@ Remastered by **MD Shifat Bin Siddique Urfi**, this release delivers full Window
 
 ## 🌟 Features at a Glance
 
-* **Classic Floating Sticky TopBar**:
-  * Stays pinned on top across all virtual desktops and workspaces (`keep_above`, `dock`, `sticky`).
-  * Non-focus-stealing controls: toggling Bangla/English or changing layout never interrupts your active document.
-  * Windows-identical interface: Logo, Mode toggle (Bangla / English), Layout selector, Tools menu, Doctor, Candidate preview toggle, and Exit.
-* **Non-Flickering Candidate Preview**:
-  * Decoupled IPC architecture communicates via a high-performance Unix domain socket (`avro-ui.sock`).
-  * Instant suggestions with zero focus stealing, zero popup flicker, and 100% reliable Bengali typing in web browsers, IDEs, office suites, and text editors.
+* **Avro TopBar** (`avro-topbar`), re-created from Avro Keyboard 5 for Windows:
+  * The same 285×30 bar and elements: অ menu, বাংলা / English mode button with the keyboard-layout strip under it, Layout Viewer, Avro Mouse, Tools, Web, Help and power button, with the Windows menus and tooltips. Original artwork, scaled to your screen DPI.
+  * Real keyboard layouts: Avro Phonetic plus the Bangla XKB layouts in IBus, National (Jatiya), Probhat and Bornona first.
+  * Always on top on every workspace, and never takes focus: click it and keep typing.
+  * Drag by the logo with magnetic edge snap, fades when idle, hides to the system tray (click to switch mode, double-click to restore), one bar per session, and the commands `avro-topbar toggle | bn | sys | minimize | restore`.
+  * Four skins and the Windows TopBar options under Preferences → TopBar.
+* **Windows-Style Preview Window**:
+  * The classic Avro Keyboard preview: a small window at the text cursor with the English text you type (yellow row) and the Bangla suggestions below it, the selected word in blue.
+  * Drawn by the engine itself on every key press, as a focus-less popup that never takes focus from the app you are typing in.
+  * Click a word to insert it; drag the title bar or click the pin to keep the window in one place; classic (light) and dark themes.
+  * On GNOME Wayland the desktop's own candidate panel is used, with the typed text shown above a vertical list.
+* **Correct Bangla Rendering**:
+  * Ships a fontconfig rule that renders Bangla with Noto Sans/Serif Bengali instead of Lohit Bengali and Mukti, whose headline (মাত্রা) breaks over letters such as আ and ম.
 * **Full Keyboard Navigation**:
   * `F12`: Instant toggle between Bangla and English mode.
-  * `Tab` / `Shift+Tab`: Cycle forward and backward through suggestions.
+  * `Tab` / `Shift+Tab`, `↓` / `↑`: Move forward and backward through suggestions.
   * `1`–`9`: Direct numeric selection of candidates.
+  * `Esc`: Cancel the word being typed.
   * `Space` / `Enter` / `।`: Automatic suffix commits on word boundaries.
 * **Comprehensive Standalone Application Suite**:
   * **Avro Pad (`avro-pad`)**: Dedicated Bengali text editor with Unicode and Bijoy copy support, word counts, and Bangla font styling.
@@ -109,7 +116,7 @@ sudo apt install -y \
 # Build schemas, desktop files, and permissions
 make all
 
-# Run the complete test suite (11 test suites, 324 assertions)
+# Run the complete test suite (12 test suites; run under Xvfb to include the live Preview Window checks)
 make test
 
 # Build the Debian (.deb) package
@@ -134,14 +141,16 @@ Avro Linux uses a modular, decoupled architecture engineered specifically to ove
 +-------------------------------v--------------------------------+
 |                     IBus Avro Engine                           |
 |      (Phonetic Transliteration, Dictionary, Suffix Tree)       |
+|  +----------------------------------------------------------+  |
+|  |  Preview Window (in-process, X11 override-redirect popup)|  |
+|  |  or the desktop IBus candidate panel (GNOME Wayland)     |  |
+|  +----------------------------------------------------------+  |
 +-------------------------------+--------------------------------+
-                                | Unix Domain Socket (avro-ui.sock)
-        +-----------------------+-----------------------+
-        |                                               |
-+-------v-----------------------+       +---------------v---------------+
-|    Floating Preview Window    |       |      Sticky Avro TopBar       |
-| (type_hint=TOOLTIP, no-focus) |       |  (type_hint=DOCK, keep_above) |
-+-------------------------------+       +-------------------------------+
+                                | GSettings (com.omicronlab.avro)
+                +---------------v---------------+
+                |      Sticky Avro TopBar       |
+                |  (type_hint=DOCK, keep_above) |
+                +-------------------------------+
 ```
 
 For in-depth technical documentation, refer to:

@@ -1,3 +1,54 @@
+avro-linux (1.2.0-1) unstable; urgency=medium
+
+  * New Avro TopBar, re-created from Avro Keyboard 5 for Windows: the 285x30
+    bar with the অ menu, বাংলা / English mode button and keyboard-layout strip,
+    Layout Viewer, Avro Mouse, Tools, Web, Help and power button, with the
+    Windows menus and tooltips. Original Cairo artwork, scaled to the DPI.
+  * Real keyboard layouts in the TopBar: Avro Phonetic plus the Bangla XKB
+    layouts in IBus (National (Jatiya), Probhat, Bornona first); switching
+    also applies the X keyboard layout, like `ibus engine`. Replaces the old
+    layout list whose entries did nothing.
+  * The TopBar never takes focus, stays on top on every workspace, drags by
+    the logo with a 32 px magnetic snap, remembers its X position, fades to
+    a transparency level when idle, hides to the system tray (click toggles
+    the mode, double-click restores), runs once per session and accepts the
+    commands toggle, bn, sys, minimize and restore.
+  * Four TopBar skins and the Windows TopBar options (transparency, power
+    button action, start-up mode, start on login) in Preferences -> TopBar.
+  * Fixed the old TopBar's emoji icons showing as boxes without an emoji font.
+  * The version number now lives only in the Makefile; About boxes, the IBus
+    component and the package read it from there (they showed 1.0.0).
+  * Launchers no longer load modules from ./src of the current directory.
+  * Recommends gkbd-capplet for the fixed-layout Layout Viewer.
+
+ -- MD Shifat Bin Siddique Urfi <msbsu@github.com>  Sat, 03 Oct 2026 18:00:00 +0600
+
+avro-linux (1.1.0-1) unstable; urgency=medium
+
+  * Added the Windows-style Avro Preview Window: a floating window at the text
+    cursor with the typed English text (yellow row) and the Bangla suggestions
+    (selected word in blue). Drawn in-process by the engine as a focus-less
+    X11 popup, so it updates on every key and never steals focus.
+  * Preview Window: click a word to insert it, drag the title bar or click the
+    pin to keep it in place, classic (Windows) and dark themes.
+  * The preview is now on by default; the desktop IBus candidate panel is used
+    on GNOME Wayland (with the typed text shown above a vertical list).
+  * Fixed Bangla rendering: ship a fontconfig rule that prefers Noto Sans/Serif
+    Bengali over Lohit Bengali and Mukti, whose headline (matra) breaks over
+    letters such as আ and ম. Recommends fonts-noto-core.
+  * Fixed Shift+Tab (ISO_Left_Tab) not cycling suggestions backwards.
+  * F12, the mode switch and switching keyboards now keep the word being typed
+    instead of discarding it.
+  * Tab, arrows and Enter (with "Enter inserts new line") finish the word and
+    then reach the application, instead of inserting literal tab/newline text.
+  * Never compose in password fields, so typed text is not shown in the preview.
+  * Fixed lookup-table labels repeating ("1." after "3.") as words got longer.
+  * Removed the per-keystroke Unix socket IPC to the separate avro-preview
+    process; avro-preview is now a helper to turn the preview on/off or show
+    a demo (avro-preview --demo).
+
+ -- MD Shifat Bin Siddique Urfi <msbsu@github.com>  Sat, 03 Oct 2026 12:00:00 +0600
+
 avro-linux (1.0.0-1) unstable; urgency=medium
 
   * Remastered release of Avro Linux by MD Shifat Bin Siddique Urfi.

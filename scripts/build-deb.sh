@@ -1,14 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
 PACKAGE_NAME="avro-linux"
-VERSION="1.0.0"
+VERSION="$(make -s --no-print-directory -C "${ROOT_DIR}" print-version)"
 REVISION="1"
 ARCH="all"
 DEB_FILENAME="${PACKAGE_NAME}_${VERSION}-${REVISION}_${ARCH}.deb"
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 BUILD_DIR="${ROOT_DIR}/build"
 STAGING_DIR="${BUILD_DIR}/staging"
@@ -40,7 +40,7 @@ Architecture: ${ARCH}
 Installed-Size: ${INSTALLED_SIZE}
 Maintainer: MD Shifat Bin Siddique Urfi <msbsu@github.com>
 Depends: gjs (>= 1.70.0), ibus (>= 1.5.0), gir1.2-ibus-1.0, gir1.2-gtk-3.0, dconf-gsettings-backend | gsettings-backend
-Recommends: im-config
+Recommends: im-config, fonts-noto-core, gkbd-capplet
 Conflicts: ibus-avro
 Replaces: ibus-avro
 Homepage: https://github.com/sarim/ibus-avro

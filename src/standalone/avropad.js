@@ -35,7 +35,8 @@ const Pango = imports.gi.Pango;
 /* ─── Search paths ──────────────────────────────────────────────────────── */
 let baseDir = '/usr/share/avro-linux';
 try {
-    let scriptPath = (typeof ARGV !== 'undefined' && ARGV[0]) ? ARGV[0] : '.';
+    // gjs does not put the script itself in ARGV; programPath is its real location.
+    let scriptPath = imports.system.programPath || imports.system.programInvocationName || '.';
     let scriptDir  = GLib.path_get_dirname(scriptPath);
     if (GLib.file_test(scriptDir + '/../avro-core/phonetic/avrolib.js', GLib.FileTest.EXISTS)) {
         baseDir = GLib.path_get_dirname(scriptDir);
@@ -44,18 +45,14 @@ try {
     }
 } catch (e) {}
 
-// Repository-local paths take priority over installed paths
+// Modules next to the running program (source tree or installed copy)
 for (let p of [
-    './src/avro-core/phonetic',
-    './src/avro-core/dictionary',
-    './src/avro-core/autocorrect',
-    './src/avro-core/suggestions',
-    './src/standalone',
     baseDir + '/avro-core/phonetic',
     baseDir + '/avro-core/dictionary',
     baseDir + '/avro-core/autocorrect',
     baseDir + '/avro-core/suggestions',
     baseDir + '/standalone',
+    baseDir + '/common',
 ]) {
     imports.searchPath.unshift(p);
 }
@@ -752,7 +749,7 @@ function showAbout(parent) {
         transient_for: parent,
         modal: true,
         program_name: "Avro Pad (Remastered Edition)",
-        version: "1.0.0",
+        version: (() => { try { return imports.evars.get_version(); } catch (e) { return ""; } })(),
         comments: "A full-featured standalone Bengali text editor with live\nAvro Phonetic composition.\n\nRemastered for Linux by MD Shifat Bin Siddique Urfi.",
         website: "https://github.com/avro-linux/avro-linux",
         authors: [

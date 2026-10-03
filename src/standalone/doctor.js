@@ -218,7 +218,7 @@ function runDoctorGUI() {
     // Header
     let headerBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 2 });
     let titleLabel = new Gtk.Label({
-        markup: "<span size='x-large' weight='bold' color='#58a6ff'>🩺 Avro Doctor — System Health & Diagnostics</span>",
+        markup: "<span size='x-large' weight='bold' color='#58a6ff'>Avro Doctor — System Health & Diagnostics</span>",
         xalign: 0
     });
     let subLabel = new Gtk.Label({
@@ -276,9 +276,9 @@ function runDoctorGUI() {
     // Actions Row
     let btnBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8 });
 
-    let btnRefresh = new Gtk.Button({ label: "🔄 Refresh Telemetry" });
-    let btnFix = new Gtk.Button({ label: "⚡ Auto-Fix Common Issues" });
-    let btnCopy = new Gtk.Button({ label: "📋 Copy Report to Clipboard" });
+    let btnRefresh = new Gtk.Button({ label: "Refresh Telemetry" });
+    let btnFix = new Gtk.Button({ label: "Auto-Fix Common Issues" });
+    let btnCopy = new Gtk.Button({ label: "Copy Report to Clipboard" });
     let btnClose = new Gtk.Button({ label: "Close" });
 
     function refreshReport() {

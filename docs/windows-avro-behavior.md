@@ -9,58 +9,58 @@ This document specifies the exact user experience, behavioral expectations, and 
 ## 2. Windows Avro User Interface Concepts
 
 ### 2.1 The Floating TopBar
-On Windows, Avro Keyboard does not hide itself exclusively inside the system tray; it presents a prominent, elegant floating toolbar docked at the top-center of the screen.
+Avro Keyboard 5 for Windows shows a small floating toolbar, the TopBar (default skin 285×30 px). It is always on top, has no taskbar button, and docks to the top of the screen. Avro Linux re-creates it in `src/standalone/topbar.js` (`avro-topbar`) with the same layout, menus and behaviour, drawn with original artwork (the Windows skin contains Microsoft artwork, such as the Internet Explorer logo, so its images are not reused).
 
-Key characteristics:
-1. **Always-On-Top & Sticky**: The TopBar stays visible above all maximized and tiled application windows across all virtual desktops.
-2. **Non-Focus-Stealing**: Clicking controls on the TopBar (such as toggling between বাংলা and English, or choosing a layout) never steals keyboard focus from the active text document or editor. The user can click a button on the bar and immediately continue typing.
-3. **Draggable & Dockable**: The bar can be dragged freely to any screen edge or arbitrary position, and snaps back to top-center when pinned.
-4. **Collapsible / Mini-Mode**: A toggle button allows the user to collapse the full toolbar into an ultra-compact mode containing only the logo and mode toggle.
+### 2.2 TopBar elements (left to right)
+| Element | Windows tooltip / behaviour | Avro Linux |
+| :--- | :--- | :--- |
+| অ logo | "Drag to move TopBar. Click for menu." Press-and-drag moves the bar; click (any button) opens the main menu | Same |
+| Mode button (বাংলা / English) | Any click toggles Bangla / English (F12) | Same; shows the shared mode of the IBus engine |
+| ▼ strip under the mode button | "Select your Bangla keyboard layout." Opens the layout menu | Same; the tooltip also names the current layout |
+| Layout Viewer (keyboard) | Left click opens the Layout Viewer; other buttons open the layout menu | Same: Avro Phonetic opens `avro-layout`, fixed layouts open `gkbd-keyboard-display` |
+| Avro Mouse | Opens the on-screen keyboard | Same (`avro-mouse`, opened once) |
+| Tools (gear) | Tools menu | Same |
+| Web | Web menu (Windows shows the IE logo) | Same menu, original globe icon |
+| Help (?) | Help menu | Same |
+| Power | Setting: show menu (Jump to system tray / Exit), minimize, or exit; right click always shows the menu | Same |
 
-### 2.2 TopBar Component Breakdown
-* **Avro Logo Button ("অ Avro")**: Opens the master menu:
-  - Layout Selection submenu
-  - Avro Pad (dedicated Bengali text editor)
-  - Unicode to Bijoy Converter
-  - Keyboard Layout Viewer
-  - Skin / Theme selector
-  - Preferences
-  - Avro Doctor (diagnostic health check)
-  - About Avro (developer & contributor credits)
-  - Exit
-* **Mode Toggle Button**:
-  - Displays `বাংলা  [F12]` with vibrant green/emerald styling when Bengali mode is active.
-  - Displays `English  [F12]` with cool slate/navy styling when English mode is active.
-  - Globally bound to `F12` key.
-* **Layout Selector Button**:
-  - Displays active layout name (`Phonetic ▼`).
-  - Allows 1-click switching between Avro Phonetic, Avro Easy, Bornona, National (Jatiya), and Probhat.
-* **Quick Tools**:
-  - 📝 Avro Pad
-  - 🔄 Unicode ↔ Bijoy Converter
-  - ⌨ Keyboard Layout Viewer
-  - ⚙ Preferences
-  - 🩺 Avro Doctor
-* **Window Controls**:
-  - 📌 Pin to top-center / Unpin to float
-  - ▲ / ▼ Collapse / Expand
-  - ✕ Close TopBar
+The bar background itself has no action, as on Windows.
+
+### 2.3 Menus
+Captions follow Avro Keyboard 5 (`Toggle keyboard mode`, `Dock to top`, `Jump to system tray`, `Select keyboard layout`, `Avro Mouse - Click 'n Type!`, `On the web`, `Options...`, `Help files`, `About Avro Keyboard...`, `Exit`; the Tools, Web, Help, power and tray menus likewise). Windows-only items are left out: Spell checker, Unicode/ANSI output, Keyboard Layout Editor, Skin Designer and Check update. Linux adds Avro Pad and Avro Doctor to Tools and Help.
+
+Keyboard layouts: Windows lists Avro Phonetic plus its installed fixed layouts. Linux lists Avro Phonetic plus the Bangla XKB layouts IBus provides, with the three that Windows Avro ships first: **National (Jatiya)** (`xkb:bd::ben`, the BCC national standard), **Probhat** (`xkb:bd:probhat:ben`) and **Bornona** (`xkb:in:ben_bornona:ben`). The other Bangla layouts are under "More Bangla keyboard layouts". Avro Easy and Munir Optima have no Linux equivalent and are not offered. When the TopBar switches to a fixed layout it also applies the X keyboard layout, like the `ibus engine` command, unless IBus is set to use the system keyboard layout.
+
+### 2.4 Behaviour
+* **Always on top, all workspaces, no taskbar entry**, re-asserted every second.
+* **Never takes focus** (an improvement over Windows, where the bar is activated and Avro tracks the last application window instead): click the bar and keep typing.
+* **Drag** by the logo only, with a **32 px magnetic snap** to the screen edges and the bar kept below any top panel.
+* **Position**: default at the top, 250 px left of the right edge; as on Windows only the X position is remembered and the bar docks to the top at start-up. `Dock to top` puts it back.
+* **Hover**: glassy blue frames fade in and out over 150 ms (red for the power button); pressed buttons show a dark frame; menus open at the button's bottom-left corner.
+* **Transparency**: after 5 s without mouse activity or mode changes, the bar fades to the transparency level (default 80 of 255) in steps of 50; a mode change or the mouse makes it fully visible again. Needs a compositing window manager.
+* **System tray**: the tray icon is shown only while the bar is hidden. Click toggles the mode; double-click restores the bar (mode unchanged); right click opens the tray menu. The icon and its tooltip show the mode.
+* **Start-up**: one TopBar per session. Running `avro-topbar` again restores it. Commands: `toggle`, `bn`, `sys`, `minimize`, `restore` (bare or with `/`, `-` or `--`). The start-up mode can be Top Bar, tray icon or the last used one.
+* **First runs**: a balloon "Click here to start Bangla typing or Press F12" points at the mode button the first two times; "Avro Keyboard is running here." is shown the first two times the bar goes to the tray.
+* **Options** (Preferences → TopBar): skin (Classic, Royal Blue, Flat Mint, Paper Light), transparency on/off and level, power button action, start-up mode, start when logging in.
 
 ---
 
 ## 3. Dedicated Floating Candidate & Preview Window
 
-### 3.1 Non-Intrusive Floating Window
-Unlike generic IME frameworks that rely on OS popups which steal window focus or compete with Wayland compositors, Avro utilizes a dedicated, lightweight preview overlay.
+### 3.1 The Preview Window
+Avro Keyboard on Windows shows a small "Preview Window" next to the caret while you type. Avro Linux draws the same window from inside the IBus engine.
 
 Key behaviors:
-* **Zero Focus Grab**: Constructed with `type_hint = TOOLTIP` or `POPUP_MENU`, `accept_focus = false`, and `focus_on_map = false`.
-* **Visual Presentation**:
-  - Shows the raw phonetic buffer (e.g. `ami`).
-  - Shows the primary transliteration preview (e.g. `আমি`).
-  - Shows candidate badges with numbered accelerators (e.g. `[1. আমি]  [2. আমী]`).
-  - Displays navigation hints (`[Tab] Next  [Space] Commit  [1-9] Select`).
-* **Placement**: Follows the active cursor position or floats unobtrusively near the caret without obscuring adjacent text.
+* **Zero Focus Grab**: an X11 override-redirect popup (`Gtk.WindowType.POPUP`), never managed or focused by the window manager.
+* **Visual Presentation** (classic theme):
+  - Title bar with the Avro logo, "Preview Window" and a pin button.
+  - A light-yellow row with the English (roman) text typed so far, in bold (e.g. `ami`).
+  - The Bangla suggestions below, one per row; the selected word is highlighted in blue and is also shown inline in the editor.
+* **Placement**: just below the caret, flipped above it near the bottom of the screen, always kept on the monitor that holds the caret.
+* **Mouse**: clicking a suggestion inserts it; dragging the title bar moves the window and pins it there; the pin button toggles between "pinned" and "follow the caret". The pinned position is remembered.
+* **Themes**: classic (Windows look) and dark.
+* **Fallback**: on GNOME Wayland the desktop's IBus candidate panel shows the typed text above a vertical list instead.
+* Nothing is shown in password fields: Avro passes keys through there.
 
 ---
 
@@ -78,11 +78,13 @@ Key behaviors:
 ### 4.2 Candidate Navigation Keys
 * `Tab`: Advances selection to the next candidate word (`index + 1`). Wraps around.
 * `Shift + Tab`: Moves selection to the previous candidate word (`index - 1`).
-* `Left / Right Arrow`: Navigates candidate list when multiple suggestions exist.
-* `Up / Down Arrow`: Navigates candidate list (vertical mode) or cycles candidates.
-* `Number Keys 1 to 9`: Instantly commits the candidate at index `N-1`.
+* `Up / Down Arrow`: Moves the selection while the suggestion list is on screen; otherwise commits the word and moves the caret.
+* `Left / Right Arrow`: Moves the selection only in a horizontal desktop panel list; otherwise commits the word and moves the caret, as on Windows.
+* `Number Keys 1 to 9`: While the suggestion list is on screen, instantly commits the candidate at index `N-1`.
 * `Space`: Commits the currently selected candidate followed by a space.
-* `Enter / Return`: Commits the currently selected candidate. If `switch-newline` is enabled, also emits a newline.
+* `Enter / Return`: Commits the currently selected candidate. If `switch-newline` is enabled, the application then also receives the Enter key (new line, form submit).
+* `Tab` with a single suggestion, `Home`, `End`, `Delete`, `Page Up/Down` and other non-text keys: commit the word, then reach the application.
+* `F12` / mode switch / switching keyboards: keep the word being typed, then switch.
 * `Period (.)`: Commits the currently selected candidate followed by the Bengali Dari (`।`).
 * `Escape`: Cancels composition, dismisses candidate preview, and resets the input buffer.
 * `Backspace`: Removes the last typed Latin character from the buffer and recomputes suggestions in real time. If the buffer is empty, deletes the preceding character in the editor.

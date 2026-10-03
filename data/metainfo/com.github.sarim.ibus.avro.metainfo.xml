@@ -30,6 +30,16 @@
   </provides>
   <content_rating type="oars-1.1" />
   <releases>
+    <release version="1.2.0" date="2026-10-03">
+      <description>
+        <p>New Avro TopBar re-created from Avro Keyboard 5 for Windows, with real Bangla keyboard layouts, system tray, transparency, skins and command-line control.</p>
+      </description>
+    </release>
+    <release version="1.1.0" date="2026-10-03">
+      <description>
+        <p>Windows-style Preview Window, correct Bangla font rendering and engine fixes.</p>
+      </description>
+    </release>
     <release version="1.0.0" date="2026-10-02">
       <description>
         <p>Avro Linux release with modernized GTK preferences, privacy hardening, and full regression testing.</p>

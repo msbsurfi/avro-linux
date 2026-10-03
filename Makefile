@@ -2,27 +2,35 @@
 # SPDX-License-Identifier: MPL-2.0
 
 SHELL := /bin/bash
+# The one place the version number lives; everything else reads it from here.
+VERSION := 1.2.0
 prefix ?= /usr
 pkgdatadir ?= $(prefix)/share/avro-linux
 libexecdir ?= $(prefix)/libexec/avro-linux
 datadir ?= $(prefix)/share
+sysconfdir ?= /etc
 
-.PHONY: all build test package install clean
+.PHONY: all build test package install clean print-version
 
 all: build
 
 build: src/common/evars.js data/ibus/ibus-avro.xml data/gsettings/gschemas.compiled
 
-src/common/evars.js: src/common/evars.js.in
+print-version:
+	@echo $(VERSION)
+
+src/common/evars.js: src/common/evars.js.in Makefile
 	@mkdir -p src/common
 	sed -e 's|@pkgdatadir@|$(pkgdatadir)|g' \
 	    -e 's|@libexecdir@|$(libexecdir)|g' \
+	    -e 's|@version@|$(VERSION)|g' \
 	    $< > $@
 
-data/ibus/ibus-avro.xml: data/ibus/ibus-avro.xml.in
+data/ibus/ibus-avro.xml: data/ibus/ibus-avro.xml.in Makefile
 	@mkdir -p data/ibus
 	sed -e 's|@pkgdatadir@|$(pkgdatadir)|g' \
 	    -e 's|@libexecdir@|$(libexecdir)|g' \
+	    -e 's|@version@|$(VERSION)|g' \
 	    $< > $@
 
 data/gsettings/gschemas.compiled: data/gsettings/com.omicronlab.avro.gschema.xml
@@ -63,6 +71,8 @@ install: build
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/128x128/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/icons/hicolor/256x256/apps
 	install -d -m 0755 $(DESTDIR)$(datadir)/doc/avro-linux
+	install -d -m 0755 $(DESTDIR)$(datadir)/fontconfig/conf.avail
+	install -d -m 0755 $(DESTDIR)$(sysconfdir)/fonts/conf.d
 
 	# Command-line binary launchers
 	install -m 0755 bin/avro $(DESTDIR)$(prefix)/bin/avro
@@ -105,6 +115,11 @@ install: build
 	# Preferences application
 	install -m 0755 src/preferences/pref.js $(DESTDIR)$(pkgdatadir)/preferences/pref.js
 	install -m 0644 src/preferences/avropref.ui $(DESTDIR)$(pkgdatadir)/preferences/avropref.ui
+
+	# Bangla font preference: Noto Bengali instead of Lohit/Mukti, whose
+	# headline (matra) breaks over letters such as আ and ম
+	install -m 0644 data/fontconfig/64-avro-bengali.conf $(DESTDIR)$(datadir)/fontconfig/conf.avail/64-avro-bengali.conf
+	ln -sf $(datadir)/fontconfig/conf.avail/64-avro-bengali.conf $(DESTDIR)$(sysconfdir)/fonts/conf.d/64-avro-bengali.conf
 
 	# Integration files
 	install -m 0644 data/ibus/ibus-avro.xml $(DESTDIR)$(datadir)/ibus/component/ibus-avro.xml

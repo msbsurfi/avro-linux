@@ -52,6 +52,37 @@ function getPkgDataDir() {
     return '/usr/share/avro-linux';
 }
 
+function appVersion() {
+    if (eevars && typeof eevars.get_version === 'function') {
+        return eevars.get_version();
+    }
+    return '';
+}
+
+function topBarAutostartFile() {
+    return Gio.File.new_for_path(GLib.get_user_config_dir() + "/autostart/avro-topbar.desktop");
+}
+
+function isTopBarAutostart() {
+    return topBarAutostartFile().query_exists(null);
+}
+
+function setTopBarAutostart(enable) {
+    let file = topBarAutostartFile();
+    try {
+        if (enable) {
+            GLib.mkdir_with_parents(GLib.get_user_config_dir() + "/autostart", 0o755);
+            let content = "[Desktop Entry]\nName=Avro TopBar\nComment=Floating Avro Keyboard toolbar\n" +
+                          "Exec=avro-topbar\nIcon=avro-bangla\nTerminal=false\nType=Application\n" +
+                          "Categories=Utility;\nX-GNOME-Autostart-enabled=true\n";
+            file.replace_contents(new TextEncoder().encode(content), null, false,
+                                  Gio.FileCreateFlags.REPLACE_DESTINATION, null);
+        } else if (file.query_exists(null)) {
+            file.delete(null);
+        }
+    } catch (e) {}
+}
+
 function getCandidateSelectionsFile() {
     let configDir = GLib.get_user_config_dir();
     let xdgFile = Gio.File.new_for_path(configDir + "/avro/candidate-selections.json");
@@ -76,7 +107,7 @@ function getUserDictionary() {
 function createDiagnosticReport() {
     let diagText = "";
     diagText += "Application: Avro Linux\n";
-    diagText += "Version: 1.0.0-1\n";
+    diagText += "Version: " + appVersion() + "\n";
     diagText += "Engine: IBus Avro Phonetic Engine\n";
     try {
         diagText += "System: " + (GLib.get_os_info("PRETTY_NAME") || "Linux") + "\n";
@@ -136,9 +167,9 @@ function runpref() {
     // Preview Window Toggle
     let previewBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12 });
     let previewLabelBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
-    let previewTitle = new Gtk.Label({ label: "<b>Show Preview / Candidate Window</b>", use_markup: true, xalign: 0 });
+    let previewTitle = new Gtk.Label({ label: "<b>Show Preview Window</b>", use_markup: true, xalign: 0 });
     let previewSubtitle = new Gtk.Label({
-        label: "Displays auxiliary Latin text and Bengali candidates while typing",
+        label: "Shows the English text you type and the Bangla suggestions next to the cursor",
         xalign: 0
     });
     previewSubtitle.get_style_context().add_class("dim-label");
@@ -149,11 +180,42 @@ function runpref() {
     previewBox.pack_end(switchPreview, false, false, 0);
     generalBox.pack_start(previewBox, false, false, 0);
 
+    // Preview window style
+    let styleBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12 });
+    let styleLabelBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
+    let styleTitle = new Gtk.Label({ label: "<b>Preview Window Style</b>", use_markup: true, xalign: 0 });
+    let styleSubtitle = new Gtk.Label({ label: "Avro's Windows-style window, or your desktop's candidate panel", xalign: 0 });
+    styleSubtitle.get_style_context().add_class("dim-label");
+    styleLabelBox.pack_start(styleTitle, false, false, 0);
+    styleLabelBox.pack_start(styleSubtitle, false, false, 0);
+    let cboxStyle = new Gtk.ComboBoxText({ valign: Gtk.Align.CENTER });
+    cboxStyle.append("auto", "Automatic");
+    cboxStyle.append("classic", "Avro (Windows style)");
+    cboxStyle.append("system", "Desktop panel (IBus)");
+    styleBox.pack_start(styleLabelBox, true, true, 0);
+    styleBox.pack_end(cboxStyle, false, false, 0);
+    generalBox.pack_start(styleBox, false, false, 0);
+
+    // Preview window theme
+    let themeBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12 });
+    let themeLabelBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
+    let themeTitle = new Gtk.Label({ label: "<b>Preview Window Theme</b>", use_markup: true, xalign: 0 });
+    let themeSubtitle = new Gtk.Label({ label: "Colours of the Windows-style Preview Window", xalign: 0 });
+    themeSubtitle.get_style_context().add_class("dim-label");
+    themeLabelBox.pack_start(themeTitle, false, false, 0);
+    themeLabelBox.pack_start(themeSubtitle, false, false, 0);
+    let cboxTheme = new Gtk.ComboBoxText({ valign: Gtk.Align.CENTER });
+    cboxTheme.append("classic", "Classic (light)");
+    cboxTheme.append("dark", "Dark");
+    themeBox.pack_start(themeLabelBox, true, true, 0);
+    themeBox.pack_end(cboxTheme, false, false, 0);
+    generalBox.pack_start(themeBox, false, false, 0);
+
     // Orientation selector
     let orientBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12 });
     let orientLabelBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
     let orientTitle = new Gtk.Label({ label: "<b>Candidate List Orientation</b>", use_markup: true, xalign: 0 });
-    let orientSubtitle = new Gtk.Label({ label: "Display suggestion candidates horizontally or vertically", xalign: 0 });
+    let orientSubtitle = new Gtk.Label({ label: "Direction of the list in the desktop (IBus) candidate panel", xalign: 0 });
     orientSubtitle.get_style_context().add_class("dim-label");
     orientLabelBox.pack_start(orientTitle, false, false, 0);
     orientLabelBox.pack_start(orientSubtitle, false, false, 0);
@@ -168,12 +230,15 @@ function runpref() {
     // Desktop Tools Row
     let toolsFrame = new Gtk.Frame({ label: " Avro Desktop Tools " });
     let toolsBox = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 8, margin: 10 });
-    let btnLaunchTopbar = new Gtk.Button({ label: "🚀 Avro TopBar" });
-    let btnLaunchPreview = new Gtk.Button({ label: "👁 Candidate Preview" });
-    let btnLaunchDoctor = new Gtk.Button({ label: "🩺 Avro Doctor" });
+    let btnLaunchTopbar = new Gtk.Button({ label: "Avro TopBar" });
+    let btnLaunchPreview = new Gtk.Button({ label: "Preview Demo" });
+    let btnLaunchDoctor = new Gtk.Button({ label: "Avro Doctor" });
 
     btnLaunchTopbar.connect("clicked", () => GLib.spawn_command_line_async("avro-topbar"));
-    btnLaunchPreview.connect("clicked", () => GLib.spawn_command_line_async("avro-preview"));
+    btnLaunchPreview.connect("clicked", () => {
+        let theme = cboxTheme.get_active_id() || "classic";
+        GLib.spawn_command_line_async("avro-preview --demo amader --theme " + theme + " --timeout 8");
+    });
     btnLaunchDoctor.connect("clicked", () => GLib.spawn_command_line_async("avro-doctor"));
 
     toolsBox.pack_start(btnLaunchTopbar, true, true, 0);
@@ -199,6 +264,16 @@ function runpref() {
         dialog.destroy();
         if (res === Gtk.ResponseType.OK && setting) {
             setting.reset("switch-preview");
+            setting.reset("preview-style");
+            setting.reset("preview-theme");
+            setting.reset("preview-pinned");
+            setting.reset("preview-pin-x");
+            setting.reset("preview-pin-y");
+            setting.reset("topbar-skin");
+            setting.reset("topbar-transparent");
+            setting.reset("topbar-transparency-level");
+            setting.reset("topbar-x-button");
+            setting.reset("topbar-startup-ui");
             setting.reset("switch-dict");
             setting.reset("switch-newline");
             setting.reset("lutable-size");
@@ -249,6 +324,65 @@ function runpref() {
     typingBox.pack_start(sizeBox, false, false, 0);
 
     notebook.append_page(typingBox, new Gtk.Label({ label: "Typing" }));
+
+    /* ========================================================================= */
+    /* TOPBAR TAB (the Avro Keyboard "General" and "Interface" options)          */
+    /* ========================================================================= */
+    let topbarBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 18, border_width: 16 });
+
+    function topbarRow(title, subtitle, control) {
+        let row = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12 });
+        let labels = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
+        labels.pack_start(new Gtk.Label({ label: "<b>" + title + "</b>", use_markup: true, xalign: 0 }), false, false, 0);
+        if (subtitle) {
+            let sub = new Gtk.Label({ label: subtitle, xalign: 0 });
+            sub.get_style_context().add_class("dim-label");
+            labels.pack_start(sub, false, false, 0);
+        }
+        row.pack_start(labels, true, true, 0);
+        row.pack_end(control, false, false, 0);
+        topbarBox.pack_start(row, false, false, 0);
+    }
+
+    let cboxSkin = new Gtk.ComboBoxText({ valign: Gtk.Align.CENTER });
+    cboxSkin.append("classic", "Avro Classic (dark)");
+    cboxSkin.append("royal", "Avro Royal Blue");
+    cboxSkin.append("mint", "Avro Flat Mint");
+    cboxSkin.append("light", "Avro Paper Light");
+    topbarRow("Interface Skin", "Look of the Avro TopBar", cboxSkin);
+
+    let switchTransparent = new Gtk.Switch({ valign: Gtk.Align.CENTER });
+    topbarRow("Make TopBar semi transparent when it is inactive",
+              "Fades after 5 seconds without mouse activity (needs desktop compositing)", switchTransparent);
+
+    let scaleLevel = new Gtk.Scale({
+        orientation: Gtk.Orientation.HORIZONTAL,
+        adjustment: new Gtk.Adjustment({ lower: 0, upper: 255, step_increment: 1, page_increment: 16 }),
+        digits: 0, value_pos: Gtk.PositionType.RIGHT, width_request: 200, valign: Gtk.Align.CENTER
+    });
+    topbarRow("Transparency level (0-255)", "0 = fully transparent, 255 = fully visible", scaleLevel);
+
+    let cboxXButton = new Gtk.ComboBoxText({ valign: Gtk.Align.CENTER });
+    cboxXButton.append("menu", "Show option for both");
+    cboxXButton.append("minimize", "Minimize to the system tray");
+    cboxXButton.append("exit", "Close the TopBar");
+    topbarRow("When I click the power button on TopBar", "A right click always shows both options", cboxXButton);
+
+    let cboxStartup = new Gtk.ComboBoxText({ valign: Gtk.Align.CENTER });
+    cboxStartup.append("topbar", "Top Bar (on desktop, as toolbar)");
+    cboxStartup.append("tray", "System tray icon");
+    cboxStartup.append("last", "UI mode used last time");
+    topbarRow("At startup, Avro TopBar will run as", null, cboxStartup);
+
+    let switchAutostart = new Gtk.Switch({ valign: Gtk.Align.CENTER, active: isTopBarAutostart() });
+    switchAutostart.connect("notify::active", () => setTopBarAutostart(switchAutostart.get_active()));
+    topbarRow("Start Avro TopBar when I log in", "Adds the TopBar to your desktop's autostart programs", switchAutostart);
+
+    let btnOpenTopbar = new Gtk.Button({ label: "Open Avro TopBar", halign: Gtk.Align.START });
+    btnOpenTopbar.connect("clicked", () => GLib.spawn_command_line_async("avro-topbar restore"));
+    topbarBox.pack_start(btnOpenTopbar, false, false, 0);
+
+    notebook.append_page(topbarBox, new Gtk.Label({ label: "TopBar" }));
 
     /* ========================================================================= */
     /* 3. DICTIONARY & AUTOCORRECT TAB                                           */
@@ -409,7 +543,7 @@ function runpref() {
         });
     });
 
-    let btnDoctor = new Gtk.Button({ label: "🩺 Open Avro Doctor Interactive Tool" });
+    let btnDoctor = new Gtk.Button({ label: "Open Avro Doctor Interactive Tool" });
     btnDoctor.connect("clicked", () => {
         GLib.spawn_command_line_async("avro-doctor");
     });
@@ -426,7 +560,7 @@ function runpref() {
     let aboutBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 10, border_width: 20, halign: Gtk.Align.CENTER });
     
     let appNameLabel = new Gtk.Label({ label: "<big><b>Avro Linux (Remastered Edition)</b></big>", use_markup: true });
-    let appVerLabel = new Gtk.Label({ label: "Version 1.0.0 — Modern Linux Edition" });
+    let appVerLabel = new Gtk.Label({ label: "Version " + appVersion() + " — Modern Linux Edition" });
     appVerLabel.get_style_context().add_class("dim-label");
     let appDescLabel = new Gtk.Label({
         label: "Modern Linux implementation of Avro Phonetic Bengali input method\nwith Windows-style floating TopBar, standalone Avro Pad, and Bijoy converter.",
@@ -480,6 +614,8 @@ function runpref() {
             switchNewline.set_active(setting.get_boolean("switch-newline"));
             spinSize.set_value(setting.get_int("lutable-size"));
             cboxOrient.set_active(setting.get_int("cboxorient"));
+            cboxStyle.set_active_id(setting.get_string("preview-style"));
+            cboxTheme.set_active_id(setting.get_string("preview-theme"));
             updateSensitivities();
         } catch (e) {}
     }
@@ -490,6 +626,8 @@ function runpref() {
         switchNewline.set_sensitive(previewActive);
         spinSize.set_sensitive(previewActive);
         cboxOrient.set_sensitive(previewActive);
+        cboxStyle.set_sensitive(previewActive);
+        cboxTheme.set_sensitive(previewActive);
     }
 
     if (setting) {
@@ -498,7 +636,16 @@ function runpref() {
         setting.bind("switch-newline", switchNewline, "active", Gio.SettingsBindFlags.DEFAULT);
         setting.bind("lutable-size", spinSize, "value", Gio.SettingsBindFlags.DEFAULT);
         setting.bind("cboxorient", cboxOrient, "active", Gio.SettingsBindFlags.DEFAULT);
-        
+        setting.bind("preview-style", cboxStyle, "active-id", Gio.SettingsBindFlags.DEFAULT);
+        setting.bind("preview-theme", cboxTheme, "active-id", Gio.SettingsBindFlags.DEFAULT);
+        setting.bind("topbar-skin", cboxSkin, "active-id", Gio.SettingsBindFlags.DEFAULT);
+        setting.bind("topbar-transparent", switchTransparent, "active", Gio.SettingsBindFlags.DEFAULT);
+        setting.bind("topbar-transparency-level", scaleLevel.get_adjustment(), "value", Gio.SettingsBindFlags.DEFAULT);
+        setting.bind("topbar-x-button", cboxXButton, "active-id", Gio.SettingsBindFlags.DEFAULT);
+        setting.bind("topbar-startup-ui", cboxStartup, "active-id", Gio.SettingsBindFlags.DEFAULT);
+        scaleLevel.set_sensitive(switchTransparent.get_active());
+        switchTransparent.connect("notify::active", () => scaleLevel.set_sensitive(switchTransparent.get_active()));
+
         switchPreview.connect("notify::active", function() {
             updateSensitivities();
         });

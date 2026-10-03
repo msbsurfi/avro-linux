@@ -33,7 +33,8 @@ const GLib = imports.gi.GLib;
 // Determine base directory and configure module search paths
 let baseDir = '/usr/share/avro-linux';
 try {
-    let scriptPath = ARGV[0] || '.';
+    // gjs does not put the script itself in ARGV; programPath is its real location.
+    let scriptPath = imports.system.programPath || imports.system.programInvocationName || '.';
     let scriptDir = GLib.path_get_dirname(scriptPath);
     if (GLib.file_test(scriptDir + '/../common/evars.js', GLib.FileTest.EXISTS)) {
         baseDir = GLib.path_get_dirname(scriptDir);
@@ -51,12 +52,38 @@ eevars.init_search_paths(baseDir);
 
 const suggestion = imports.suggestionbuilder;
 
-var prefwindow = null;
+// Windows-style Preview Window. Optional: it needs GTK and an X11/XWayland
+// display; without it the desktop's IBus candidate panel is used instead.
+var previewModule = null;
 try {
-    prefwindow = imports.pref;
+    previewModule = imports['floating-preview'];
 } catch (e) {
-    // Loaded on-demand in runPreferences()
+    previewModule = null;
 }
+
+// X11 keysym values. These never change, unlike the IBus.KEY_* constants,
+// which are not exported by every IBus introspection version.
+const KEY = {
+    space: 0x020, comma: 0x02c, period: 0x02e, digit1: 0x031, digit9: 0x039,
+    ISO_Left_Tab: 0xfe20,
+    BackSpace: 0xff08, Tab: 0xff09, Return: 0xff0d, Escape: 0xff1b,
+    Left: 0xff51, Up: 0xff52, Right: 0xff53, Down: 0xff54,
+    KP_Enter: 0xff8d, KP_Left: 0xff96, KP_Up: 0xff97, KP_Right: 0xff98, KP_Down: 0xff99,
+    KP_Multiply: 0xffaa, KP_Add: 0xffab, KP_Subtract: 0xffad, KP_Decimal: 0xffae, KP_Divide: 0xffaf,
+    KP_0: 0xffb0, KP_1: 0xffb1, KP_9: 0xffb9,
+    F12: 0xffc9
+};
+
+// Shift, Control, Caps/Shift Lock, Meta, Alt, Super, Hyper, AltGr, Num Lock
+function isModifierKey(keyval) {
+    return (keyval >= 0xffe1 && keyval <= 0xffee) ||
+           keyval === 0xfe03 || keyval === 0xfe11 || keyval === 0xff7e || keyval === 0xff7f;
+}
+
+const PURPOSE_PASSWORD = (IBus.InputPurpose && IBus.InputPurpose.PASSWORD !== undefined) ? IBus.InputPurpose.PASSWORD : 8;
+const PURPOSE_PIN = (IBus.InputPurpose && IBus.InputPurpose.PIN !== undefined) ? IBus.InputPurpose.PIN : 9;
+const ORIENTATION_HORIZONTAL = 0;
+const PREEDIT_COMMIT = (IBus.PreeditFocusMode && IBus.PreeditFocusMode.COMMIT !== undefined) ? IBus.PreeditFocusMode.COMMIT : 1;
 
 // Check if running from ibus
 var exec_by_ibus = (ARGV[0] == '--ibus' || ARGV[1] == '--ibus');
@@ -68,53 +95,12 @@ IBus.init();
 var bus = new IBus.Bus();
 
 if (bus.is_connected()) {
-    
+
     /* =========================================================================== */
     /*                           IBus Engine                                       */
     /* =========================================================================== */
-    
+
     var id = 0;
-
-    function getSocketPath() {
-        let runtimeDir = GLib.getenv("XDG_RUNTIME_DIR");
-        if (!runtimeDir || runtimeDir.length === 0) {
-            runtimeDir = "/tmp";
-        }
-        return runtimeDir + "/avro-ui.sock";
-    }
-
-    function ensurePreviewDaemon() {
-        try {
-            let sockPath = getSocketPath();
-            let f = Gio.File.new_for_path(sockPath);
-            if (!f.query_exists(null)) {
-                GLib.spawn_command_line_async("avro-preview");
-            }
-        } catch (e) {}
-    }
-
-    function broadcastUI(msgObj) {
-        try {
-            let sockPath = getSocketPath();
-            let client = new Gio.SocketClient();
-            let addr = Gio.UnixSocketAddress.new(sockPath);
-            client.connect_async(addr, null, (c, res) => {
-                try {
-                    let conn = client.connect_finish(res);
-                    if (conn) {
-                        let outStream = conn.get_output_stream();
-                        let payload = JSON.stringify(msgObj) + "\n";
-                        outStream.write_bytes_async(new GLib.Bytes(payload), GLib.PRIORITY_DEFAULT, null, (s, r) => {
-                            try {
-                                s.write_bytes_finish(r);
-                                conn.close(null);
-                            } catch (e) {}
-                        });
-                    }
-                } catch (e) {}
-            });
-        } catch (e) {}
-    }
 
     function _create_engine_cb(factory, engine_name) {
         id += 1;
@@ -125,24 +111,40 @@ if (bus.is_connected()) {
         });
 
         engine.mode_bangla = true;
+        engine.password_field = false;
+        engine.presentation = 'none';
+        engine.cursorRect = null;
 
         engine.connect('process-key-event', engine_process_key_event);
         engine.connect('candidate-clicked', engine_candidate_clicked);
         engine.connect('focus-out', engine_focus_out);
         engine.connect('focus-in', engine_focus_in);
         engine.connect('reset', engine_reset);
+        engine.connect('disable', engine_disable);
         engine.connect('property-activate', engine_property_activate);
+        engine.connect('set-content-type', engine_set_content_type);
         engine.connect('set-cursor-location', function(eng, x, y, w, h) {
-            broadcastUI({ type: "cursor", x: x, y: y, w: w, h: h });
+            eng.cursorRect = { x: x, y: y, w: w, h: h };
+            if (previewUI && previewOwner === eng) {
+                previewUI.setCursorLocation(eng.cursorRect);
+            }
+        });
+        engine.connect('destroy', function(eng) {
+            if (previewOwner === eng) {
+                hidePreviewWindow(eng);
+            }
         });
 
-        engine.lookuptable = IBus.LookupTable.new(16, 0, true, true);        
+        engine.lookuptable = IBus.LookupTable.new(16, 0, true, true);
+        // Labels are per page position; set them once ("1." ... "16.").
+        for (let i = 1; i <= 16; i++) {
+            engine.lookuptable.append_label(IBus.Text.new_from_string(i + "."));
+        }
         resetAll(engine);
         initSetting(engine);
-        ensurePreviewDaemon();
         return engine;
     }
-    
+
     function updateEngineProperty(engine) {
         if (!engine.mode_bangla) {
             prop_mode.set_label(IBus.Text.new_from_string("English"));
@@ -154,33 +156,39 @@ if (bus.is_connected()) {
         engine.update_property(prop_mode);
     }
 
+    function setMode(engine, bangla) {
+        // Keep what was already typed instead of throwing the word away.
+        if (engine.buffertext && engine.buffertext.length > 0) {
+            commitCandidate(engine);
+        }
+        engine.mode_bangla = bangla;
+        updateEngineProperty(engine);
+        try {
+            if (engine.setting) {
+                engine.setting.set_boolean('mode-bangla', engine.mode_bangla);
+            }
+        } catch (e) {}
+    }
+
     function engine_process_key_event(engine, keyval, keycode, state) {
         // Privacy rule: Never log raw keyval, keycode, or user input text
 
-        // Check for F12 (Toggle Bangla / English mode)
-        if (keyval === IBus.KEY_F12 || keyval === IBus.F12 || keyval === 0xffc9 || keyval === 65481) {
-            let isRelease = (state & IBus.ModifierType.RELEASE_MASK) !== 0;
+        let isRelease = (state & IBus.ModifierType.RELEASE_MASK) !== 0;
+
+        // F12 toggles Bangla / English mode
+        if (keyval === KEY.F12) {
             if (!isRelease) {
-                engine.mode_bangla = !engine.mode_bangla;
-                if (engine.buffertext && engine.buffertext.length > 0) {
-                    resetAll(engine);
-                }
-                updateEngineProperty(engine);
-                try {
-                    if (engine.setting) {
-                        engine.setting.set_boolean('mode-bangla', engine.mode_bangla);
-                    }
-                } catch (e) {}
-                broadcastUI({ type: "mode", bangla: engine.mode_bangla });
+                setMode(engine, !engine.mode_bangla);
             }
             return true;
         }
 
-        // Ignore release events
-        let isRelease = (state & IBus.ModifierType.RELEASE_MASK) !== 0;
-        if (isRelease) {
+        // Ignore release events and lone modifier keys (Shift, Ctrl, Alt, Caps Lock, ...)
+        if (isRelease || isModifierKey(keyval)) {
             return false;
         }
+
+        let hasBuffer = engine.buffertext.length > 0;
 
         // Pass through keyboard shortcuts with Ctrl, Alt, Super (Mod4)
         let isControl = (state & IBus.ModifierType.CONTROL_MASK) !== 0;
@@ -188,74 +196,102 @@ if (bus.is_connected()) {
         let isSuper = (state & (IBus.ModifierType.SUPER_MASK | IBus.ModifierType.MOD4_MASK)) !== 0;
 
         if (isControl || isAlt || isSuper) {
-            if (engine.buffertext && engine.buffertext.length > 0) {
+            if (hasBuffer) {
                 commitCandidate(engine);
             }
             return false;
         }
 
-        // If in English mode, pass key events through to application directly
-        if (!engine.mode_bangla) {
+        // English mode and password fields: keys go straight to the application
+        if (!engine.mode_bangla || engine.password_field) {
+            if (hasBuffer) {
+                commitCandidate(engine);
+            }
             return false;
         }
 
-        // Pass modifier keys alone through (Shift, Control, Alt, CapsLock)
-        if (keycode == 42 || keyval == IBus.Shift_L || keyval == IBus.Shift_R ||
-            keyval == IBus.Control_L || keyval == IBus.Control_R ||
-            keyval == IBus.Alt_L || keyval == IBus.Alt_R ||
-            keyval == IBus.Caps_Lock) {
-            return false;
-        }
+        let count = engine.currentSuggestions.length;
+        let listVisible = hasBuffer && (engine.presentation === 'classic' || engine.presentation === 'system');
+        let horizontal = engine.presentation === 'system' && engine.setting_cboxorient === ORIENTATION_HORIZONTAL;
+        let isShift = (state & IBus.ModifierType.SHIFT_MASK) !== 0;
 
-        // Word boundaries and separators
-        if (keyval === IBus.space || keyval === IBus.KEY_space) {
-            if (engine.buffertext.length > 0) {
+        switch (keyval) {
+        case KEY.space:
+            if (hasBuffer) {
                 commitCandidateWithSuffix(engine, " ");
                 return true;
             }
-        } else if (keyval === IBus.Return || keyval === IBus.KEY_Return || keyval === IBus.KP_Enter) {
-            if (engine.buffertext.length > 0) {
-                let suffix = (engine.setting_switch_newline) ? "\n" : "";
-                commitCandidateWithSuffix(engine, suffix);
-                return true;
+            return false;
+
+        case KEY.Return:
+        case KEY.KP_Enter:
+            if (hasBuffer) {
+                commitCandidate(engine);
+                // With "Enter inserts a new line" the application gets the key too.
+                return !engine.setting_switch_newline;
             }
-        } else if (keyval === IBus.Tab || keyval === IBus.KEY_Tab) {
-            if (engine.buffertext.length > 0) {
-                if (engine.currentSuggestions.length > 1) {
-                    let isShift = (state & IBus.ModifierType.SHIFT_MASK) !== 0;
-                    if (isShift) {
+            return false;
+
+        case KEY.Tab:
+        case KEY.ISO_Left_Tab:
+            if (hasBuffer) {
+                if (count > 1) {
+                    if (keyval === KEY.ISO_Left_Tab || isShift) {
                         decSelection(engine);
                     } else {
                         incSelection(engine);
                     }
                     return true;
-                } else {
-                    commitCandidateWithSuffix(engine, "\t");
-                    return true;
                 }
-            }
-        } else if (keyval === IBus.period || keyval === 46) {
-            // Bengali Dari '।'
-            if (engine.buffertext.length > 0) {
-                commitCandidateWithSuffix(engine, "।");
-                return true;
-            } else {
-                engine.commit_text(IBus.Text.new_from_string("।"));
-                return true;
-            }
-        } else if (keyval === IBus.comma || keyval === 44) {
-            if (engine.buffertext.length > 0) {
-                commitCandidateWithSuffix(engine, ",");
-                return true;
+                commitCandidate(engine);
             }
             return false;
-        } else if (keyval === IBus.Escape || keyval === IBus.KEY_Escape) {
-            if (engine.buffertext.length > 0) {
+
+        case KEY.Up:
+        case KEY.KP_Up:
+        case KEY.Down:
+        case KEY.KP_Down:
+            if (hasBuffer) {
+                if (count > 1 && listVisible) {
+                    if (keyval === KEY.Up || keyval === KEY.KP_Up) {
+                        decSelection(engine);
+                    } else {
+                        incSelection(engine);
+                    }
+                    return true;
+                }
+                commitCandidate(engine);
+            }
+            return false;
+
+        case KEY.Left:
+        case KEY.KP_Left:
+        case KEY.Right:
+        case KEY.KP_Right:
+            // Left/Right pick candidates only in a horizontal list; otherwise
+            // they finish the word and move the text cursor, as on Windows.
+            if (hasBuffer) {
+                if (count > 1 && listVisible && horizontal) {
+                    if (keyval === KEY.Left || keyval === KEY.KP_Left) {
+                        decSelection(engine);
+                    } else {
+                        incSelection(engine);
+                    }
+                    return true;
+                }
+                commitCandidate(engine);
+            }
+            return false;
+
+        case KEY.Escape:
+            if (hasBuffer) {
                 resetAll(engine);
                 return true;
             }
-        } else if (keyval === IBus.BackSpace || keyval === IBus.KEY_BackSpace) {
-            if (engine.buffertext.length > 0) {
+            return false;
+
+        case KEY.BackSpace:
+            if (hasBuffer) {
                 engine.buffertext = engine.buffertext.substr(0, engine.buffertext.length - 1);
                 if (engine.buffertext.length <= 0) {
                     resetAll(engine);
@@ -264,118 +300,111 @@ if (bus.is_connected()) {
                 }
                 return true;
             }
-        } else if (keyval === IBus.Left || keyval === IBus.KP_Left || keyval === IBus.Right || keyval === IBus.KP_Right) {
-            if (engine.currentSuggestions.length > 1) {
-                if (keyval === IBus.Left || keyval === IBus.KP_Left) {
-                    decSelection(engine);
-                } else {
-                    incSelection(engine);
-                }
-                return true;
-            } else if (engine.buffertext.length > 0) {
-                commitCandidate(engine);
-                return false;
+            return false;
+
+        case KEY.period:
+            // Bengali Dari '।'
+            if (hasBuffer) {
+                commitCandidateWithSuffix(engine, "।");
+            } else {
+                engine.commit_text(IBus.Text.new_from_string("।"));
             }
-        } else if (keyval === IBus.Up || keyval === IBus.KP_Up || keyval === IBus.Down || keyval === IBus.KP_Down) {
-            if (engine.currentSuggestions.length > 1) {
-                if (keyval === IBus.Up || keyval === IBus.KP_Up) {
-                    decSelection(engine);
-                } else {
-                    incSelection(engine);
-                }
+            return true;
+
+        case KEY.comma:
+            if (hasBuffer) {
+                commitCandidateWithSuffix(engine, ",");
                 return true;
-            } else if (engine.buffertext.length > 0) {
-                commitCandidate(engine);
-                return false;
             }
+            return false;
         }
 
-        // Number keys 1-9: when suggestions exist, select and commit candidate
-        if (engine.buffertext.length > 0 && engine.currentSuggestions.length > 1) {
+        // Number keys 1-9 pick a suggestion while the list is on screen
+        if (listVisible && count > 1) {
             let numIdx = -1;
-            if (keyval >= 49 && keyval <= 57) { // '1'..'9'
-                numIdx = keyval - 49;
-            } else if (keyval >= IBus.KP_1 && keyval <= IBus.KP_9) {
-                numIdx = keyval - IBus.KP_1;
+            if (keyval >= KEY.digit1 && keyval <= KEY.digit9) {
+                numIdx = keyval - KEY.digit1;
+            } else if (keyval >= KEY.KP_1 && keyval <= KEY.KP_9) {
+                numIdx = keyval - KEY.KP_1;
             }
-            if (numIdx >= 0 && numIdx < engine.currentSuggestions.length) {
-                engine.currentSelection = numIdx;
-                commitCandidate(engine);
+            if (numIdx >= 0 && numIdx < count) {
+                selectAndCommit(engine, numIdx);
                 return true;
             }
         }
 
         // Process alphanumeric and keypad characters
         if ((keyval >= 33 && keyval <= 126) ||
-            (keyval >= IBus.KP_0 && keyval <= IBus.KP_9) ||
-             keyval == IBus.KP_Add ||
-             keyval == IBus.KP_Decimal ||
-             keyval == IBus.KP_Divide ||
-             keyval == IBus.KP_Multiply ||
-             keyval == IBus.KP_Subtract) {
-            
+            (keyval >= KEY.KP_0 && keyval <= KEY.KP_9) ||
+             keyval === KEY.KP_Add ||
+             keyval === KEY.KP_Decimal ||
+             keyval === KEY.KP_Divide ||
+             keyval === KEY.KP_Multiply ||
+             keyval === KEY.KP_Subtract) {
+
             engine.buffertext += IBus.keyval_to_unicode(keyval);
             updateCurrentSuggestions(engine);
             return true;
-        } else if (keyval == IBus.Control_L || 
-                   keyval == IBus.Control_R || 
-                   keyval == IBus.Insert || 
-                   keyval == IBus.KP_Insert || 
-                   keyval == IBus.Delete || 
-                   keyval == IBus.KP_Delete || 
-                   keyval == IBus.Home || 
-                   keyval == IBus.KP_Home || 
-                   keyval == IBus.Page_Up || 
-                   keyval == IBus.KP_Page_Up || 
-                   keyval == IBus.Page_Down || 
-                   keyval == IBus.KP_Page_Down || 
-                   keyval == IBus.End || 
-                   keyval == IBus.KP_End || 
-                   keyval == IBus.Alt_L || 
-                   keyval == IBus.Alt_R || 
-                   keyval == IBus.Super_L || 
-                   keyval == IBus.Super_R || 
-                   keyval == IBus.KP_Enter) {
-                
-                commitCandidate(engine);
+        }
+
+        // Any other key (Home, End, Delete, Page Up/Down, F-keys, ...) finishes the word
+        if (hasBuffer) {
+            commitCandidate(engine);
         }
         return false;
     }
 
-    function engine_candidate_clicked(engine, index, button, state) {
+    // A word picked by click or number key is remembered for next time,
+    // like a word chosen with Tab or the arrow keys.
+    function selectAndCommit(engine, index) {
         if (engine.buffertext.length > 0 && index >= 0 && index < engine.currentSuggestions.length) {
             engine.currentSelection = index;
-            preeditCandidate(engine);
-            suggestionBuilder.updateCandidateSelection(engine.buffertext, engine.currentSuggestions[engine.currentSelection]);
+            suggestionBuilder.updateCandidateSelection(engine.buffertext, engine.currentSuggestions[index]);
+            commitCandidate(engine);
         }
     }
 
-    var focusOutTimeoutId = 0;
+    function engine_candidate_clicked(engine, index, button, state) {
+        selectAndCommit(engine, index);
+    }
+
+    // The preedit is sent in IBus.PreeditFocusMode.COMMIT, so when the user
+    // clicks elsewhere or focus moves to another field, the client (or
+    // ibus-daemon) keeps the visible word in the field it was typed in, at
+    // that very moment. The engine must not commit it again: with IBus'
+    // global engine the same engine object is attached to the next input
+    // context right after focus-out, so a late commit_text() would put the
+    // word into the newly focused field.
+    function finishCompositionByClient(engine) {
+        if (engine.buffertext && engine.buffertext.length > 0 && engine.currentSuggestions.length > 0) {
+            let word = engine.currentSuggestions[engine.currentSelection] || engine.buffertext;
+            suggestionBuilder.stringCommitted(engine.buffertext, word);
+        }
+        resetAll(engine);
+    }
 
     function engine_focus_out(engine) {
-        if (engine.buffertext && engine.buffertext.length > 0) {
-            if (focusOutTimeoutId !== 0) {
-                GLib.source_remove(focusOutTimeoutId);
-                focusOutTimeoutId = 0;
-            }
-            // Debounce by 80ms: in Wayland/KWin environments where a window maps or
-            // focus momentarily bounces, focus_in cancels this timer before composition is aborted.
-            focusOutTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 80, () => {
-                focusOutTimeoutId = 0;
-                if (engine.buffertext && engine.buffertext.length > 0) {
-                    commitCandidate(engine);
-                }
-                return GLib.SOURCE_REMOVE;
-            });
-        }
+        // The preview belongs to the focused text field
+        hidePreviewWindow(engine);
+        finishCompositionByClient(engine);
     }
 
     function engine_reset(engine) {
-        if (focusOutTimeoutId !== 0) {
-            GLib.source_remove(focusOutTimeoutId);
-            focusOutTimeoutId = 0;
+        finishCompositionByClient(engine);
+    }
+
+    function engine_disable(engine) {
+        // Switching to another keyboard keeps the word being typed
+        finishCompositionByClient(engine);
+    }
+
+    function engine_set_content_type(engine, purpose, hints) {
+        // Never compose (or show typed text in the preview) inside password fields
+        let secret = (purpose === PURPOSE_PASSWORD || purpose === PURPOSE_PIN);
+        if (secret && engine.buffertext && engine.buffertext.length > 0) {
+            resetAll(engine);
         }
-        resetAll(engine);
+        engine.password_field = secret;
     }
 
     var proplist = new IBus.PropList();
@@ -405,36 +434,216 @@ if (bus.is_connected()) {
     proplist.append(prop_mode);
     proplist.append(propp);
 
-    function engine_focus_in(engine) {    
-        if (focusOutTimeoutId !== 0) {
-            GLib.source_remove(focusOutTimeoutId);
-            focusOutTimeoutId = 0;
-        }
+    function engine_focus_in(engine) {
         engine.register_properties(proplist);
+        updateEngineProperty(engine);
+        if (engine.buffertext && engine.buffertext.length > 0) {
+            showComposition(engine);
+        }
     }
 
-    function engine_property_activate(engine, prop_name, prop_state) {    
+    function engine_property_activate(engine, prop_name, prop_state) {
         if (prop_name === 'setup') {
             runPreferences();
         } else if (prop_name === 'mode') {
-            engine.mode_bangla = !engine.mode_bangla;
-            if (engine.buffertext && engine.buffertext.length > 0) {
-                resetAll(engine);
-            }
-            updateEngineProperty(engine);
+            setMode(engine, !engine.mode_bangla);
+        }
+    }
+
+    /* =========================================================================== */
+    /*                  Preview Window & Candidate Panel                           */
+    /* =========================================================================== */
+
+    // One preview window serves every input context. It belongs to whichever
+    // engine (text field) is currently composing.
+    var previewUI = null;
+    var previewUITried = false;
+    var previewOwner = null;
+    var uiSetting = null;
+
+    function hasKey(settings, key) {
+        try {
+            return settings.settings_schema.has_key(key);
+        } catch (e) {
             try {
-                if (engine.setting) engine.setting.set_boolean('mode-bangla', engine.mode_bangla);
-            } catch (e) {}
-            broadcastUI({ type: "mode", bangla: engine.mode_bangla });
+                return settings.list_keys().indexOf(key) !== -1;
+            } catch (e2) {
+                return false;
+            }
+        }
+    }
+
+    function getUISetting() {
+        if (!uiSetting) {
+            try {
+                uiSetting = Gio.Settings.new("com.omicronlab.avro");
+            } catch (e) {
+                uiSetting = null;
+            }
+        }
+        return uiSetting;
+    }
+
+    function readPin(s) {
+        let pinned = s && hasKey(s, 'preview-pinned') ? s.get_boolean('preview-pinned') : false;
+        let x = s && hasKey(s, 'preview-pin-x') ? s.get_int('preview-pin-x') : -1;
+        let y = s && hasKey(s, 'preview-pin-y') ? s.get_int('preview-pin-y') : -1;
+        return { pinned: pinned, x: x, y: y };
+    }
+
+    function getPreviewUI() {
+        if (previewUI || previewUITried) {
+            return previewUI;
+        }
+        previewUITried = true;
+        if (!previewModule || typeof previewModule.createPreviewWindow !== 'function') {
+            return null;
+        }
+        let s = getUISetting();
+        let pin = readPin(s);
+        previewUI = previewModule.createPreviewWindow({
+            iconPath: eevars.get_pkgdatadir() + "/icons/avro-bangla.png",
+            theme: s && hasKey(s, 'preview-theme') ? s.get_string('preview-theme') : 'classic',
+            pinned: pin.pinned,
+            pinX: pin.x,
+            pinY: pin.y,
+            onCandidateActivated: function(index) {
+                if (previewOwner) {
+                    selectAndCommit(previewOwner, index);
+                }
+            },
+            onPinChanged: function(pinned, x, y) {
+                let st = getUISetting();
+                if (!st) return;
+                try {
+                    if (x >= 0 && y >= 0 && hasKey(st, 'preview-pin-x')) {
+                        st.set_int('preview-pin-x', x);
+                        st.set_int('preview-pin-y', y);
+                    }
+                    if (hasKey(st, 'preview-pinned')) {
+                        st.set_boolean('preview-pinned', pinned);
+                    }
+                } catch (e) {}
+            }
+        });
+        if (previewUI && s) {
+            s.connect('changed', function(settings, key) {
+                if (!previewUI) return;
+                try {
+                    if (key === 'preview-theme') {
+                        previewUI.setTheme(settings.get_string('preview-theme'));
+                    } else if (key === 'preview-pinned' || key === 'preview-pin-x' || key === 'preview-pin-y') {
+                        let p = readPin(settings);
+                        previewUI.setPinned(p.pinned, p.x, p.y);
+                    }
+                } catch (e) {}
+            });
+        }
+        return previewUI;
+    }
+
+    function sessionInfo() {
+        let sessionType = (GLib.getenv("XDG_SESSION_TYPE") || "").toLowerCase();
+        let currentDesktop = (GLib.getenv("XDG_CURRENT_DESKTOP") || "").toUpperCase();
+        return {
+            wayland: sessionType === "wayland",
+            gnome: currentDesktop.indexOf("GNOME") !== -1
+        };
+    }
+
+    // How suggestions are shown while typing:
+    //   'classic' - Avro's own Windows-style Preview Window (X11 / XWayland)
+    //   'system'  - the desktop's IBus candidate panel (GNOME Shell, ibus-ui-gtk3, ...)
+    //   'none'    - inline preedit only
+    function presentationFor(engine) {
+        if (!engine.setting_switch_preview) {
+            return 'none';
+        }
+        let session = sessionInfo();
+        // On KDE Plasma (and other non-GNOME) Wayland sessions, mapping the
+        // ibus-ui-gtk3 candidate window triggers focus-out on the active editor.
+        let systemPanelSafe = !(session.wayland && !session.gnome);
+        let style = engine.setting_preview_style || 'auto';
+
+        if (style === 'system') {
+            return systemPanelSafe ? 'system' : 'none';
+        }
+        // GNOME Shell draws IBus candidates natively on Wayland
+        if (style === 'auto' && session.wayland && session.gnome) {
+            return 'system';
+        }
+        if (getPreviewUI()) {
+            return 'classic';
+        }
+        return systemPanelSafe ? 'system' : 'none';
+    }
+
+    function showPreviewWindow(engine) {
+        let ui = getPreviewUI();
+        if (!ui) return;
+        previewOwner = engine;
+        try {
+            ui.update(engine.buffertext, engine.currentSuggestions, engine.currentSelection, engine.cursorRect);
+        } catch (e) {}
+    }
+
+    function hidePreviewWindow(engine) {
+        if (previewUI && (!engine || previewOwner === engine)) {
+            try { previewUI.hide(); } catch (e) {}
+            previewOwner = null;
+        }
+    }
+
+    function showSystemPanel(engine) {
+        try {
+            engine.lookuptable.clear();
+            engine.currentSuggestions.forEach(function(word) {
+                engine.lookuptable.append_candidate(IBus.Text.new_from_string(word));
+            });
+            engine.lookuptable.set_cursor_pos(engine.currentSelection);
+            // The English text typed so far, shown above the list like on Windows
+            engine.update_auxiliary_text(IBus.Text.new_from_string(engine.buffertext), true);
+            if (typeof engine.update_lookup_table_fast === 'function') {
+                engine.update_lookup_table_fast(engine.lookuptable, true);
+            } else {
+                engine.update_lookup_table(engine.lookuptable, true);
+            }
+        } catch (e) {
+            hideSystemPanel(engine);
+        }
+    }
+
+    function hideSystemPanel(engine) {
+        try { engine.hide_lookup_table(); } catch (e) {}
+        try { engine.hide_auxiliary_text(); } catch (e) {}
+    }
+
+    function showComposition(engine) {
+        // Preedit is the primary composition channel. Update it first so a
+        // preview failure can never make typed text vanish.
+        preeditCandidate(engine);
+
+        let mode = presentationFor(engine);
+        engine.presentation = mode;
+        if (mode !== 'classic') {
+            hidePreviewWindow(engine);
+        }
+        if (mode !== 'system') {
+            hideSystemPanel(engine);
+        }
+        if (mode === 'classic') {
+            showPreviewWindow(engine);
+        } else if (mode === 'system') {
+            showSystemPanel(engine);
         }
     }
 
     /* =========================================================================== */
     /*                  Engine Utility Functions                                   */
     /* =========================================================================== */
-    
+
     var suggestionBuilder = new suggestion.SuggestionBuilder();
-    
+
     function initSetting(engine) {
         try {
             engine.setting = Gio.Settings.new("com.omicronlab.avro");
@@ -444,25 +653,31 @@ if (bus.is_connected()) {
             readSetting(engine);
         } catch (e) {
             // Default settings fallback if GSettings schema is not yet compiled
+            engine.setting = null;
             engine.setting_switch_preview = true;
             engine.setting_switch_dict = true;
             engine.setting_switch_newline = false;
             engine.setting_lutable_size = 15;
-            engine.lookuptable.set_orientation(0);
+            engine.setting_cboxorient = 1;
+            engine.setting_preview_style = 'auto';
+            engine.lookuptable.set_orientation(1);
             engine.lookuptable.set_page_size(15);
         }
     }
-    
+
     function readSetting(engine) {
         if (!engine.setting) return;
         try {
             engine.setting_switch_preview = engine.setting.get_boolean('switch-preview');
             engine.setting_switch_dict = engine.setting.get_boolean('switch-dict');
             engine.setting_switch_newline = engine.setting.get_boolean('switch-newline');
-            engine.lookuptable.set_orientation(engine.setting.get_int('cboxorient'));
+            engine.setting_cboxorient = engine.setting.get_int('cboxorient');
+            engine.lookuptable.set_orientation(engine.setting_cboxorient);
             engine.setting_lutable_size = engine.setting.get_int('lutable-size');
             engine.lookuptable.set_page_size(engine.setting_lutable_size);
-            
+            engine.setting_preview_style = hasKey(engine.setting, 'preview-style')
+                ? engine.setting.get_string('preview-style') : 'auto';
+
             var dictPref = suggestionBuilder.getPref();
             dictPref.dictEnable = engine.setting_switch_dict;
             suggestionBuilder.setPref(dictPref);
@@ -470,25 +685,33 @@ if (bus.is_connected()) {
             try {
                 let m = engine.setting.get_boolean('mode-bangla');
                 if (engine.mode_bangla !== m) {
+                    if (engine.buffertext && engine.buffertext.length > 0) {
+                        commitCandidate(engine);
+                    }
                     engine.mode_bangla = m;
                     updateEngineProperty(engine);
                 }
             } catch (e) {}
+
+            // Apply preview changes immediately if a word is being typed
+            if (engine.buffertext && engine.buffertext.length > 0) {
+                showComposition(engine);
+            }
         } catch (e) {}
     }
-    
+
     function resetAll(engine) {
         engine.currentSuggestions = [];
         engine.currentSelection = 0;
-        
+
         engine.buffertext = "";
         engine.lookuptable.clear();
         engine.hide_preedit_text();
         engine.hide_auxiliary_text();
         engine.hide_lookup_table();
-        broadcastUI({ type: "hide" });
+        hidePreviewWindow(engine);
     }
-    
+
     function updateCurrentSuggestions(engine) {
         var res = null;
         try {
@@ -505,54 +728,10 @@ if (bus.is_connected()) {
         }
         engine.currentSelection = Math.min(res && res['prevSelection'] || 0, engine.currentSuggestions.length - 1);
         if (engine.currentSelection < 0) engine.currentSelection = 0;
-        
-        fillLookupTable(engine);
-        broadcastUI({
-            type: "composition",
-            raw: engine.buffertext,
-            candidates: engine.currentSuggestions,
-            selected: engine.currentSelection
-        });
-    }
-    
-    function fillLookupTable(engine) {
-        // Preedit is the primary composition channel. Update it first so a
-        // panel-specific lookup-table failure can never make typed text vanish.
-        preeditCandidate(engine);
 
-        // Check if desktop environment is Wayland non-GNOME (e.g. KDE Plasma Wayland).
-        // On KDE Wayland, ibus-ui-gtk3 candidate window mappings trigger focus-out
-        // on active text editors. In such environments, our dedicated non-focus-stealing
-        // avro-preview and inline preedit provide candidate presentation cleanly.
-        let sessionType = (GLib.getenv("XDG_SESSION_TYPE") || "").toLowerCase();
-        let currentDesktop = (GLib.getenv("XDG_CURRENT_DESKTOP") || "").toUpperCase();
-        let isWayland = sessionType === "wayland";
-        let isGnome = currentDesktop.indexOf("GNOME") !== -1;
-        let bypassDesktopPopup = isWayland && !isGnome;
-
-        if (!bypassDesktopPopup && engine.setting_switch_preview && engine.setting_switch_dict && engine.currentSuggestions.length > 1) {
-            try {
-                engine.lookuptable.clear();
-                engine.currentSuggestions.forEach(function(word, idx) {
-                    let wtext = IBus.Text.new_from_string(word);
-                    let wlabel = IBus.Text.new_from_string((idx + 1) + ". ");
-                    engine.lookuptable.append_candidate(wtext);
-                    engine.lookuptable.append_label(wlabel);
-                });
-                engine.lookuptable.set_cursor_pos(engine.currentSelection);
-                if (typeof engine.update_lookup_table_fast === 'function') {
-                    engine.update_lookup_table_fast(engine.lookuptable, true);
-                } else {
-                    engine.update_lookup_table(engine.lookuptable, true);
-                }
-            } catch (e) {
-                try { engine.hide_lookup_table(); } catch (ignored) {}
-            }
-        } else {
-            try { engine.hide_lookup_table(); } catch (e) {}
-        }
+        showComposition(engine);
     }
-    
+
     function preeditCandidate(engine) {
         if (engine.currentSuggestions.length <= 0) {
             engine.hide_preedit_text();
@@ -569,9 +748,15 @@ if (bus.is_connected()) {
             selectedWord.length
         ));
         preeditText.set_attributes(attrs);
-        engine.update_preedit_text(preeditText, Array.from(selectedWord).length, true);
+        let cursorPos = Array.from(selectedWord).length;
+        if (typeof engine.update_preedit_text_with_mode === 'function') {
+            // COMMIT: on focus change or reset the visible word stays in the field
+            engine.update_preedit_text_with_mode(preeditText, cursorPos, true, PREEDIT_COMMIT);
+        } else {
+            engine.update_preedit_text(preeditText, cursorPos, true);
+        }
     }
-    
+
     function commitCandidate(engine) {
         commitCandidateWithSuffix(engine, "");
     }
@@ -589,58 +774,41 @@ if (bus.is_connected()) {
         } else if (suffix) {
             engine.commit_text(IBus.Text.new_from_string(suffix));
         }
-        
+
         resetAll(engine);
     }
-    
+
     function incSelection(engine) {
         if (engine.currentSuggestions.length <= 0) return;
         var lastIndex = engine.currentSuggestions.length - 1;
-        
+
         if ((engine.currentSelection + 1) > lastIndex) {
             engine.currentSelection = -1;
-        } 
+        }
         ++engine.currentSelection;
-        preeditCandidate(engine);
-        
         suggestionBuilder.updateCandidateSelection(engine.buffertext, engine.currentSuggestions[engine.currentSelection]);
-        broadcastUI({
-            type: "composition",
-            raw: engine.buffertext,
-            candidates: engine.currentSuggestions,
-            selected: engine.currentSelection
-        });
+        showComposition(engine);
     }
-    
+
     function decSelection(engine) {
         if (engine.currentSuggestions.length <= 0) return;
         if ((engine.currentSelection - 1) < 0) {
             engine.currentSelection = engine.currentSuggestions.length;
         }
         --engine.currentSelection;
-        preeditCandidate(engine);
-        
         suggestionBuilder.updateCandidateSelection(engine.buffertext, engine.currentSuggestions[engine.currentSelection]);
-        broadcastUI({
-            type: "composition",
-            raw: engine.buffertext,
-            candidates: engine.currentSuggestions,
-            selected: engine.currentSelection
-        });
+        showComposition(engine);
     }
-    
+
     function runPreferences() {
+        // Always a separate process: a GTK main loop must never block the engine.
         try {
-            if (!prefwindow) {
-                prefwindow = imports.pref;
-            }
-            if (prefwindow && typeof prefwindow.runpref === 'function') {
-                prefwindow.runpref();
+            let launcher = GLib.find_program_in_path("avro-preferences");
+            if (launcher) {
+                GLib.spawn_command_line_async(launcher);
                 return;
             }
         } catch (e) {}
-
-        // Fallback: spawn standalone preferences process
         try {
             let prefApp = eevars.get_pkgdatadir() + "/preferences/pref.js";
             GLib.spawn_command_line_async("gjs " + prefApp + " --standalone");
@@ -659,7 +827,7 @@ if (bus.is_connected()) {
         component = new IBus.Component({
             name: "org.freedesktop.IBus.Avro",
             description: "Avro Phonetic Bengali Input Method",
-            version: "1.0.0",
+            version: eevars.get_version(),
             license: "MPL-2.0",
             author: "Sarim Khan <sarim2005@gmail.com>",
             homepage: "https://github.com/sarim/ibus-avro",
@@ -670,7 +838,7 @@ if (bus.is_connected()) {
         component = new IBus.Component({
             name: "org.freedesktop.IBus.Avro",
             description: "Avro Phonetic Bengali Input Method",
-            version: "1.0.0",
+            version: eevars.get_version(),
             license: "MPL-2.0",
             author: "Sarim Khan <sarim2005@gmail.com>",
             homepage: "https://github.com/sarim/ibus-avro",
@@ -707,7 +875,7 @@ if (bus.is_connected()) {
 
     component.add_engine(avroenginedesc1);
     component.add_engine(avroenginedesc2);
-    
+
     if (exec_by_ibus) {
         bus.request_name("org.freedesktop.IBus.Avro", 0);
     } else {

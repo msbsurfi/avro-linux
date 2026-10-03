@@ -2,7 +2,7 @@
 <schemalist>
   <schema id="com.omicronlab.avro" path="/com/omicronlab/avro/">
     <key type="b" name="switch-preview">
-      <default>false</default>
+      <default>true</default>
       <summary>switch-preview</summary>
       <description>Whether Preview window (auxiliary text, suggestions) will be shown</description>
     </key>
@@ -21,17 +21,122 @@
       <range min="5" max="15"/>
       <summary>lutable-size</summary>
       <description>Dictionary suggestion lookup table size</description>
-    </key>    
+    </key>
     <key type="i" name="cboxorient">
-      <default>0</default>
+      <default>1</default>
       <range min="0" max="1"/>
       <summary>cboxorient</summary>
-      <description>Orientation of Lookup Table</description>
-    </key>    
+      <description>Orientation of the desktop (IBus) candidate list: 0 = horizontal, 1 = vertical</description>
+    </key>
+    <key type="s" name="preview-style">
+      <choices>
+        <choice value="auto"/>
+        <choice value="classic"/>
+        <choice value="system"/>
+      </choices>
+      <default>'auto'</default>
+      <summary>Preview window style</summary>
+      <description>'classic' shows Avro's own Windows-style Preview Window, 'system' uses the desktop's IBus candidate panel, 'auto' picks classic wherever it can be positioned (X11/XWayland) and the desktop panel on GNOME Wayland</description>
+    </key>
+    <key type="s" name="preview-theme">
+      <choices>
+        <choice value="classic"/>
+        <choice value="dark"/>
+      </choices>
+      <default>'classic'</default>
+      <summary>Preview window theme</summary>
+      <description>Colour theme of the Windows-style Preview Window</description>
+    </key>
+    <key type="b" name="preview-pinned">
+      <default>false</default>
+      <summary>Preview window pinned</summary>
+      <description>Whether the Preview Window stays at a fixed position instead of following the text cursor</description>
+    </key>
+    <key type="i" name="preview-pin-x">
+      <default>-1</default>
+      <summary>Pinned preview window X position</summary>
+      <description>Screen X position of the pinned Preview Window (-1 = not set)</description>
+    </key>
+    <key type="i" name="preview-pin-y">
+      <default>-1</default>
+      <summary>Pinned preview window Y position</summary>
+      <description>Screen Y position of the pinned Preview Window (-1 = not set)</description>
+    </key>
     <key type="b" name="mode-bangla">
       <default>true</default>
       <summary>Input Mode</summary>
       <description>Whether Avro is currently in Bangla mode (true) or English passthrough (false)</description>
+    </key>
+    <key type="s" name="bangla-layout">
+      <default>'ibus-avro'</default>
+      <summary>Bangla keyboard layout</summary>
+      <description>The IBus keyboard the TopBar switches to for Bangla: 'ibus-avro' (Avro Phonetic) or a Bangla XKB layout such as 'xkb:bd::ben' (National (Jatiya)), 'xkb:bd:probhat:ben' (Probhat) or 'xkb:in:ben_bornona:ben' (Bornona)</description>
+    </key>
+    <key type="i" name="topbar-x">
+      <default>-1</default>
+      <summary>TopBar X position</summary>
+      <description>Screen X position of the TopBar (-1 = default). As in Avro Keyboard, only X is remembered; the bar docks to the top at start-up.</description>
+    </key>
+    <key type="s" name="topbar-skin">
+      <choices>
+        <choice value="classic"/>
+        <choice value="royal"/>
+        <choice value="mint"/>
+        <choice value="light"/>
+      </choices>
+      <default>'classic'</default>
+      <summary>TopBar skin</summary>
+      <description>Look of the TopBar: classic (dark), royal (blue), mint (flat green) or light</description>
+    </key>
+    <key type="b" name="topbar-transparent">
+      <default>true</default>
+      <summary>Make TopBar semi transparent when it is inactive</summary>
+      <description>Fade the TopBar to the transparency level after 5 seconds without mouse activity or mode changes (needs a compositing window manager)</description>
+    </key>
+    <key type="i" name="topbar-transparency-level">
+      <range min="0" max="255"/>
+      <default>80</default>
+      <summary>TopBar transparency level</summary>
+      <description>Opacity of the inactive TopBar: 0 = fully transparent, 255 = fully visible</description>
+    </key>
+    <key type="s" name="topbar-x-button">
+      <choices>
+        <choice value="menu"/>
+        <choice value="minimize"/>
+        <choice value="exit"/>
+      </choices>
+      <default>'menu'</default>
+      <summary>TopBar power button action</summary>
+      <description>What a left click on the TopBar power button does: 'menu' (show both options), 'minimize' (jump to the system tray) or 'exit' (close the TopBar). A right click always shows the menu.</description>
+    </key>
+    <key type="s" name="topbar-startup-ui">
+      <choices>
+        <choice value="topbar"/>
+        <choice value="tray"/>
+        <choice value="last"/>
+      </choices>
+      <default>'last'</default>
+      <summary>TopBar start-up mode</summary>
+      <description>How the TopBar starts: 'topbar' (on the desktop), 'tray' (system tray icon) or 'last' (the mode used last time)</description>
+    </key>
+    <key type="s" name="topbar-last-ui">
+      <choices>
+        <choice value="topbar"/>
+        <choice value="tray"/>
+      </choices>
+      <default>'topbar'</default>
+      <summary>TopBar mode used last time</summary>
+      <description>Internal: whether the TopBar was last shown on the desktop or in the system tray</description>
+    </key>
+    <key type="i" name="topbar-hint-count">
+      <default>0</default>
+      <summary>TopBar hint counter</summary>
+      <description>Internal: how many times the first-run "Click here to start Bangla typing" balloon has been shown (at most 2)</description>
+    </key>
+    <key type="i" name="tray-hint-count">
+      <default>0</default>
+      <summary>Tray hint counter</summary>
+      <description>Internal: how many times the "Avro Keyboard is running here" notification has been shown (at most 2)</description>
     </key>
 
   </schema>

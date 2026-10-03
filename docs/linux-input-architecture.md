@@ -41,19 +41,17 @@ To achieve the seamless Windows Avro experience without triggering Linux desktop
 |  - Autocorrect (autocorrect.js)                             |
 |  - User Dictionary (userdictionary.js)                      |
 |  - State management & atomic commit                         |
+|  - Windows-style Preview Window (src/ui/floating-preview.js)|
+|    drawn in-process: X11 override-redirect popup, no focus  |
 +-------------------------------------------------------------+
                               │
-                              │ Unix Domain Socket IPC
-                              │ ($XDG_RUNTIME_DIR/avro-ui.sock)
+                              │ GSettings (com.omicronlab.avro)
                               ▼
 +-------------------------------------------------------------+
-|               Avro Presentation UI Subsystem                |
-|  1. Floating TopBar (src/standalone/topbar.js)              |
-|     - Always-on-top, sticky, non-focus-stealing             |
-|     - F12 mode toggle & layout switcher                     |
-|  2. Dedicated Floating Preview (src/ui/floating-preview.js)  |
-|     - Real-time phonetic preview & candidate badges          |
-|     - Zero focus theft (accept_focus = false)               |
+|               Avro Desktop Tools                            |
+|  - Floating TopBar (src/standalone/topbar.js)               |
+|    always-on-top, sticky, non-focus-stealing, F12 / mode    |
+|  - Preferences (src/preferences/pref.js)                    |
 +-------------------------------------------------------------+
 ```
 
@@ -67,50 +65,26 @@ In earlier implementations, relying on generic desktop candidate popups (`ibus-u
 **The Avro Linux Solution**:
 * **Direct Inline Preedit**: The transliterated Bengali text is rendered directly inline in the active editor using `engine.update_preedit_text()`.
 * **Atomic Suffix Commits**: When committing on word boundary keys (Space, Return, Tab, Period), the engine emits `engine.commit_text()` with the punctuation suffix and returns `true` (consuming the event), preventing client-side double keystrokes.
-* **Non-Focus-Stealing Preview UI**: The dedicated Avro preview window sets:
-  ```javascript
-  window.set_type_hint(Gdk.WindowTypeHint.TOOLTIP);
-  window.set_accept_focus(false);
-  window.set_focus_on_map(false);
-  window.set_keep_above(true);
-  window.stick();
-  ```
-  This window receives composition updates from the engine via a local Unix socket without ever competing with the compositor for keyboard focus.
+* **Non-Focus-Stealing Preview Window**: The engine imports `src/ui/floating-preview.js` and draws the Windows-style Preview Window itself, as a `Gtk.WindowType.POPUP` window. On X11 (and XWayland) that is an override-redirect window: the window manager never manages or focuses it, so mapping it can never send `focus-out` to the editor. GTK is forced onto the X11 backend for this window, because only X11 lets a popup be placed at absolute screen coordinates (the caret rectangle from `set-cursor-location`).
 
 ---
 
-## 3. Communication Protocol (Socket IPC)
+## 3. Preview Presentation
 
-The engine exposes a lightweight, local Unix domain socket at:
-`${XDG_RUNTIME_DIR:-/tmp}/avro-ui.sock`
+The engine updates the preedit first, then the preview, on every key, in the same process (no IPC):
 
-### Message Schema:
-1. **Composition Update**:
-   ```json
-   {
-     "type": "composition",
-     "raw": "ami",
-     "preview": "আমি",
-     "candidates": ["আমি", "আমী"],
-     "selected": 0,
-     "visible": true
-   }
-   ```
-2. **Hide / Reset**:
-   ```json
-   {
-     "type": "hide"
-   }
-   ```
-3. **Mode Toggle**:
-   ```json
-   {
-     "type": "mode",
-     "bangla": true
-   }
-   ```
+| Situation | What shows the suggestions |
+| :--- | :--- |
+| X11 session (XFCE, MATE, Cinnamon, GNOME/KDE on Xorg, xrdp) | Avro Preview Window |
+| GNOME Wayland (`preview-style` = `auto`) | GNOME Shell's IBus candidate panel: typed text as auxiliary text above a vertical list |
+| KDE Plasma / other Wayland with XWayland | Avro Preview Window through XWayland |
+| `preview-style` = `system` | The desktop IBus candidate panel (not on non-GNOME Wayland, where it steals focus) |
+| `switch-preview` = false | Inline preedit only |
 
-If no UI client is connected to the socket, the engine continues processing keystrokes with inline preedit without any performance penalty or blocking.
+Preview settings (`com.omicronlab.avro`): `switch-preview`, `preview-style` (`auto`/`classic`/`system`), `preview-theme` (`classic`/`dark`), `preview-pinned`, `preview-pin-x`, `preview-pin-y`. The TopBar's 👁 button and `avro-preview` toggle `switch-preview`; `avro-preview --demo` shows the window with sample suggestions.
+
+### 3.1 Focus changes keep the word in the right field
+The preedit is sent with `IBus.PreeditFocusMode.COMMIT`. When focus moves or the application resets the input context (for example a click elsewhere in the text), the client (GTK, Qt, Chromium) or ibus-daemon keeps the visible word in the field it was typed in, at that moment. The engine then only clears its own state. It must not call `commit_text()` itself: with IBus' global engine the same engine object is attached to the next input context immediately after `focus-out`, so a late commit would land in the newly focused field.
 
 ---
 
