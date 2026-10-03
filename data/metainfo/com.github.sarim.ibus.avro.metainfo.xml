@@ -21,7 +21,7 @@
   <url type="homepage">https://github.com/sarim/ibus-avro</url>
   <url type="bugtracker">https://github.com/sarim/ibus-avro/issues</url>
   <developer id="com.github.avro-linux">
-    <name>MD Shifat Bin Siddique Urfi and Avro Linux Contributors</name>
+    <name>Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79), MD Mehedi Hasan (BUET, 2021-22), and Avro Linux Contributors</name>
   </developer>
   <icon type="stock">avro-bangla</icon>
   <provides>

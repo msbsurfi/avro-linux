@@ -3,7 +3,7 @@
 
 SHELL := /bin/bash
 # The one place the version number lives; everything else reads it from here.
-VERSION := 1.2.0
+VERSION := 1.3.0
 prefix ?= /usr
 pkgdatadir ?= $(prefix)/share/avro-linux
 libexecdir ?= $(prefix)/libexec/avro-linux
@@ -77,6 +77,7 @@ install: build
 	install -d -m 0755 $(DESTDIR)$(datadir)/doc/avro-linux
 	install -d -m 0755 $(DESTDIR)$(datadir)/fontconfig/conf.avail
 	install -d -m 0755 $(DESTDIR)$(sysconfdir)/fonts/conf.d
+	install -d -m 0755 $(DESTDIR)$(sysconfdir)/profile.d
 
 	# Command-line binary launchers
 	install -m 0755 bin/avro $(DESTDIR)$(prefix)/bin/avro
@@ -127,6 +128,9 @@ install: build
 	# headline (matra) breaks over letters such as আ and ম
 	install -m 0644 data/fontconfig/64-avro-bengali.conf $(DESTDIR)$(datadir)/fontconfig/conf.avail/64-avro-bengali.conf
 	ln -sf $(datadir)/fontconfig/conf.avail/64-avro-bengali.conf $(DESTDIR)$(sysconfdir)/fonts/conf.d/64-avro-bengali.conf
+
+	# Session input method environment variables
+	install -m 0644 data/profile.d/avro-linux.sh $(DESTDIR)$(sysconfdir)/profile.d/avro-linux.sh
 
 	# Integration files
 	install -m 0644 data/ibus/ibus-avro.xml $(DESTDIR)$(datadir)/ibus/component/ibus-avro.xml

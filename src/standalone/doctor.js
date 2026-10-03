@@ -3,7 +3,7 @@
     =============================================================================
     Avro Linux — Avro Doctor (Remastered Diagnostic & Health Check Tool)
     SPDX-License-Identifier: MPL-2.0
-    Developer & Maintainer: MD Shifat Bin Siddique Urfi
+    Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)
     =============================================================================
 */
 
@@ -146,6 +146,80 @@ function runDiagnosticCheck() {
         }
     } catch (e) {}
 
+    // Check IBus version
+    report.ibusVersion = "Unknown";
+    try {
+        let [ok, out] = GLib.spawn_command_line_sync("ibus version");
+        if (ok && out) {
+            let str = String.fromCharCode.apply(null, out).trim();
+            report.ibusVersion = str || "Unknown";
+        }
+    } catch (e) {}
+
+    // Check ibus-avro component file
+    report.componentFile = false;
+    let componentPaths = [
+        "/usr/share/ibus/component/avro.xml",
+        "/usr/share/ibus/component/ibus-avro.xml",
+        "/usr/local/share/ibus/component/avro.xml"
+    ];
+    for (let cp of componentPaths) {
+        if (GLib.file_test(cp, GLib.FileTest.EXISTS)) {
+            report.componentFile = cp;
+            break;
+        }
+    }
+    if (!report.componentFile) {
+        report.issues.push("IBus component file for ibus-avro not found in /usr/share/ibus/component/.");
+        report.recommendations.push("Reinstall avro-linux: sudo dpkg -i avro-linux_*.deb");
+    }
+
+    // Check embed-preedit-text (required for live inline typing in VS Code / Konsole)
+    report.embedPreedit = "unknown";
+    try {
+        let [ok, out] = GLib.spawn_command_line_sync("gsettings get org.freedesktop.ibus.general embed-preedit-text");
+        if (ok && out) {
+            report.embedPreedit = String.fromCharCode.apply(null, out).trim();
+            if (report.embedPreedit !== "true") {
+                report.issues.push("IBus embed-preedit-text is not enabled (value: " + report.embedPreedit + ").");
+                report.recommendations.push("Run: gsettings set org.freedesktop.ibus.general embed-preedit-text true");
+            }
+        }
+    } catch (e) {}
+
+    // Check GNOME input sources (only if on GNOME)
+    report.gnomeInputSources = "N/A";
+    try {
+        let desktop = (GLib.getenv("XDG_CURRENT_DESKTOP") || "").toUpperCase();
+        if (desktop.indexOf("GNOME") !== -1) {
+            let [ok, out] = GLib.spawn_command_line_sync("gsettings get org.gnome.desktop.input-sources sources");
+            if (ok && out) {
+                report.gnomeInputSources = String.fromCharCode.apply(null, out).trim();
+                if (report.gnomeInputSources.indexOf("ibus") === -1) {
+                    report.issues.push("GNOME input sources do not include IBus: " + report.gnomeInputSources);
+                    report.recommendations.push("Add IBus as input source in GNOME Settings → Keyboard.");
+                }
+            }
+        }
+    } catch (e) {}
+
+    // Check system locale
+    report.locale = "Unknown";
+    try {
+        let [ok, out] = GLib.spawn_command_line_sync("locale");
+        if (ok && out) {
+            let str = String.fromCharCode.apply(null, out).trim();
+            report.locale = str.split("\n")[0] || "Unknown";
+        }
+    } catch (e) {}
+
+    // Check profile.d env file exists
+    report.profileEnvFile = GLib.file_test("/etc/profile.d/avro-linux.sh", GLib.FileTest.EXISTS);
+    if (!report.profileEnvFile) {
+        report.issues.push("/etc/profile.d/avro-linux.sh is missing (IM env vars won't auto-set on login).");
+        report.recommendations.push("Reinstall avro-linux: sudo dpkg -i avro-linux_*.deb");
+    }
+
     return report;
 }
 
@@ -153,7 +227,7 @@ function formatReportText(report) {
     let lines = [];
     lines.push("==================================================");
     lines.push("          AVRO LINUX SYSTEM DIAGNOSTIC REPORT     ");
-    lines.push("       Remastered by MD Shifat Bin Siddique Urfi   ");
+    lines.push("  Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) & MD Mehedi Hasan (BUET, 2021-22)  ");
     lines.push("==================================================");
     lines.push("Timestamp:           " + report.timestamp);
     lines.push("Operating System:    " + report.os);
@@ -161,18 +235,28 @@ function formatReportText(report) {
     lines.push("Session Type:        " + report.session + " (Wayland: " + report.waylandDisplay + ", X11: " + report.x11Display + ")");
     lines.push("");
     lines.push("--- IBus Subsystem ---");
+    lines.push("IBus Version:        " + (report.ibusVersion || "Unknown"));
     lines.push("IBus Daemon Running: " + (report.ibusRunning ? "YES [OK]" : "NO [FAIL]"));
     lines.push("ibus-avro Registered:" + (report.ibusRegistered ? "YES [OK]" : "NO [FAIL]"));
     lines.push("Active Engine:       " + report.ibusActiveEngine + (report.ibusActiveEngine === "ibus-avro" ? " [OK]" : " [SWITCH NEEDED]"));
+    lines.push("Component File:      " + (report.componentFile ? report.componentFile + " [OK]" : "NOT FOUND [FAIL]"));
+    lines.push("Embed Preedit Text:  " + (report.embedPreedit === "true" ? "Enabled [OK]" : report.embedPreedit + " [FAIL — live typing won't work]"));
     lines.push("");
     lines.push("--- Environment Variables ---");
-    lines.push("GTK_IM_MODULE:       " + report.envGtk);
-    lines.push("QT_IM_MODULE:        " + report.envQt);
-    lines.push("XMODIFIERS:          " + report.envXmod);
+    lines.push("GTK_IM_MODULE:       " + report.envGtk + (report.envGtk === "ibus" ? " [OK]" : " [WRONG — should be 'ibus']"));
+    lines.push("QT_IM_MODULE:        " + report.envQt + (report.envQt === "ibus" ? " [OK]" : " [WRONG — should be 'ibus']"));
+    lines.push("XMODIFIERS:          " + report.envXmod + (report.envXmod.indexOf("@im=ibus") !== -1 ? " [OK]" : " [WRONG]"));
+    lines.push("Profile Env Script:  " + (report.profileEnvFile ? "/etc/profile.d/avro-linux.sh [OK]" : "MISSING [FAIL]"));
     lines.push("");
     lines.push("--- Configuration & Fonts ---");
     lines.push("GSettings Schema:    " + (report.schemaValid ? "VALID [OK]" : "MISSING [FAIL]"));
     lines.push("Bengali Fonts Found: " + (report.bengaliFonts.length > 0 ? report.bengaliFonts.join(", ") : "None detected"));
+    lines.push("");
+    lines.push("--- System ---");
+    lines.push("System Locale:       " + (report.locale || "Unknown"));
+    if (report.gnomeInputSources && report.gnomeInputSources !== "N/A") {
+        lines.push("GNOME Input Sources: " + report.gnomeInputSources);
+    }
     lines.push("");
     if (report.issues.length === 0) {
         lines.push("STATUS: ALL CHECKS PASSED — Avro Linux is fully configured and operational!");
@@ -310,13 +394,18 @@ function runDoctorGUI() {
         addCheck("daemon", "IBus daemon", "The input method service that runs Avro"),
         addCheck("registered", "Avro engine registered", "ibus-avro is known to IBus"),
         addCheck("active", "Active input engine", "Engine IBus is using right now"),
+        addCheck("component", "Component file", "ibus-avro .xml file in /usr/share/ibus/component/"),
+        addCheck("preedit", "Embed preedit text", "Live inline typing (needed for VS Code, Konsole, etc.)"),
         addCheck("schema", "Avro settings", "GSettings schema com.omicronlab.avro"),
+        addCheck("envvars", "IM environment vars", "GTK_IM_MODULE, QT_IM_MODULE, XMODIFIERS"),
+        addCheck("profile", "Profile env script", "/etc/profile.d/avro-linux.sh"),
         addCheck("fonts", "Bengali fonts", "Fonts that can display Bengali text")
     ]);
     vbox.pack_start(checksCard, false, false, 0);
 
     function setCheck(key, text, kind) {
         let b = checkRows[key];
+        if (!b) return;
         let ctx = b.get_style_context();
         ["ok", "warn", "err", "info"].forEach(k => ctx.remove_class("avro-badge-" + k));
         ctx.add_class("avro-badge-" + kind);
@@ -388,7 +477,15 @@ function runDoctorGUI() {
         setCheck("registered", r.ibusRegistered ? "Registered" : "Missing", r.ibusRegistered ? "ok" : "err");
         let active = r.ibusActiveEngine && r.ibusActiveEngine !== "None" ? r.ibusActiveEngine : "None";
         setCheck("active", active, /avro/i.test(active) ? "ok" : "warn");
+        setCheck("component", r.componentFile ? "Found" : "Missing", r.componentFile ? "ok" : "err");
+        setCheck("preedit", r.embedPreedit === "true" ? "Enabled" : (r.embedPreedit || "Unknown"), r.embedPreedit === "true" ? "ok" : "err");
         setCheck("schema", r.schemaValid ? "Valid" : "Not found", r.schemaValid ? "ok" : "err");
+
+        // Env vars: ok only if all 3 are correct
+        let envOk = r.envGtk === "ibus" && r.envQt === "ibus" && r.envXmod.indexOf("@im=ibus") !== -1;
+        setCheck("envvars", envOk ? "All set" : "Issues found", envOk ? "ok" : "warn");
+        setCheck("profile", r.profileEnvFile ? "Present" : "Missing", r.profileEnvFile ? "ok" : "err");
+
         let nf = (r.bengaliFonts || []).length;
         setCheck("fonts", nf > 0 ? nf + " found" : "None", nf > 0 ? "ok" : "warn");
 

@@ -1,13 +1,13 @@
 Avro Linux (Remastered Edition)
-Copyright (c) 2026 MD Shifat Bin Siddique Urfi.
+Copyright (c) 2026 MD Shifat Bin Siddique Urfi, MD Mehedi Hasan.
 Copyright (c) 2024-2026 Avro Linux Project Contributors.
 
 This software is licensed under the Mozilla Public License, Version 2.0 (MPL-2.0).
 A copy of the license is included in the LICENSE file.
 
 REMASTERED LINUX EDITION:
-Remastered by MD Shifat Bin Siddique Urfi <msbsu@github.com> for modern Linux distributions
-including Ubuntu 24.04, 26.04, Debian 12 (Bookworm), and Debian 13 (Trixie).
+Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)
+for modern Linux distributions including Ubuntu 24.04, 26.04, Debian 12 (Bookworm), and Debian 13 (Trixie).
 Features standalone Windows-style floating sticky TopBar, standalone Avro Pad with live phonetic
 composition, Unicode <-> Bijoy converter, visual layout viewer, and resilient IBus integration.
 

@@ -3,7 +3,7 @@
     Avro Linux — Shared Modern Theme (Fluent / Windows 11 inspired)
     SPDX-License-Identifier: MPL-2.0
     Part of Avro Linux
-    Lead Developer & Remaster Maintainer: MD Shifat Bin Siddique Urfi
+    Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)
 
     One look for every Avro window: rounded cards, an accent colour, a clean
     header bar, sidebar navigation and automatic light / dark palettes.
@@ -385,24 +385,64 @@ function headerBar(opts) {
 */
 function _addWindowControls(hb, kinds) {
     let box = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 2 });
-    let maxBtn = null;
     kinds.forEach(kind => {
         let icon = kind === 'maximize' ? 'avro-maximize-symbolic' : 'avro-' + kind + '-symbolic';
         let b = new Gtk.Button({ relief: Gtk.ReliefStyle.NONE, can_focus: false, valign: Gtk.Align.CENTER });
-        b.add(Gtk.Image.new_from_icon_name(icon, Gtk.IconSize.BUTTON));
+        let img = Gtk.Image.new_from_icon_name(icon, Gtk.IconSize.BUTTON);
+        b.add(img);
         let ctx = b.get_style_context();
         ctx.add_class('avro-winctl');
         if (kind === 'close') ctx.add_class('avro-winctl-close');
-        b.set_tooltip_text(kind === 'minimize' ? 'Minimize' : kind === 'maximize' ? 'Maximize' : 'Close');
+        b.set_tooltip_text(kind === 'minimize' ? 'Minimize' : kind === 'maximize' ? 'Maximize / Restore' : 'Close');
         b.connect('clicked', () => {
-            let w = hb.get_toplevel();
-            if (!w || !w.get_window) return;
-            if (kind === 'close') w.close();
-            else if (kind === 'minimize') w.iconify();
-            else if (w.is_maximized()) w.unmaximize();
-            else w.maximize();
+            try {
+                let w = hb.get_toplevel();
+                if (!w || !w.is_toplevel || !w.is_toplevel()) return;
+                if (kind === 'close') {
+                    w.close();
+                } else if (kind === 'minimize') {
+                    w.iconify();
+                } else {
+                    // Maximize / restore toggle (GTK 3 Gdk.WindowState check)
+                    let gdkWin = w.get_window ? w.get_window() : null;
+                    let isMax = gdkWin ? ((gdkWin.get_state() & Gdk.WindowState.MAXIMIZED) !== 0) : Boolean(w._isMaximized);
+                    if (isMax) {
+                        w.unmaximize();
+                        w._isMaximized = false;
+                        try { img.set_from_icon_name('avro-maximize-symbolic', Gtk.IconSize.BUTTON); } catch (e) {}
+                        b.set_tooltip_text('Maximize');
+                    } else {
+                        w.maximize();
+                        w._isMaximized = true;
+                        try { img.set_from_icon_name('avro-restore-symbolic', Gtk.IconSize.BUTTON); } catch (e) {}
+                        b.set_tooltip_text('Restore');
+                    }
+                }
+            } catch (e) { printerr('winctl: ' + e); }
         });
-        if (kind === 'maximize') maxBtn = b;
+        // Update maximize icon whenever the window state changes
+        if (kind === 'maximize') {
+            hb.connect('realize', () => {
+                try {
+                    let w = hb.get_toplevel();
+                    if (!w || !w.connect) return;
+                    w.connect('window-state-event', () => {
+                        try {
+                            let gdkWin = w.get_window ? w.get_window() : null;
+                            let isMax = gdkWin ? ((gdkWin.get_state() & Gdk.WindowState.MAXIMIZED) !== 0) : Boolean(w._isMaximized);
+                            if (isMax) {
+                                img.set_from_icon_name('avro-restore-symbolic', Gtk.IconSize.BUTTON);
+                                b.set_tooltip_text('Restore');
+                            } else {
+                                img.set_from_icon_name('avro-maximize-symbolic', Gtk.IconSize.BUTTON);
+                                b.set_tooltip_text('Maximize');
+                            }
+                        } catch (e) {}
+                        return false;
+                    });
+                } catch (e) {}
+            });
+        }
         box.pack_start(b, false, false, 0);
     });
     hb.pack_end(box);

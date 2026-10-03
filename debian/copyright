@@ -5,6 +5,7 @@ Source: https://github.com/avro-linux/avro-linux
 
 Files: *
 Copyright: 2026 MD Shifat Bin Siddique Urfi <msbsu@github.com>
+           2026 MD Mehedi Hasan
            2024-2026 Avro Linux Contributors
            2012-2021 Sarim Khan <sarim2005@gmail.com>
 License: MPL-2.0
@@ -22,6 +23,7 @@ License: public-domain
 
 Files: data/metainfo/*
 Copyright: 2026 MD Shifat Bin Siddique Urfi <msbsu@github.com>
+           2026 MD Mehedi Hasan
            2019 Sarim Khan <sarim2005@gmail.com>
            2024-2026 Avro Linux Contributors
 License: CC0-1.0
@@ -32,6 +34,7 @@ License: CC0-1.0
 
 Files: debian/*
 Copyright: 2026 MD Shifat Bin Siddique Urfi <msbsu@github.com>
+           2026 MD Mehedi Hasan
            2026 Avro Linux Contributors
            2019-2023 Gunnar Hjalmarsson <gunnarhj@debian.org>
            2024 Boyuan Yang <byang@debian.org>

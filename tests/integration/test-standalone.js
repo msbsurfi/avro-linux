@@ -159,6 +159,7 @@ try {
     assert(res === true, "main.js --version executed successfully");
     let outStr = String.fromCharCode.apply(null, stdout);
     assert(outStr.indexOf("MD Shifat Bin Siddique Urfi") !== -1, "Version output credits MD Shifat Bin Siddique Urfi");
+    assert(outStr.indexOf("MD Mehedi Hasan") !== -1, "Version output credits MD Mehedi Hasan");
 } catch (e) {
     assert(false, "CLI version check failed: " + e.message);
 }

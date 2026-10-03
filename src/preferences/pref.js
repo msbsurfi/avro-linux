@@ -212,7 +212,7 @@ function runpref() {
     let nav = new Gtk.ListBox({ selection_mode: Gtk.SelectionMode.SINGLE });
     nav.get_style_context().add_class("avro-nav");
     sidebar.pack_start(nav, false, false, 0);
-    let credit = Theme.label("© MD Shifat Bin Siddique Urfi", "avro-row-sub");
+    let credit = Theme.label("© Remastered by MD Shifat Bin Siddique Urfi & MD Mehedi Hasan", "avro-row-sub");
     credit.set_margin_start(18);
     sidebar.pack_end(credit, false, false, 14);
 
@@ -581,8 +581,9 @@ function runpref() {
 
     let creditsBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 6, margin: 18 });
     let creditsLabel = new Gtk.Label({
-        label: "<b>Lead Developer &amp; Remaster Maintainer</b>\n" +
-               "MD Shifat Bin Siddique Urfi\n\n" +
+        label: "<b>Remastered by</b>\n" +
+               "MD Shifat Bin Siddique Urfi (DMC, K-79)\n" +
+               "and MD Mehedi Hasan (BUET, 2021-22)\n\n" +
                "<b>Original Authors &amp; Historical Attribution</b>\n" +
                "OmicronLab (Dr. Mehdi Hasan Khan &amp; Rifat Nabi)\n" +
                "Sarim Khan (ibus-avro)\n" +

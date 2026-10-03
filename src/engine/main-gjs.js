@@ -119,6 +119,7 @@ if (bus.is_connected()) {
         engine.connect('candidate-clicked', engine_candidate_clicked);
         engine.connect('focus-out', engine_focus_out);
         engine.connect('focus-in', engine_focus_in);
+        engine.connect('enable', engine_enable);
         engine.connect('reset', engine_reset);
         engine.connect('disable', engine_disable);
         engine.connect('property-activate', engine_property_activate);
@@ -477,6 +478,18 @@ if (bus.is_connected()) {
         } else if (prop_name === 'mode') {
             setMode(engine, !engine.mode_bangla);
         }
+    }
+
+    // enable() fires when IBus activates the engine for a new input context,
+    // which in Electron/VS Code (and some Qt apps) happens BEFORE the first
+    // focus-in. Registering properties here ensures the engine is fully
+    // initialised before the first keypress — fixing "first attempt fails"
+    // or "one Bengali letter then English" bugs in those apps.
+    function engine_enable(engine) {
+        try {
+            engine.register_properties(proplist);
+            updateEngineProperty(engine);
+        } catch (e) {}
     }
 
     /* =========================================================================== */

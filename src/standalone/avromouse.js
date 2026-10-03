@@ -3,7 +3,7 @@
     =============================================================================
     Avro Linux — Avro Mouse (On-Screen Click & Type Bengali Virtual Keyboard)
     SPDX-License-Identifier: MPL-2.0
-    Developer & Maintainer: MD Shifat Bin Siddique Urfi
+    Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)
     =============================================================================
 */
 

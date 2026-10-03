@@ -3,7 +3,7 @@
     =============================================================================
     Avro Linux — Windows-Style Authentic Splash Screen
     SPDX-License-Identifier: MPL-2.0
-    Developer & Maintainer: MD Shifat Bin Siddique Urfi
+    Remastered by: MD Shifat Bin Siddique Urfi (DMC, K-79) and MD Mehedi Hasan (BUET, 2021-22)
     Original Avro Keyboard by Dr. Mehdi Hasan Khan (OmicronLab) & Sarim Khan
     Artwork directly from upstream OmicronLab Avro Keyboard (mugli/Avro-Keyboard)
 
@@ -223,7 +223,7 @@ var SplashScreen = class SplashScreen {
         });
 
         let verTag = new Gtk.Label({
-            label: "Avro Keyboard v" + appVersion() + " • Remastered by MD Shifat Bin Siddique Urfi",
+            label: "Avro Keyboard v" + appVersion() + " • Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) & MD Mehedi Hasan (BUET, 2021-22)",
             xalign: 0
         });
         verTag.get_style_context().add_class('avro-splash-tag');
@@ -301,7 +301,7 @@ var SplashScreen = class SplashScreen {
 
         let creditsLabel = new Gtk.Label({
             label: "<span foreground='#7c8594'>Original design: </span><span foreground='#93c5fd' weight='bold'>Dr. Mehdi Hasan Khan</span><span foreground='#7c8594'> (OmicronLab)\n" +
-                   "Engine: </span><span foreground='#93c5fd' weight='bold'>Sarim Khan</span><span foreground='#7c8594'> • Remastered by: </span><span foreground='#60a5fa' weight='bold'>MD Shifat Bin Siddique Urfi</span>",
+                   "Engine: </span><span foreground='#93c5fd' weight='bold'>Sarim Khan</span><span foreground='#7c8594'> • Remastered by: </span><span foreground='#60a5fa' weight='bold'>MD Shifat Bin Siddique Urfi (DMC, K-79) &amp; MD Mehedi Hasan (BUET, 2021-22)</span>",
             use_markup: true,
             justify: Gtk.Justification.CENTER
         });

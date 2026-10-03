@@ -31,6 +31,7 @@ try {
     let outStr = String.fromCharCode.apply(null, stdout);
     assert(outStr.indexOf("AVRO LINUX SYSTEM DIAGNOSTIC REPORT") !== -1, "Report contains header");
     assert(outStr.indexOf("MD Shifat Bin Siddique Urfi") !== -1, "Report credits MD Shifat Bin Siddique Urfi");
+    assert(outStr.indexOf("MD Mehedi Hasan") !== -1, "Report credits MD Mehedi Hasan");
     assert(outStr.indexOf("IBus Subsystem") !== -1, "Report checks IBus Subsystem");
     assert(outStr.indexOf("Environment Variables") !== -1, "Report checks Environment Variables");
     assert(outStr.indexOf("Configuration & Fonts") !== -1, "Report checks Configuration & Fonts");
