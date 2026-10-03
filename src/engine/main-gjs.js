@@ -43,14 +43,26 @@ try {
     }
 } catch (e) {}
 
-imports.searchPath.unshift(baseDir + '/common');
-imports.searchPath.unshift(baseDir + '/src/common');
+// The engine's own tree first (the last unshift is searched first)
 imports.searchPath.unshift('/usr/share/avro-linux/common');
+imports.searchPath.unshift(baseDir + '/src/common');
+imports.searchPath.unshift(baseDir + '/common');
 
 const eevars = imports.evars;
 eevars.init_search_paths(baseDir);
 
 const suggestion = imports.suggestionbuilder;
+
+// The fixed keyboard layouts of Avro Keyboard (National (Jatiya), Probhat, ...)
+var fixedLayout = null;
+var fixedTyper = null;
+try {
+    fixedLayout = imports.fixedlayout;
+    fixedTyper = imports.fixedtyper;
+} catch (e) {
+    fixedLayout = null;
+    fixedTyper = null;
+}
 
 // Windows-style Preview Window. Optional: it needs GTK and an X11/XWayland
 // display; without it the desktop's IBus candidate panel is used instead.
@@ -71,7 +83,8 @@ const KEY = {
     KP_Enter: 0xff8d, KP_Left: 0xff96, KP_Up: 0xff97, KP_Right: 0xff98, KP_Down: 0xff99,
     KP_Multiply: 0xffaa, KP_Add: 0xffab, KP_Subtract: 0xffad, KP_Decimal: 0xffae, KP_Divide: 0xffaf,
     KP_0: 0xffb0, KP_1: 0xffb1, KP_9: 0xffb9,
-    F12: 0xffc9
+    F12: 0xffc9,
+    Alt_R: 0xffea, ISO_Level3_Shift: 0xfe03
 };
 
 // Shift, Control, Caps/Shift Lock, Meta, Alt, Super, Hyper, AltGr, Num Lock
@@ -114,6 +127,13 @@ if (bus.is_connected()) {
         engine.password_field = false;
         engine.presentation = 'none';
         engine.cursorRect = null;
+        // Fixed keyboard layout (null: Avro Phonetic) and the word typed with it
+        engine.layoutId = 'phonetic';
+        engine.layout = null;
+        engine.typer = fixedTyper ? new fixedTyper.FixedTyper() : null;
+        engine.typerOptions = '';
+        engine.altGrDown = false;
+        engine.setting_numpad_bangla = true;
 
         engine.connect('process-key-event', engine_process_key_event);
         engine.connect('candidate-clicked', engine_candidate_clicked);
@@ -133,6 +153,11 @@ if (bus.is_connected()) {
             if (previewOwner === eng) {
                 hidePreviewWindow(eng);
             }
+            // A destroyed engine must not react to settings changes any more
+            if (eng.setting && eng.settingHandler) {
+                eng.setting.disconnect(eng.settingHandler);
+                eng.settingHandler = 0;
+            }
         });
 
         engine.lookuptable = IBus.LookupTable.new(16, 0, true, true);
@@ -150,16 +175,28 @@ if (bus.is_connected()) {
             prop_mode.set_label(IBus.Text.new_from_string("English"));
             prop_mode.set_symbol(IBus.Text.new_from_string("En"));
         } else {
-            prop_mode.set_label(IBus.Text.new_from_string("বাংলা (Avro)"));
+            let name = engine.layout ? engine.layout.name : "Avro";
+            prop_mode.set_label(IBus.Text.new_from_string("বাংলা (" + name + ")"));
             prop_mode.set_symbol(IBus.Text.new_from_string("বা"));
         }
         engine.update_property(prop_mode);
     }
 
-    function setMode(engine, bangla) {
-        // Keep what was already typed instead of throwing the word away.
+    /* Commit what is being typed, with Avro Phonetic or a fixed layout. */
+    function finishWord(engine) {
         if (engine.buffertext && engine.buffertext.length > 0) {
             commitCandidate(engine);
+        }
+        if (engine.typer && !engine.typer.isEmpty()) {
+            commitFixed(engine, "");
+        }
+    }
+
+    function setMode(engine, bangla) {
+        // Keep what was already typed instead of throwing the word away.
+        finishWord(engine);
+        if (engine.typer) {
+            engine.typer.interrupt();
         }
         engine.mode_bangla = bangla;
         updateEngineProperty(engine);
@@ -175,6 +212,12 @@ if (bus.is_connected()) {
 
         let isRelease = (state & IBus.ModifierType.RELEASE_MASK) !== 0;
 
+        // Right Alt is AltGr for the fixed layouts, also on a US keyboard
+        // layout where it is a plain Alt key.
+        if (keyval === KEY.Alt_R || keyval === KEY.ISO_Level3_Shift) {
+            engine.altGrDown = !isRelease;
+        }
+
         // F12 toggles Bangla / English mode
         if (keyval === KEY.F12) {
             if (!isRelease) {
@@ -186,6 +229,10 @@ if (bus.is_connected()) {
         // Ignore release events and lone modifier keys (Shift, Ctrl, Alt, Caps Lock, ...)
         if (isRelease || isModifierKey(keyval)) {
             return false;
+        }
+
+        if (engine.layout) {
+            return processFixedKey(engine, keyval, keycode, state);
         }
 
         let hasBuffer = engine.buffertext.length > 0;
@@ -354,6 +401,131 @@ if (bus.is_connected()) {
         return false;
     }
 
+    /* =========================================================================== */
+    /*                  Fixed keyboard layouts                                     */
+    /* =========================================================================== */
+
+    // The word typed with a fixed layout is the preedit until it ends; the
+    // typing rules of Avro Keyboard (fixedtyper.js) rearrange it while typing.
+    function processFixedKey(engine, keyval, keycode, state) {
+        let typer = engine.typer;
+        let M = IBus.ModifierType;
+        let ctrl = (state & M.CONTROL_MASK) !== 0;
+        let alt = (state & M.MOD1_MASK) !== 0;
+        let superKey = (state & (M.SUPER_MASK | M.MOD4_MASK)) !== 0;
+        let level3 = (state & M.MOD5_MASK) !== 0;
+        if (!alt && !level3) {
+            engine.altGrDown = false;   // its release went to another window
+        }
+        // AltGr: Right Alt, the ISO level 3 shift, or Ctrl+Alt as on Windows
+        let altGr = level3 || (engine.altGrDown && alt) || (ctrl && alt);
+
+        // English mode and password fields: keys go straight to the application
+        if (!engine.mode_bangla || engine.password_field) {
+            finishWord(engine);
+            return false;
+        }
+        // Shortcuts with Ctrl, Alt or Super
+        if (superKey || ((ctrl || alt) && !altGr)) {
+            finishWord(engine);
+            return false;
+        }
+
+        switch (keyval) {
+        case KEY.space: {
+            let text = typer.text;
+            typer.boundary();
+            if (text) {
+                commitText(engine, text + " ");
+                return true;
+            }
+            return false;
+        }
+        case KEY.Return:
+        case KEY.KP_Enter:
+        case KEY.Tab:
+        case KEY.ISO_Left_Tab: {
+            let text = typer.text;
+            typer.boundary();
+            if (text) {
+                commitText(engine, text);
+            }
+            return false;
+        }
+        case KEY.BackSpace:
+            if (typer.backspace()) {
+                showPreedit(engine, typer.text);
+                return true;
+            }
+            return false;
+        }
+
+        let key = fixedLayout.keyForEvent(keyval, keycode);
+        let mods = {
+            shift: (state & M.SHIFT_MASK) !== 0,
+            capsLock: (state & M.LOCK_MASK) !== 0,
+            altGr: altGr
+        };
+        let text = fixedLayout.charForKey(engine.layout, key, mods, engine.setting_numpad_bangla);
+        if (!text) {
+            // Not a key of the layout (arrows, Home, Escape, F-keys, ...): the
+            // word ends and the application gets the key.
+            finishWord(engine);
+            typer.interrupt();
+            return false;
+        }
+        typer.type(text);
+        // Only the last few characters can still change: keep the preedit short
+        if (typer.text.length > 64) {
+            let done = typer.text.slice(0, typer.text.length - 16);
+            typer.text = typer.text.slice(done.length);
+            engine.commit_text(IBus.Text.new_from_string(done));
+        }
+        showPreedit(engine, typer.text);
+        return true;
+    }
+
+    function commitText(engine, text) {
+        engine.commit_text(IBus.Text.new_from_string(text));
+        engine.hide_preedit_text();
+    }
+
+    function commitFixed(engine, suffix) {
+        let text = engine.typer.text + (suffix || "");
+        engine.typer.interrupt();
+        if (text) {
+            commitText(engine, text);
+        } else {
+            engine.hide_preedit_text();
+        }
+    }
+
+    /* Switch between Avro Phonetic ('phonetic') and a fixed layout. */
+    function applyLayout(engine, id) {
+        let layout = (fixedLayout && engine.typer && id && id !== 'phonetic') ? fixedLayout.getLayout(id) : null;
+        let newId = layout ? id : 'phonetic';
+        if (newId === engine.layoutId) return;
+        finishWord(engine);
+        if (engine.typer) {
+            engine.typer.interrupt();
+        }
+        engine.layoutId = newId;
+        engine.layout = layout;
+        updateEngineProperty(engine);
+    }
+
+    function applyTyperOptions(engine, options) {
+        if (!engine.typer) return;
+        let signature = JSON.stringify(options);
+        if (signature === engine.typerOptions) return;
+        // A style change in the middle of a word keeps what is on screen
+        if (!engine.typer.isEmpty()) {
+            commitFixed(engine, "");
+        }
+        engine.typer.setOptions(options);
+        engine.typerOptions = signature;
+    }
+
     // A word picked by click or number key is remembered for next time,
     // like a word chosen with Tab or the arrow keys.
     function selectAndCommit(engine, index) {
@@ -375,10 +547,16 @@ if (bus.is_connected()) {
     // global engine the same engine object is attached to the next input
     // context right after focus-out, so a late commit_text() would put the
     // word into the newly focused field.
-    function finishCompositionByClient(engine) {
+    function finishCompositionByClient(engine, keepContext) {
         if (engine.buffertext && engine.buffertext.length > 0 && engine.currentSuggestions.length > 0) {
             let word = engine.currentSuggestions[engine.currentSelection] || engine.buffertext;
             suggestionBuilder.stringCommitted(engine.buffertext, word);
+        }
+        // Fixed layouts: the client keeps the word too. A reset with no word
+        // in progress (some applications reset after every commit) keeps
+        // knowing that a new word starts, for Automatic Vowel Forming.
+        if (engine.typer && !(keepContext && engine.typer.isEmpty())) {
+            engine.typer.interrupt();
         }
         resetAll(engine);
     }
@@ -386,22 +564,25 @@ if (bus.is_connected()) {
     function engine_focus_out(engine) {
         // The preview belongs to the focused text field
         hidePreviewWindow(engine);
-        finishCompositionByClient(engine);
+        engine.altGrDown = false;
+        finishCompositionByClient(engine, false);
     }
 
     function engine_reset(engine) {
-        finishCompositionByClient(engine);
+        finishCompositionByClient(engine, true);
     }
 
     function engine_disable(engine) {
         // Switching to another keyboard keeps the word being typed
-        finishCompositionByClient(engine);
+        finishCompositionByClient(engine, false);
     }
 
     function engine_set_content_type(engine, purpose, hints) {
         // Never compose (or show typed text in the preview) inside password fields
         let secret = (purpose === PURPOSE_PASSWORD || purpose === PURPOSE_PIN);
-        if (secret && engine.buffertext && engine.buffertext.length > 0) {
+        if (secret && ((engine.buffertext && engine.buffertext.length > 0) ||
+                       (engine.typer && !engine.typer.isEmpty()))) {
+            if (engine.typer) engine.typer.interrupt();
             resetAll(engine);
         }
         engine.password_field = secret;
@@ -473,13 +654,21 @@ if (bus.is_connected()) {
         }
     }
 
+    // Gio.Settings.new() aborts the process when the schema is not installed;
+    // look the schema up first.
+    function newAvroSettings() {
+        try {
+            let source = Gio.SettingsSchemaSource.get_default();
+            let schema = source ? source.lookup("com.omicronlab.avro", true) : null;
+            return schema ? new Gio.Settings({ settings_schema: schema }) : null;
+        } catch (e) {
+            return null;
+        }
+    }
+
     function getUISetting() {
         if (!uiSetting) {
-            try {
-                uiSetting = Gio.Settings.new("com.omicronlab.avro");
-            } catch (e) {
-                uiSetting = null;
-            }
+            uiSetting = newAvroSettings();
         }
         return uiSetting;
     }
@@ -646,8 +835,11 @@ if (bus.is_connected()) {
 
     function initSetting(engine) {
         try {
-            engine.setting = Gio.Settings.new("com.omicronlab.avro");
-            engine.setting.connect('changed', function() {
+            engine.setting = newAvroSettings();
+            if (!engine.setting) {
+                throw new Error("schema com.omicronlab.avro is not installed");
+            }
+            engine.settingHandler = engine.setting.connect('changed', function() {
                 readSetting(engine);
             });
             readSetting(engine);
@@ -677,6 +869,18 @@ if (bus.is_connected()) {
             engine.lookuptable.set_page_size(engine.setting_lutable_size);
             engine.setting_preview_style = hasKey(engine.setting, 'preview-style')
                 ? engine.setting.get_string('preview-style') : 'auto';
+
+            // Fixed keyboard layouts and their typing options
+            let s = engine.setting;
+            let flag = (key) => hasKey(s, key) ? s.get_boolean(key) : true;
+            engine.setting_numpad_bangla = flag('fixed-numpad-bangla');
+            applyTyperOptions(engine, {
+                style: hasKey(s, 'fixed-typing-style') ? s.get_string('fixed-typing-style') : 'modern',
+                oldReph: flag('fixed-old-reph'),
+                vowelForming: flag('fixed-vowel-forming'),
+                fixChandra: flag('fixed-fix-chandra')
+            });
+            applyLayout(engine, hasKey(s, 'keyboard-layout') ? s.get_string('keyboard-layout') : 'phonetic');
 
             var dictPref = suggestionBuilder.getPref();
             dictPref.dictEnable = engine.setting_switch_dict;
@@ -737,18 +941,24 @@ if (bus.is_connected()) {
             engine.hide_preedit_text();
             return;
         }
+        showPreedit(engine, engine.currentSuggestions[engine.currentSelection] || "");
+    }
 
-        var selectedWord = engine.currentSuggestions[engine.currentSelection] || "";
-        var preeditText = IBus.Text.new_from_string(selectedWord);
+    function showPreedit(engine, word) {
+        if (!word) {
+            engine.hide_preedit_text();
+            return;
+        }
+        var preeditText = IBus.Text.new_from_string(word);
         var attrs = new IBus.AttrList();
+        let cursorPos = Array.from(word).length;
         attrs.append(IBus.Attribute.new(
             IBus.AttrType.UNDERLINE,
             IBus.AttrUnderline.SINGLE,
             0,
-            selectedWord.length
+            cursorPos
         ));
         preeditText.set_attributes(attrs);
-        let cursorPos = Array.from(selectedWord).length;
         if (typeof engine.update_preedit_text_with_mode === 'function') {
             // COMMIT: on focus change or reset the visible word stays in the field
             engine.update_preedit_text_with_mode(preeditText, cursorPos, true, PREEDIT_COMMIT);

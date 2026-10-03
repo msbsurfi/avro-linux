@@ -1,2 +1,9 @@
 #!/bin/sh
+# Launcher script for Avro Doctor
+# SPDX-License-Identifier: MPL-2.0
+
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -f "${SCRIPT_DIR}/src/standalone/doctor.js" ]; then
+    exec gjs "${SCRIPT_DIR}/src/standalone/doctor.js" "$@"
+fi
 exec gjs /usr/share/avro-linux/standalone/doctor.js "$@"

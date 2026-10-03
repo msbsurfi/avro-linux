@@ -22,36 +22,49 @@ function assert(condition, message) {
     }
 }
 
+function bytes(b) {
+    return b ? new TextDecoder().decode(b) : "";
+}
+
+/* Run argv with environment changes ({ NAME: value | null }). */
+function run(argv, changes) {
+    let env = GLib.get_environ();
+    for (let name in changes || {}) {
+        env = changes[name] === null ? GLib.environ_unsetenv(env, name) : GLib.environ_setenv(env, name, changes[name], true);
+    }
+    let [, out, err, status] = GLib.spawn_sync(null, argv, env, GLib.SpawnFlags.SEARCH_PATH, null);
+    // A wait status with a signal number means the program crashed
+    return { out: bytes(out), err: bytes(err), crashed: (status & 0x7f) !== 0 };
+}
+
+function checkReport(r, what) {
+    assert(!r.crashed, what + " exits normally (no crash)");
+    let ok = r.out.indexOf("AVRO LINUX SYSTEM DIAGNOSTIC REPORT") !== -1;
+    assert(ok, what + ": report contains header");
+    if (!ok && r.err) printerr("    stderr: " + r.err.trim().split("\n").slice(-3).join(" | "));
+    assert(r.out.indexOf("MD Shifat Bin Siddique Urfi") !== -1, what + ": report credits MD Shifat Bin Siddique Urfi");
+    assert(r.out.indexOf("IBus Subsystem") !== -1, what + ": report checks IBus Subsystem");
+    assert(r.out.indexOf("Environment Variables") !== -1, what + ": report checks Environment Variables");
+    assert(r.out.indexOf("Configuration & Fonts") !== -1, what + ": report checks Configuration & Fonts");
+}
+
 print("Running Avro Doctor Integration Tests...");
 
-// 1. Test CLI execution
-try {
-    let [res, stdout, stderr, exitCode] = GLib.spawn_command_line_sync("gjs src/standalone/doctor.js --cli");
-    assert(res === true, "doctor.js --cli runs successfully");
-    let outStr = String.fromCharCode.apply(null, stdout);
-    assert(outStr.indexOf("AVRO LINUX SYSTEM DIAGNOSTIC REPORT") !== -1, "Report contains header");
-    assert(outStr.indexOf("MD Shifat Bin Siddique Urfi") !== -1, "Report credits MD Shifat Bin Siddique Urfi");
-    assert(outStr.indexOf("IBus Subsystem") !== -1, "Report checks IBus Subsystem");
-    assert(outStr.indexOf("Environment Variables") !== -1, "Report checks Environment Variables");
-    assert(outStr.indexOf("Configuration & Fonts") !== -1, "Report checks Configuration & Fonts");
-} catch (e) {
-    assert(false, "Doctor CLI test failed: " + e.message);
-}
+// 1. The report, with the schema of the source tree
+let withSchema = run(["gjs", "src/standalone/doctor.js", "--cli"], { GSETTINGS_SCHEMA_DIR: "data/gsettings" });
+checkReport(withSchema, "doctor.js --cli");
+assert(withSchema.out.indexOf("GSettings Schema:    VALID [OK]") !== -1, "An installed schema is reported as valid");
 
-// 2. Test binary launchers
-try {
-    let [res, stdout] = GLib.spawn_command_line_sync("bin/avro-doctor --cli");
-    assert(res === true, "bin/avro-doctor --cli runs successfully");
-} catch (e) {
-    assert(false, "bin/avro-doctor test failed: " + e.message);
-}
+// 2. A missing schema is reported, not a crash (Gio.Settings.new() aborts)
+let noSchema = run(["gjs", "src/standalone/doctor.js", "--cli"],
+                   { GSETTINGS_SCHEMA_DIR: null, XDG_DATA_DIRS: "/nonexistent" });
+checkReport(noSchema, "doctor.js --cli without the schema");
+assert(noSchema.out.indexOf("GSettings Schema:    MISSING [FAIL]") !== -1, "A missing schema is reported as missing");
+assert(noSchema.out.indexOf("is not installed") !== -1, "The report says the schema is not installed");
 
-try {
-    let [res, stdout] = GLib.spawn_command_line_sync("bin/avro-linux-doctor --cli");
-    assert(res === true, "bin/avro-linux-doctor --cli runs successfully");
-} catch (e) {
-    assert(false, "bin/avro-linux-doctor test failed: " + e.message);
-}
+// 3. Launchers (they run the Doctor of the source tree they belong to)
+checkReport(run(["bin/avro-doctor", "--cli"], { GSETTINGS_SCHEMA_DIR: "data/gsettings" }), "bin/avro-doctor --cli");
+checkReport(run(["bin/avro-linux-doctor", "--cli"], { GSETTINGS_SCHEMA_DIR: "data/gsettings" }), "bin/avro-linux-doctor --cli");
 
 print("\nDoctor Integration Test Summary:");
 print("  Total Passed: " + passedCount);

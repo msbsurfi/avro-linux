@@ -23,10 +23,10 @@ const Gtk = imports.gi.Gtk;
 const Gdk = imports.gi.Gdk;
 const GLib = imports.gi.GLib;
 
-// Discover base path
+// Discover base path (gjs does not put the script itself in ARGV)
 let baseDir = '/usr/share/avro-linux';
 try {
-    let scriptPath = ARGV[0] || '.';
+    let scriptPath = imports.system.programPath || '.';
     let scriptDir = GLib.path_get_dirname(scriptPath);
     if (GLib.file_test(scriptDir + '/../common/evars.js', GLib.FileTest.EXISTS)) {
         baseDir = GLib.path_get_dirname(scriptDir);
@@ -35,9 +35,10 @@ try {
     }
 } catch (e) {}
 
-imports.searchPath.unshift(baseDir + '/common');
-imports.searchPath.unshift(baseDir + '/src/common');
+// Its own tree first (the last unshift is searched first)
 imports.searchPath.unshift('/usr/share/avro-linux/common');
+imports.searchPath.unshift(baseDir + '/src/common');
+imports.searchPath.unshift(baseDir + '/common');
 
 let eevars = null;
 try {
@@ -59,28 +60,46 @@ function appVersion() {
     return '';
 }
 
-function topBarAutostartFile() {
-    return Gio.File.new_for_path(GLib.get_user_config_dir() + "/autostart/avro-topbar.desktop");
+function autostartModule() {
+    try {
+        return imports.autostart;
+    } catch (e) {
+        return null;
+    }
 }
 
 function isTopBarAutostart() {
-    return topBarAutostartFile().query_exists(null);
+    let autostart = autostartModule();
+    return autostart ? autostart.isEnabled() : false;
 }
 
 function setTopBarAutostart(enable) {
-    let file = topBarAutostartFile();
+    let autostart = autostartModule();
+    return autostart ? autostart.setEnabled(enable) : false;
+}
+
+/* The settings, or null when the schema is not installed (Gio.Settings
+   aborts the whole program for a missing schema). */
+function avroSettings() {
     try {
-        if (enable) {
-            GLib.mkdir_with_parents(GLib.get_user_config_dir() + "/autostart", 0o755);
-            let content = "[Desktop Entry]\nName=Avro TopBar\nComment=Floating Avro Keyboard toolbar\n" +
-                          "Exec=avro-topbar\nIcon=avro-bangla\nTerminal=false\nType=Application\n" +
-                          "Categories=Utility;\nX-GNOME-Autostart-enabled=true\n";
-            file.replace_contents(new TextEncoder().encode(content), null, false,
-                                  Gio.FileCreateFlags.REPLACE_DESTINATION, null);
-        } else if (file.query_exists(null)) {
-            file.delete(null);
+        let source = Gio.SettingsSchemaSource.get_default();
+        let schema = source ? source.lookup("com.omicronlab.avro", true) : null;
+        return schema ? new Gio.Settings({ settings_schema: schema }) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+/* [id, name] of Avro Phonetic and the fixed keyboard layouts. */
+function keyboardLayoutChoices() {
+    let choices = [["phonetic", "Avro Phonetic (English to Bangla)"]];
+    try {
+        let fixed = imports.fixedlayout;
+        for (let id of fixed.layoutIds()) {
+            choices.push([id, fixed.getLayout(id).name]);
         }
     } catch (e) {}
+    return choices;
 }
 
 function getCandidateSelectionsFile() {
@@ -149,11 +168,9 @@ function runpref() {
     }
 
     // Connect to GSettings
-    let setting = null;
-    try {
-        setting = new Gio.Settings({ schema_id: "com.omicronlab.avro" });
-    } catch (e) {
-        print("Warning: Could not connect to GSettings schema com.omicronlab.avro: " + e.message);
+    let setting = avroSettings();
+    if (!setting) {
+        print("Warning: GSettings schema com.omicronlab.avro is not installed; settings cannot be saved.");
     }
 
     let notebook = new Gtk.Notebook();
@@ -274,6 +291,12 @@ function runpref() {
             setting.reset("topbar-transparency-level");
             setting.reset("topbar-x-button");
             setting.reset("topbar-startup-ui");
+            setting.reset("keyboard-layout");
+            setting.reset("fixed-typing-style");
+            setting.reset("fixed-old-reph");
+            setting.reset("fixed-vowel-forming");
+            setting.reset("fixed-fix-chandra");
+            setting.reset("fixed-numpad-bangla");
             setting.reset("switch-dict");
             setting.reset("switch-newline");
             setting.reset("lutable-size");
@@ -326,6 +349,71 @@ function runpref() {
     notebook.append_page(typingBox, new Gtk.Label({ label: "Typing" }));
 
     /* ========================================================================= */
+    /* KEYBOARD LAYOUTS TAB (the Avro Keyboard "Fixed Keyboard Layouts" options) */
+    /* ========================================================================= */
+    let layoutsBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 14, border_width: 16 });
+
+    function optionRow(box, title, subtitle, control) {
+        let row = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 12 });
+        let labels = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 4 });
+        labels.pack_start(new Gtk.Label({ label: "<b>" + title + "</b>", use_markup: true, xalign: 0 }), false, false, 0);
+        if (subtitle) {
+            let sub = new Gtk.Label({ label: subtitle, xalign: 0, wrap: true, max_width_chars: 52 });
+            sub.get_style_context().add_class("dim-label");
+            labels.pack_start(sub, false, false, 0);
+        }
+        row.pack_start(labels, true, true, 0);
+        row.pack_end(control, false, false, 0);
+        box.pack_start(row, false, false, 0);
+        return row;
+    }
+
+    let cboxLayout = new Gtk.ComboBoxText({ valign: Gtk.Align.CENTER });
+    for (let [id, name] of keyboardLayoutChoices()) {
+        cboxLayout.append(id, name);
+    }
+    optionRow(layoutsBox, "Keyboard layout",
+              "Avro Phonetic, or a fixed layout of Avro Keyboard. F12 switches Bangla and English with all of them.",
+              cboxLayout);
+
+    let styleFrame = new Gtk.Frame({ label: " Typing Style in Fixed Keyboard Layouts " });
+    let styleBoxFixed = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 6, margin: 10 });
+    let radioModern = new Gtk.RadioButton({ label: "Use Modern Style Typing" });
+    let radioOld = Gtk.RadioButton.new_with_label_from_widget(radioModern, "Use Full Old Style Typing");
+    let modernHint = new Gtk.Label({ label: "(Type Kar/Matra/Short Form Of Vowel always AFTER consonants)", xalign: 0, margin_left: 26 });
+    let oldHint = new Gtk.Label({ label: "(Use Type writer or old ASCII based typing style)", xalign: 0, margin_left: 26 });
+    modernHint.get_style_context().add_class("dim-label");
+    oldHint.get_style_context().add_class("dim-label");
+    let checkOldReph = new Gtk.CheckButton({ label: "Enable \"Old Style Reph\"", margin_left: 26 });
+    let checkVowelForming = new Gtk.CheckButton({ label: "Enable \"Automatic vowel Forming\"", margin_left: 26 });
+    let checkFixChandra = new Gtk.CheckButton({ label: "Automatically fix \"Chandra\" position", margin_left: 26 });
+    styleBoxFixed.pack_start(radioModern, false, false, 0);
+    styleBoxFixed.pack_start(modernHint, false, false, 0);
+    styleBoxFixed.pack_start(checkOldReph, false, false, 0);
+    styleBoxFixed.pack_start(checkVowelForming, false, false, 0);
+    styleBoxFixed.pack_start(checkFixChandra, false, false, 0);
+    styleBoxFixed.pack_start(radioOld, false, false, 6);
+    styleBoxFixed.pack_start(oldHint, false, false, 0);
+    styleFrame.add(styleBoxFixed);
+    layoutsBox.pack_start(styleFrame, false, false, 0);
+
+    let switchNumpad = new Gtk.Switch({ valign: Gtk.Align.CENTER });
+    optionRow(layoutsBox, "Enable Bangla in Number Pad", "The number pad types Bangla digits in fixed keyboard layouts", switchNumpad);
+
+    let btnShowLayout = new Gtk.Button({ label: "Show keyboard layout", halign: Gtk.Align.START });
+    btnShowLayout.connect("clicked", () => GLib.spawn_command_line_async("avro-layout"));
+    layoutsBox.pack_start(btnShowLayout, false, false, 0);
+
+    function updateTypingStyle() {
+        let modern = radioModern.get_active();
+        checkOldReph.set_sensitive(modern);
+        checkVowelForming.set_sensitive(modern);
+        checkFixChandra.set_sensitive(modern);
+    }
+
+    notebook.append_page(layoutsBox, new Gtk.Label({ label: "Keyboard Layouts" }));
+
+    /* ========================================================================= */
     /* TOPBAR TAB (the Avro Keyboard "General" and "Interface" options)          */
     /* ========================================================================= */
     let topbarBox = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 18, border_width: 16 });
@@ -375,7 +463,13 @@ function runpref() {
     topbarRow("At startup, Avro TopBar will run as", null, cboxStartup);
 
     let switchAutostart = new Gtk.Switch({ valign: Gtk.Align.CENTER, active: isTopBarAutostart() });
-    switchAutostart.connect("notify::active", () => setTopBarAutostart(switchAutostart.get_active()));
+    switchAutostart.connect("notify::active", () => {
+        setTopBarAutostart(switchAutostart.get_active());
+        // The user's choice: the TopBar never adds itself back
+        if (setting && setting.settings_schema.has_key("topbar-autostart-done")) {
+            setting.set_boolean("topbar-autostart-done", true);
+        }
+    });
     topbarRow("Start Avro TopBar when I log in", "Adds the TopBar to your desktop's autostart programs", switchAutostart);
 
     let btnOpenTopbar = new Gtk.Button({ label: "Open Avro TopBar", halign: Gtk.Align.START });
@@ -643,6 +737,25 @@ function runpref() {
         setting.bind("topbar-transparency-level", scaleLevel.get_adjustment(), "value", Gio.SettingsBindFlags.DEFAULT);
         setting.bind("topbar-x-button", cboxXButton, "active-id", Gio.SettingsBindFlags.DEFAULT);
         setting.bind("topbar-startup-ui", cboxStartup, "active-id", Gio.SettingsBindFlags.DEFAULT);
+        setting.bind("keyboard-layout", cboxLayout, "active-id", Gio.SettingsBindFlags.DEFAULT);
+        setting.bind("fixed-old-reph", checkOldReph, "active", Gio.SettingsBindFlags.DEFAULT);
+        setting.bind("fixed-vowel-forming", checkVowelForming, "active", Gio.SettingsBindFlags.DEFAULT);
+        setting.bind("fixed-fix-chandra", checkFixChandra, "active", Gio.SettingsBindFlags.DEFAULT);
+        setting.bind("fixed-numpad-bangla", switchNumpad, "active", Gio.SettingsBindFlags.DEFAULT);
+        let readTypingStyle = () => {
+            let old = setting.get_string("fixed-typing-style") === "old";
+            (old ? radioOld : radioModern).set_active(true);
+            updateTypingStyle();
+        };
+        radioModern.connect("toggled", () => {
+            let style = radioModern.get_active() ? "modern" : "old";
+            if (setting.get_string("fixed-typing-style") !== style) {
+                setting.set_string("fixed-typing-style", style);
+            }
+            updateTypingStyle();
+        });
+        setting.connect("changed::fixed-typing-style", readTypingStyle);
+        readTypingStyle();
         scaleLevel.set_sensitive(switchTransparent.get_active());
         switchTransparent.connect("notify::active", () => scaleLevel.set_sensitive(switchTransparent.get_active()));
 

@@ -3,7 +3,7 @@
 
 SHELL := /bin/bash
 # The one place the version number lives; everything else reads it from here.
-VERSION := 1.2.0
+VERSION := 1.3.0
 prefix ?= /usr
 pkgdatadir ?= $(prefix)/share/avro-linux
 libexecdir ?= $(prefix)/libexec/avro-linux
@@ -51,6 +51,7 @@ install: build
 	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/avro-core/dictionary
 	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/avro-core/autocorrect
 	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/avro-core/suggestions
+	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/avro-core/fixed
 	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/preferences
 	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/standalone
 	install -d -m 0755 $(DESTDIR)$(pkgdatadir)/ui
@@ -88,6 +89,7 @@ install: build
 
 	# Common & Engine scripts
 	install -m 0644 src/common/evars.js $(DESTDIR)$(pkgdatadir)/common/evars.js
+	install -m 0644 src/common/autostart.js $(DESTDIR)$(pkgdatadir)/common/autostart.js
 	install -m 0755 src/engine/main-gjs.js $(DESTDIR)$(pkgdatadir)/engine/main-gjs.js
 
 	# Standalone application suite
@@ -111,6 +113,10 @@ install: build
 	install -m 0644 src/avro-core/autocorrect/autocorrect.js $(DESTDIR)$(pkgdatadir)/avro-core/autocorrect/autocorrect.js
 	install -m 0644 src/avro-core/suggestions/levenshtein.js $(DESTDIR)$(pkgdatadir)/avro-core/suggestions/levenshtein.js
 	install -m 0644 src/avro-core/suggestions/suggestionbuilder.js $(DESTDIR)$(pkgdatadir)/avro-core/suggestions/suggestionbuilder.js
+	# Fixed keyboard layouts of Avro Keyboard (National, Probhat, Bornona, Avro Easy, Munir Optima)
+	install -m 0644 src/avro-core/fixed/layoutdata.js $(DESTDIR)$(pkgdatadir)/avro-core/fixed/layoutdata.js
+	install -m 0644 src/avro-core/fixed/fixedlayout.js $(DESTDIR)$(pkgdatadir)/avro-core/fixed/fixedlayout.js
+	install -m 0644 src/avro-core/fixed/fixedtyper.js $(DESTDIR)$(pkgdatadir)/avro-core/fixed/fixedtyper.js
 
 	# Preferences application
 	install -m 0755 src/preferences/pref.js $(DESTDIR)$(pkgdatadir)/preferences/pref.js

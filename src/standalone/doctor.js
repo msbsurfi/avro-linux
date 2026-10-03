@@ -13,6 +13,19 @@ const Gdk = imports.gi.Gdk;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 
+/* The Avro settings, or null when the schema is not installed. Looked up
+   first: Gio.Settings.new() aborts the whole program for a missing schema,
+   which is exactly one of the problems the Doctor has to report. */
+function avroSettings() {
+    try {
+        let source = Gio.SettingsSchemaSource.get_default();
+        let schema = source ? source.lookup("com.omicronlab.avro", true) : null;
+        return schema ? new Gio.Settings({ settings_schema: schema }) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    Diagnostic Inspection Functions
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -85,16 +98,11 @@ function runDiagnosticCheck() {
     } catch (e) {}
 
     // Check GSettings schema
-    try {
-        let schema = Gio.Settings.new("com.omicronlab.avro");
-        if (schema && schema.list_keys().indexOf("mode-bangla") !== -1) {
-            report.schemaValid = true;
-        } else {
-            report.issues.push("GSettings schema 'com.omicronlab.avro' is missing or incomplete.");
-            report.recommendations.push("Run 'sudo glib-compile-schemas /usr/share/glib-2.0/schemas'.");
-        }
-    } catch (e) {
-        report.issues.push("GSettings schema 'com.omicronlab.avro' is not installed.");
+    let settings = avroSettings();
+    if (settings && settings.settings_schema.has_key("mode-bangla")) {
+        report.schemaValid = true;
+    } else {
+        report.issues.push("GSettings schema 'com.omicronlab.avro' is " + (settings ? "incomplete." : "not installed."));
         report.recommendations.push("Run 'sudo glib-compile-schemas /usr/share/glib-2.0/schemas'.");
     }
 
@@ -189,13 +197,12 @@ function autoFixIssues() {
         return false;
     });
 
-    try {
-        let schema = Gio.Settings.new("com.omicronlab.avro");
-        if (schema) {
-            schema.set_boolean("mode-bangla", true);
-            fixed.push("Set GSettings mode-bangla to true.");
-        }
-    } catch (e) {}
+    let settings = avroSettings();
+    if (settings) {
+        settings.set_boolean("mode-bangla", true);
+        Gio.Settings.sync();
+        fixed.push("Set GSettings mode-bangla to true.");
+    }
 
     return fixed;
 }

@@ -69,8 +69,42 @@
     </key>
     <key type="s" name="bangla-layout">
       <default>'ibus-avro'</default>
-      <summary>Bangla keyboard layout</summary>
-      <description>The IBus keyboard the TopBar switches to for Bangla: 'ibus-avro' (Avro Phonetic) or a Bangla XKB layout such as 'xkb:bd::ben' (National (Jatiya)), 'xkb:bd:probhat:ben' (Probhat) or 'xkb:in:ben_bornona:ben' (Bornona)</description>
+      <summary>Bangla keyboard</summary>
+      <description>The IBus keyboard the TopBar switches to for Bangla: 'ibus-avro' (Avro, typing with the layout in "keyboard-layout") or a Bangla system (XKB) layout such as 'xkb:bd::ben' or 'xkb:bd:probhat:ben'</description>
+    </key>
+    <key type="s" name="keyboard-layout">
+      <default>'phonetic'</default>
+      <summary>Avro keyboard layout</summary>
+      <description>The layout Avro types with: 'phonetic' (Avro Phonetic) or one of the fixed keyboard layouts of Avro Keyboard: 'avro-easy' (Avro Easy), 'bornona' (Bornona), 'munir-optima' (Munir Optima), 'national' (National (Jatiya)), 'probhat' (Probhat)</description>
+    </key>
+    <key type="s" name="fixed-typing-style">
+      <choices>
+        <choice value="modern"/>
+        <choice value="old"/>
+      </choices>
+      <default>'modern'</default>
+      <summary>Typing style in fixed keyboard layouts</summary>
+      <description>'modern': type kar, matra and the short form of vowels always after consonants. 'old': type writer or old ASCII based typing style, with the e, i and oi kars typed before their consonant</description>
+    </key>
+    <key type="b" name="fixed-old-reph">
+      <default>true</default>
+      <summary>Enable "Old Style Reph" (In Modern Typing Style)</summary>
+      <description>Type reph after the consonant it belongs to; Avro moves it in front of the consonant</description>
+    </key>
+    <key type="b" name="fixed-vowel-forming">
+      <default>true</default>
+      <summary>Enable "Automatic Vowel Forming" (In Modern Typing Style)</summary>
+      <description>A kar typed where no consonant can take it (at the start of a word, after a vowel or a sign) becomes the full vowel</description>
+    </key>
+    <key type="b" name="fixed-fix-chandra">
+      <default>true</default>
+      <summary>Automatically fix "Chandrabindu" position (In Modern Typing Style)</summary>
+      <description>A kar typed after chandrabindu is put before it, as Unicode needs</description>
+    </key>
+    <key type="b" name="fixed-numpad-bangla">
+      <default>true</default>
+      <summary>Enable Bangla in NumberPad (In Fixed keyboard Layouts)</summary>
+      <description>The number pad types Bangla digits in fixed keyboard layouts</description>
     </key>
     <key type="i" name="topbar-x">
       <default>-1</default>
@@ -137,6 +171,11 @@
       <default>0</default>
       <summary>Tray hint counter</summary>
       <description>Internal: how many times the "Avro Keyboard is running here" notification has been shown (at most 2)</description>
+    </key>
+    <key type="b" name="topbar-autostart-done">
+      <default>false</default>
+      <summary>TopBar start on login set up</summary>
+      <description>Internal: whether the TopBar has added itself to the programs that start on login. Like Avro Keyboard, which starts with Windows unless that is turned off, the TopBar does this once, the first time it runs; after that only the user's choice in Preferences counts.</description>
     </key>
 
   </schema>

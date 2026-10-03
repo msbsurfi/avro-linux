@@ -10,6 +10,7 @@ const Gio = imports.gi.Gio;
 const GLib = imports.gi.GLib;
 
 imports.searchPath.unshift('./src/preferences');
+imports.searchPath.unshift('./src/avro-core/fixed');
 imports.searchPath.unshift('./src/common');
 
 let passedCount = 0;
@@ -49,21 +50,16 @@ if (prefModule && typeof prefModule.createDiagnosticReport === 'function') {
 
 // 3. Test GSettings Schema and Keys
 try {
-    // Set GSETTINGS_SCHEMA_DIR to local schema if not system-installed
+    // The schema of the source tree (compiled by `make`), else the installed one
     let schemaSource = Gio.SettingsSchemaSource.get_default();
-    let schemaObj = schemaSource ? schemaSource.lookup("com.omicronlab.avro", true) : null;
-    
-    if (!schemaObj) {
-        // Look up compiled schema in build or data directory
-        let schemaDir = Gio.File.new_for_path("./data/gsettings");
-        if (schemaDir.query_exists(null)) {
-            let localSource = Gio.SettingsSchemaSource.new_from_directory(
-                schemaDir.get_path(),
-                schemaSource,
-                false
-            );
-            schemaObj = localSource.lookup("com.omicronlab.avro", true);
-        }
+    let schemaObj = null;
+    let schemaDir = Gio.File.new_for_path("./data/gsettings/gschemas.compiled");
+    if (schemaDir.query_exists(null)) {
+        let localSource = Gio.SettingsSchemaSource.new_from_directory("./data/gsettings", schemaSource, false);
+        schemaObj = localSource.lookup("com.omicronlab.avro", false);
+    }
+    if (!schemaObj && schemaSource) {
+        schemaObj = schemaSource.lookup("com.omicronlab.avro", true);
     }
 
     assert(schemaObj !== null, "GSettings schema 'com.omicronlab.avro' found and valid");
@@ -74,6 +70,14 @@ try {
         assert(schemaObj.has_key("switch-newline"), "Schema contains switch-newline");
         assert(schemaObj.has_key("lutable-size"), "Schema contains lutable-size");
         assert(schemaObj.has_key("cboxorient"), "Schema contains cboxorient");
+        ["keyboard-layout", "fixed-typing-style", "fixed-old-reph", "fixed-vowel-forming",
+         "fixed-fix-chandra", "fixed-numpad-bangla", "topbar-autostart-done"].forEach(key => {
+            assert(schemaObj.has_key(key), "Schema contains " + key);
+        });
+        assert(schemaObj.get_key("keyboard-layout").get_default_value().unpack() === "phonetic",
+               "Avro Phonetic is the default keyboard layout");
+        assert(schemaObj.get_key("fixed-typing-style").get_default_value().unpack() === "modern",
+               "Modern Style Typing is the default, as in Avro Keyboard");
 
         let settings = new Gio.Settings({ settings_schema: schemaObj });
         assert(typeof settings.get_boolean("switch-preview") === 'boolean', "switch-preview returns boolean");
@@ -86,7 +90,16 @@ try {
     assert(false, "GSettings test error: " + e.message);
 }
 
-// 4. Test candidate selections file resolution
+// 4. Keyboard layouts offered in Preferences
+if (prefModule && typeof prefModule.keyboardLayoutChoices === 'function') {
+    let choices = prefModule.keyboardLayoutChoices();
+    assert(choices.length === 6 && choices[0][0] === "phonetic", "Preferences offer Avro Phonetic and five fixed layouts");
+    assert(choices.map(c => c[1]).indexOf("National (Jatiya)") !== -1, "National (Jatiya) is offered");
+} else {
+    assert(false, "keyboardLayoutChoices is not exported");
+}
+
+// 5. Test candidate selections file resolution
 if (prefModule && typeof prefModule.getCandidateSelectionsFile === 'function') {
     let file = prefModule.getCandidateSelectionsFile();
     assert(file !== null, "Candidate selections file is returned");
