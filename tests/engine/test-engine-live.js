@@ -157,12 +157,22 @@ function activeEngineName() {
     return name;
 }
 let engineReady = waitFor(() => {
-    if (activeEngineName() === "ibus-avro") return true;
+    let cur = activeEngineName();
+    print("DEBUG current activeEngineName:", cur);
+    if (cur === "ibus-avro") return true;
     ic.set_engine("ibus-avro");
-    return waitFor(() => activeEngineName() === "ibus-avro", 3000);
+    return waitFor(() => {
+        let n = activeEngineName();
+        print("DEBUG waiting for ibus-avro, got:", n);
+        return n === "ibus-avro";
+    }, 3000);
 }, 20000);
+print("DEBUG engineReady after set_engine:", engineReady);
 if (engineReady) {
-    engineReady = waitFor(() => label !== "", 20000);
+    engineReady = waitFor(() => {
+        print("DEBUG waiting for label, current label:", label);
+        return label !== "";
+    }, 20000);
     pump(300);
 }
 assertTrue(engineReady, "The engine starts and becomes the active engine");

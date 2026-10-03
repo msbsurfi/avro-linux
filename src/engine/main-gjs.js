@@ -139,6 +139,7 @@ if (bus.is_connected()) {
         engine.connect('candidate-clicked', engine_candidate_clicked);
         engine.connect('focus-out', engine_focus_out);
         engine.connect('focus-in', engine_focus_in);
+        engine.connect('enable', engine_enable);
         engine.connect('reset', engine_reset);
         engine.connect('disable', engine_disable);
         engine.connect('property-activate', engine_property_activate);
@@ -174,10 +175,12 @@ if (bus.is_connected()) {
         if (!engine.mode_bangla) {
             prop_mode.set_label(IBus.Text.new_from_string("English"));
             prop_mode.set_symbol(IBus.Text.new_from_string("En"));
+            try { prop_mode.set_icon("input-keyboard"); } catch (e) {}
         } else {
             let name = engine.layout ? engine.layout.name : "Avro";
             prop_mode.set_label(IBus.Text.new_from_string("বাংলা (" + name + ")"));
             prop_mode.set_symbol(IBus.Text.new_from_string("বা"));
+            try { prop_mode.set_icon("avro-bangla"); } catch (e) {}
         }
         engine.update_property(prop_mode);
     }
@@ -561,19 +564,42 @@ if (bus.is_connected()) {
         resetAll(engine);
     }
 
+    var focusOutTimeoutId = 0;
+
     function engine_focus_out(engine) {
-        // The preview belongs to the focused text field
-        hidePreviewWindow(engine);
+        if (focusOutTimeoutId !== 0) {
+            GLib.source_remove(focusOutTimeoutId);
+            focusOutTimeoutId = 0;
+        }
         engine.altGrDown = false;
-        finishCompositionByClient(engine, false);
+        if ((engine.buffertext && engine.buffertext.length > 0) || (engine.typer && !engine.typer.isEmpty())) {
+            // Debounce by 80ms: in Wayland/KWin environments where a window maps or
+            // focus momentarily bounces, focus_in cancels this timer before composition is aborted.
+            focusOutTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 80, () => {
+                focusOutTimeoutId = 0;
+                hidePreviewWindow(engine);
+                finishCompositionByClient(engine, false);
+                return GLib.SOURCE_REMOVE;
+            });
+        } else {
+            hidePreviewWindow(engine);
+            finishCompositionByClient(engine, false);
+        }
     }
 
     function engine_reset(engine) {
+        if (focusOutTimeoutId !== 0) {
+            GLib.source_remove(focusOutTimeoutId);
+            focusOutTimeoutId = 0;
+        }
         finishCompositionByClient(engine, true);
     }
 
     function engine_disable(engine) {
-        // Switching to another keyboard keeps the word being typed
+        if (focusOutTimeoutId !== 0) {
+            GLib.source_remove(focusOutTimeoutId);
+            focusOutTimeoutId = 0;
+        }
         finishCompositionByClient(engine, false);
     }
 
@@ -616,6 +642,10 @@ if (bus.is_connected()) {
     proplist.append(propp);
 
     function engine_focus_in(engine) {
+        if (focusOutTimeoutId !== 0) {
+            GLib.source_remove(focusOutTimeoutId);
+            focusOutTimeoutId = 0;
+        }
         engine.register_properties(proplist);
         updateEngineProperty(engine);
         if (engine.buffertext && engine.buffertext.length > 0) {
@@ -629,6 +659,18 @@ if (bus.is_connected()) {
         } else if (prop_name === 'mode') {
             setMode(engine, !engine.mode_bangla);
         }
+    }
+
+    // enable() fires when IBus activates the engine for a new input context,
+    // which in Electron/VS Code (and some Qt apps) happens BEFORE the first
+    // focus-in. Registering properties here ensures the engine is fully
+    // initialised before the first keypress — fixing "first attempt fails"
+    // or "one Bengali letter then English" bugs in those apps.
+    function engine_enable(engine) {
+        try {
+            engine.register_properties(proplist);
+            updateEngineProperty(engine);
+        } catch (e) {}
     }
 
     /* =========================================================================== */
@@ -803,7 +845,10 @@ if (bus.is_connected()) {
     }
 
     function hideSystemPanel(engine) {
-        try { engine.hide_lookup_table(); } catch (e) {}
+        try {
+            if (engine.lookuptable) engine.lookuptable.clear();
+            engine.hide_lookup_table();
+        } catch (e) {}
         try { engine.hide_auxiliary_text(); } catch (e) {}
     }
 
@@ -821,6 +866,7 @@ if (bus.is_connected()) {
             hideSystemPanel(engine);
         }
         if (mode === 'classic') {
+            hideSystemPanel(engine);
             showPreviewWindow(engine);
         } else if (mode === 'system') {
             showSystemPanel(engine);
@@ -1064,7 +1110,7 @@ if (bus.is_connected()) {
         language: "bn",
         license: "MPL-2.0",
         author: "Sarim Khan <sarim2005@gmail.com>",
-        icon: eevars.get_pkgdatadir() + "/icons/avro-bangla.png",
+        icon: "avro-bangla",
         layout: "us",
         setup: "/usr/bin/env gjs " + eevars.get_pkgdatadir() + "/preferences/pref.js --standalone",
         rank: 99
@@ -1077,7 +1123,7 @@ if (bus.is_connected()) {
         language: "bn",
         license: "MPL-2.0",
         author: "Sarim Khan <sarim2005@gmail.com>",
-        icon: eevars.get_pkgdatadir() + "/icons/avro-bangla.png",
+        icon: "avro-bangla",
         layout: "us",
         setup: "/usr/bin/env gjs " + eevars.get_pkgdatadir() + "/preferences/pref.js --standalone",
         rank: 99
@@ -1091,6 +1137,12 @@ if (bus.is_connected()) {
     } else {
         bus.register_component(component);
     }
+
+    // Ensure IBus floating property panel is disabled (prevents unwanted 8.8x32.8 window)
+    try {
+        GLib.spawn_command_line_async("gsettings set org.freedesktop.ibus.panel show 0");
+    } catch (e) {}
+
     IBus.main();
 } else {
     print("Exiting because IBus Bus not found, maybe the daemon is not running?");
