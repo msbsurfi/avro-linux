@@ -7,11 +7,17 @@
     =============================================================================
 */
 
+const GLib = imports.gi.GLib;
+const _args = typeof ARGV !== 'undefined' ? ARGV : [];
+const _isTopBar = !_args.some(a => ['--pad', '--converter', '--layout', '--mouse', '-m', '--preferences'].indexOf(a) !== -1);
+if (_isTopBar && GLib.getenv('DISPLAY')) {
+    GLib.setenv('GDK_BACKEND', 'x11', true);
+}
+
 imports.gi.versions.Gtk = '3.0';
 imports.gi.versions.Gdk = '3.0';
 const Gtk = imports.gi.Gtk;
 const Gdk = imports.gi.Gdk;
-const GLib = imports.gi.GLib;
 
 // Base paths (gjs does not put the script itself in ARGV)
 let baseDir = '/usr/share/avro-linux';

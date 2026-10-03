@@ -3,6 +3,11 @@
 # SPDX-License-Identifier: MPL-2.0
 # Remastered by MD Shifat Bin Siddique Urfi
 
+# Use X11/XWayland backend so the TopBar docks stickily at the top of the screen
+if [ -n "$DISPLAY" ]; then
+    export GDK_BACKEND=x11
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 if [ -f "${SCRIPT_DIR}/src/standalone/main.js" ]; then
     exec "${SCRIPT_DIR}/src/standalone/main.js" --topbar "$@"
