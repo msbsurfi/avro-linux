@@ -117,8 +117,10 @@ settings.set_string("keyboard-layout", "phonetic");
 settings.set_boolean("mode-bangla", true);
 Gio.Settings.sync();
 
-// A private IBus daemon (on a private D-Bus session) and the engine from the source tree
-spawn(["ibus-daemon", "--address=" + GLib.getenv("IBUS_ADDRESS"),
+// A private IBus daemon (on a private D-Bus session, so that its helpers,
+// ibus-portal for one, never take over names of the developer's desktop
+// session) and the engine from the source tree
+spawn(["dbus-run-session", "--", "ibus-daemon", "--address=" + GLib.getenv("IBUS_ADDRESS"),
        "--panel=disable", "--config=disable", "--emoji-extension=disable", "--cache=none", "--single"]);
 
 IBus.init();

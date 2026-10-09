@@ -20,30 +20,27 @@ const GdkPixbuf = imports.gi.GdkPixbuf;
 const GLib = imports.gi.GLib;
 const Gio = imports.gi.Gio;
 
-GLib.set_prgname("avro-splash");
-GLib.set_application_name("Avro Keyboard");
-
 let baseDir = '/usr/share/avro-linux';
 try {
-    let scriptPath = imports.system.programPath || imports.system.programInvocationName || '.';
+    // The tree this file belongs to, also when the TopBar or a test imports it
+    let m = new Error().stack.match(/(?:^|@|\()(?:file:\/\/)?([^\s:()@]+\.js):\d+/m);
+    let scriptPath = m ? GLib.canonicalize_filename(m[1], GLib.get_current_dir())
+                       : (imports.system.programPath || '.');
     let scriptDir = GLib.path_get_dirname(scriptPath);
     if (GLib.file_test(scriptDir + '/../common/evars.js', GLib.FileTest.EXISTS)) {
         baseDir = GLib.path_get_dirname(scriptDir);
-    } else if (GLib.file_test(scriptDir + '/../src/common/evars.js', GLib.FileTest.EXISTS)) {
-        baseDir = GLib.path_get_dirname(scriptDir) + '/src';
     }
 } catch (e) {}
 
 imports.searchPath.unshift(baseDir + '/common');
-imports.searchPath.unshift(baseDir + '/src/common');
 let eevars = null;
 try { eevars = imports.evars; } catch (e) {}
 
 function appVersion() {
     try {
-        return eevars ? eevars.get_version() : "1.2.0";
+        return eevars ? eevars.get_version() : "";
     } catch (e) {
-        return "1.2.0";
+        return "";
     }
 }
 
@@ -367,18 +364,22 @@ function showSplashScreen(durationMs, onClosed) {
     return splash;
 }
 
+// Only when this file is the program: the TopBar imports it to show the
+// splash, and must keep its own name and main loop.
 let _isMain = false;
 try {
-    let prog = imports.system.programInvocationName || "";
-    if (prog.indexOf("splash.js") !== -1 || prog.indexOf("avro-splash") !== -1) {
-        _isMain = true;
-    }
-    if (typeof ARGV !== 'undefined' && ARGV.indexOf('--standalone') !== -1) {
+    let prog = GLib.path_get_basename(imports.system.programInvocationName || "");
+    if (prog === "splash.js" || prog === "avro-splash") {
         _isMain = true;
     }
 } catch (e) {}
 
 if (_isMain) {
+    globalThis.__avroAppIdentity = true;
+    try {
+        GLib.set_prgname("avro-splash");
+        GLib.set_application_name("Avro Keyboard");
+    } catch (e) {}
     Gtk.init(null);
     showSplashScreen(2000, () => Gtk.main_quit());
     Gtk.main();

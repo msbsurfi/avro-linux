@@ -18,7 +18,7 @@
 
 | Desktop Environment | Wayland | X11 | Notes |
 |---|---|---|---|
-| **GNOME Shell 43 - 46** | **Supported** | **Supported** | Direct ibus bus integration; auto-configured via GSettings schema override. |
+| **GNOME Shell 43 - 46** | **Supported** | **Supported** | Direct ibus bus integration; Avro added to the input sources when the user accepts the TopBar's offer (or with Doctor Auto-Fix). |
 | **KDE Plasma 5.27 & 6.x**| **Supported** | **Supported** | Non-focus-stealing floating window avoids KWin popup focus-out bug. |
 | **XFCE 4.18** | N/A | **Supported** | Full IBus support with notification area applet. |
 | **Cinnamon 6.x** | N/A | **Supported** | Standard IBus tray integration. |

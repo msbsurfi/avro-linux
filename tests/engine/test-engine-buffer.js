@@ -162,11 +162,8 @@ assertEqual(engine.buffertext, "a", "Buffer updated in Bangla mode");
 engine.reset();
 for (let digit of "2026") engine.processChar(digit);
 assertEqual(engine.buffertext, "2026", "Numeric input remains intact while composing");
-// 8. Output as ANSI vs Unicode
-imports.searchPath.unshift(rootDir + "/src/avro-core");
-const bijoyConverter = imports.bijoyconverter;
-assertEqual(bijoyConverter.unicodeToBijoy("আমার সোনার বাংলা"), "Avgvi †mvbvi evsjv", "Unicode to Bijoy ANSI conversion");
-assertEqual(bijoyConverter.bijoyToUnicode("Avgvi †mvbvi evsjv"), "আমার সোনার বাংলা", "Bijoy ANSI to Unicode conversion");
+assertEqual(engine.preeditText, "২০২৬", "Numeric input produces Bengali digits");
+// The Bijoy (ANSI) converter has its own test: tests/core/test-bijoy-converter.js
 
 print("Results: " + passed + " passed, " + failed + " failed.");
 if (failed > 0) {

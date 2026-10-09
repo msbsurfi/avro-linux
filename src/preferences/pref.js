@@ -179,10 +179,14 @@ function hasKey(settings, key) {
 }
 
 function runpref() {
-    try {
-        GLib.set_prgname("avro-preferences");
-        GLib.set_application_name("Avro Preferences");
-    } catch (e) {}
+    // Only the first part of a program names it (the TopBar opens this too)
+    if (!globalThis.__avroAppIdentity) {
+        globalThis.__avroAppIdentity = true;
+        try {
+            GLib.set_prgname("avro-preferences");
+            GLib.set_application_name("Avro Preferences");
+        } catch (e) {}
+    }
 
     Gtk.init(null);
     try { Gtk.Window.set_default_icon_name("avro-preferences"); } catch (e) {}

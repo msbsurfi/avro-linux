@@ -46,6 +46,51 @@ let Theme = null;
     }
 })();
 
+/* Command output as text. UTF-8: font names, for one, can be Bengali. */
+function decode(bytes) {
+    try {
+        return bytes ? new TextDecoder('utf-8').decode(bytes) : '';
+    } catch (e) {
+        return '';
+    }
+}
+
+/* Runs a command line: [succeeded (exit status 0), standard output]. */
+function run(cmd) {
+    try {
+        let [ok, out, , status] = GLib.spawn_command_line_sync(cmd);
+        return [ok && status === 0, ok ? decode(out) : ''];
+    } catch (e) {
+        return [false, ''];
+    }
+}
+
+/* Settings of another program, or null when its schema is not installed. */
+function settingsFor(schemaId) {
+    try {
+        let source = Gio.SettingsSchemaSource.get_default();
+        let schema = source ? source.lookup(schemaId, true) : null;
+        return schema ? new Gio.Settings({ settings_schema: schema }) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+function isGnome() {
+    return (GLib.getenv("XDG_CURRENT_DESKTOP") || "").toUpperCase().indexOf("GNOME") !== -1;
+}
+
+/* Is Avro in the keyboard list the desktop offers? GNOME keeps its own list
+   (input sources); other desktops show IBus' preload engines. */
+function avroInKeyboardList() {
+    if (isGnome()) {
+        let g = settingsFor('org.gnome.desktop.input-sources');
+        if (g) return g.get_value('sources').deep_unpack().some(s => s[1] === 'ibus-avro');
+    }
+    let i = settingsFor('org.freedesktop.ibus.general');
+    return i ? i.get_strv('preload-engines').indexOf('ibus-avro') !== -1 : false;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    Diagnostic Inspection Functions
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -60,9 +105,11 @@ function runDiagnosticCheck() {
         ibusRunning: false,
         ibusRegistered: false,
         ibusActiveEngine: "None",
+        inKeyboardList: false,
         envGtk: GLib.getenv("GTK_IM_MODULE") || "unset",
         envQt: GLib.getenv("QT_IM_MODULE") || "unset",
         envXmod: GLib.getenv("XMODIFIERS") || "unset",
+        envIssues: [],
         schemaValid: false,
         bengaliFonts: [],
         issues: [],
@@ -73,49 +120,37 @@ function runDiagnosticCheck() {
     try {
         let [ok, out] = GLib.file_get_contents("/etc/os-release");
         if (ok) {
-            let str = String.fromCharCode.apply(null, out);
-            let match = str.match(/PRETTY_NAME="([^"]+)"/);
+            let match = decode(out).match(/PRETTY_NAME="([^"]+)"/);
             if (match) report.os = match[1];
         }
     } catch (e) {}
 
-    // Check IBus daemon
-    try {
-        let [ok, out] = GLib.spawn_command_line_sync("pgrep -x ibus-daemon");
-        if (ok && out && out.length > 0) {
-            report.ibusRunning = true;
+    // IBus of this session: 'ibus list-engine' needs it (pgrep would also
+    // find the IBus of other users and sessions)
+    let [listOk, list] = run("ibus list-engine");
+    report.ibusRunning = listOk;
+    if (listOk) {
+        let [engineOk, engineOut] = run("ibus engine");
+        report.ibusActiveEngine = engineOk ? (engineOut.trim() || "None") : "None";
+        if (list.indexOf("ibus-avro") !== -1) {
+            report.ibusRegistered = true;
         } else {
-            report.issues.push("IBus daemon is not running.");
-            report.recommendations.push("Run 'ibus-daemon -drx' to start the IBus input bus.");
+            report.issues.push("IBus does not know the Avro engine yet (it was started before Avro was installed).");
+            report.recommendations.push("Click Auto-Fix, or run 'ibus write-cache; ibus restart'.");
         }
-    } catch (e) {}
+    } else {
+        report.issues.push("IBus is not running in this session.");
+        report.recommendations.push("Click Auto-Fix, or run 'ibus-daemon -drx' (log out and in again on GNOME).");
+    }
 
-    // Check IBus engine list
-    try {
-        let [ok, out] = GLib.spawn_command_line_sync("ibus list-engine");
-        if (ok && out) {
-            let str = String.fromCharCode.apply(null, out);
-            if (str.indexOf("ibus-avro") !== -1 || str.indexOf("avro") !== -1) {
-                report.ibusRegistered = true;
-            } else {
-                report.issues.push("ibus-avro engine component is not registered in IBus.");
-                report.recommendations.push("Verify /usr/share/ibus/component/ibus-avro.xml exists and restart ibus.");
-            }
-        }
-    } catch (e) {}
-
-    // Check active engine
-    try {
-        let [ok, out] = GLib.spawn_command_line_sync("ibus engine");
-        if (ok && out) {
-            let str = String.fromCharCode.apply(null, out).trim();
-            report.ibusActiveEngine = str;
-            if (str !== "ibus-avro") {
-                report.issues.push("Active IBus engine is '" + str + "' instead of 'ibus-avro'.");
-                report.recommendations.push("Run 'ibus engine ibus-avro' or click 'বাংলা' on the Avro TopBar.");
-            }
-        }
-    } catch (e) {}
+    // Avro in the user's keyboard list. Not having it is no error for the
+    // TopBar, which switches IBus itself, but the desktop's switcher needs it.
+    report.inKeyboardList = avroInKeyboardList();
+    if (!report.inKeyboardList) {
+        report.issues.push("Avro is not in your keyboard list" + (isGnome() ? " (GNOME input sources)" : " (IBus input methods)") +
+                           ", so the desktop's keyboard switcher does not offer it.");
+        report.recommendations.push("Click Auto-Fix, or add \"Bangla (Avro Phonetic)\" in your keyboard / IBus settings.");
+    }
 
     // Check GSettings schema
     let settings = avroSettings();
@@ -126,49 +161,44 @@ function runDiagnosticCheck() {
         report.recommendations.push("Run 'sudo glib-compile-schemas /usr/share/glib-2.0/schemas'.");
     }
 
-    // Check environment variables
-    if (report.envGtk !== "ibus") {
-        report.issues.push("GTK_IM_MODULE is '" + report.envGtk + "' (expected 'ibus').");
-        report.recommendations.push("Ensure /etc/profile.d/avro-linux.sh or ~/.profile sets GTK_IM_MODULE=ibus.");
-    }
-    if (report.envQt !== "ibus") {
-        report.issues.push("QT_IM_MODULE is '" + report.envQt + "' (expected 'ibus').");
-        report.recommendations.push("Ensure /etc/profile.d/avro-linux.sh or ~/.profile sets QT_IM_MODULE=ibus.");
-    }
-    if (report.envXmod.indexOf("@im=ibus") === -1) {
-        report.issues.push("XMODIFIERS is '" + report.envXmod + "' (expected '@im=ibus').");
-        report.recommendations.push("Ensure /etc/profile.d/avro-linux.sh or ~/.profile sets XMODIFIERS=@im=ibus.");
+    // Input method environment. On Wayland, GTK and Qt reach IBus without
+    // these variables; set to another framework (fcitx, ...) they are a problem.
+    let wayland = report.session === "wayland";
+    let checkVar = (name, value, expected) => {
+        if (value === "unset") {
+            if (!wayland) report.envIssues.push(name + " is not set (expected '" + expected + "').");
+        } else if (value.indexOf("ibus") === -1) {
+            report.envIssues.push(name + " is '" + value + "': another input method framework is selected.");
+        }
+    };
+    checkVar("GTK_IM_MODULE", report.envGtk, "ibus");
+    checkVar("QT_IM_MODULE", report.envQt, "ibus");
+    checkVar("XMODIFIERS", report.envXmod, "@im=ibus");
+    if (report.envIssues.length > 0) {
+        report.issues = report.issues.concat(report.envIssues);
+        report.recommendations.push("Choose IBus as the input method framework (Debian/Ubuntu: 'im-config -n ibus'), then log out and in again.");
     }
 
     // Check Bengali fonts
-    try {
-        let [ok, out] = GLib.spawn_command_line_sync("fc-list :lang=bn family");
-        if (ok && out) {
-            let str = String.fromCharCode.apply(null, out);
-            let lines = str.split("\n").map(s => s.trim()).filter(s => s.length > 0);
-            report.bengaliFonts = [...new Set(lines)].slice(0, 10);
-            if (report.bengaliFonts.length === 0) {
-                report.issues.push("No Bengali fonts detected in fontconfig.");
-                report.recommendations.push("Install 'fonts-lohit-beng-bengali' or 'fonts-beng'.");
-            }
-        }
-    } catch (e) {}
+    let [fontsOk, fontsOut] = run("fc-list :lang=bn family");
+    if (fontsOk) {
+        let lines = fontsOut.split("\n").map(s => s.trim()).filter(s => s.length > 0);
+        report.bengaliFonts = [...new Set(lines)].slice(0, 10);
+    }
+    if (report.bengaliFonts.length === 0) {
+        report.issues.push("No Bengali fonts detected in fontconfig.");
+        report.recommendations.push("Install a Bengali font: sudo apt install fonts-noto-core (or fonts-beng).");
+    }
 
     // Check IBus version
-    report.ibusVersion = "Unknown";
-    try {
-        let [ok, out] = GLib.spawn_command_line_sync("ibus version");
-        if (ok && out) {
-            let str = String.fromCharCode.apply(null, out).trim();
-            report.ibusVersion = str || "Unknown";
-        }
-    } catch (e) {}
+    let [, version] = run("ibus version");
+    report.ibusVersion = version.trim() || "Unknown";
 
     // Check ibus-avro component file
     report.componentFile = false;
     let componentPaths = [
-        "/usr/share/ibus/component/avro.xml",
         "/usr/share/ibus/component/ibus-avro.xml",
+        "/usr/share/ibus/component/avro.xml",
         "/usr/local/share/ibus/component/avro.xml"
     ];
     for (let cp of componentPaths) {
@@ -179,60 +209,44 @@ function runDiagnosticCheck() {
     }
     if (!report.componentFile) {
         report.issues.push("IBus component file for ibus-avro not found in /usr/share/ibus/component/.");
-        report.recommendations.push("Reinstall avro-linux: sudo dpkg -i avro-linux_*.deb");
+        report.recommendations.push("Reinstall Avro: sudo apt install --reinstall avro-linux");
     }
 
     // Check embed-preedit-text (required for live inline typing in VS Code / Konsole)
     report.embedPreedit = "unknown";
-    try {
-        let [ok, out] = GLib.spawn_command_line_sync("gsettings get org.freedesktop.ibus.general embed-preedit-text");
-        if (ok && out) {
-            report.embedPreedit = String.fromCharCode.apply(null, out).trim();
-            if (report.embedPreedit !== "true") {
-                report.issues.push("IBus embed-preedit-text is not enabled (value: " + report.embedPreedit + ").");
-                report.recommendations.push("Run: gsettings set org.freedesktop.ibus.general embed-preedit-text true");
-            }
+    let ibusGeneral = settingsFor('org.freedesktop.ibus.general');
+    if (ibusGeneral) {
+        report.embedPreedit = ibusGeneral.get_boolean('embed-preedit-text') ? "true" : "false";
+        if (report.embedPreedit !== "true") {
+            report.issues.push("IBus embed-preedit-text is off, so the word being typed is not shown in the text.");
+            report.recommendations.push("Click Auto-Fix, or run: gsettings set org.freedesktop.ibus.general embed-preedit-text true");
         }
-    } catch (e) {}
+    }
 
-    // Check GNOME input sources (only if on GNOME)
+    // GNOME input sources, for the report
     report.gnomeInputSources = "N/A";
-    try {
-        let desktop = (GLib.getenv("XDG_CURRENT_DESKTOP") || "").toUpperCase();
-        if (desktop.indexOf("GNOME") !== -1) {
-            let [ok, out] = GLib.spawn_command_line_sync("gsettings get org.gnome.desktop.input-sources sources");
-            if (ok && out) {
-                report.gnomeInputSources = String.fromCharCode.apply(null, out).trim();
-                if (report.gnomeInputSources.indexOf("ibus") === -1) {
-                    report.issues.push("GNOME input sources do not include IBus: " + report.gnomeInputSources);
-                    report.recommendations.push("Add IBus as input source in GNOME Settings → Keyboard.");
-                }
-            }
-        }
-    } catch (e) {}
+    if (isGnome()) {
+        let g = settingsFor('org.gnome.desktop.input-sources');
+        if (g) report.gnomeInputSources = g.get_value('sources').print(true);
+    }
 
     // Check system locale
-    report.locale = "Unknown";
-    try {
-        let [ok, out] = GLib.spawn_command_line_sync("locale");
-        if (ok && out) {
-            let str = String.fromCharCode.apply(null, out).trim();
-            report.locale = str.split("\n")[0] || "Unknown";
-        }
-    } catch (e) {}
+    let [, locale] = run("locale");
+    report.locale = locale.trim().split("\n")[0] || "Unknown";
 
-    // Check profile.d env file exists
+    // The package's login script sets the IBus variables when nothing else
+    // does; im-config or the desktop may set them instead, so this is no error.
     report.profileEnvFile = GLib.file_test("/etc/profile.d/avro-linux.sh", GLib.FileTest.EXISTS);
-    if (!report.profileEnvFile) {
-        report.issues.push("/etc/profile.d/avro-linux.sh is missing (IM env vars won't auto-set on login).");
-        report.recommendations.push("Reinstall avro-linux: sudo dpkg -i avro-linux_*.deb");
-    }
 
     return report;
 }
 
 function formatReportText(report) {
     let lines = [];
+    let active = report.ibusActiveEngine;
+    let activeNote = /avro/.test(active) ? " [OK]" :
+        !report.ibusRunning ? " [FAIL]" :
+        active === "None" ? " [none selected yet]" : " [OK — English; switch to Avro to type Bangla]";
     lines.push("==================================================");
     lines.push("          AVRO LINUX SYSTEM DIAGNOSTIC REPORT     ");
     lines.push("  Remastered by MD Shifat Bin Siddique Urfi (DMC, K-79) & MD Mehedi Hasan (CSE 21, BUET)  ");
@@ -244,17 +258,20 @@ function formatReportText(report) {
     lines.push("");
     lines.push("--- IBus Subsystem ---");
     lines.push("IBus Version:        " + (report.ibusVersion || "Unknown"));
-    lines.push("IBus Daemon Running: " + (report.ibusRunning ? "YES [OK]" : "NO [FAIL]"));
+    lines.push("IBus Running:        " + (report.ibusRunning ? "YES [OK]" : "NO [FAIL]"));
     lines.push("ibus-avro Registered:" + (report.ibusRegistered ? "YES [OK]" : "NO [FAIL]"));
-    lines.push("Active Engine:       " + report.ibusActiveEngine + (report.ibusActiveEngine === "ibus-avro" ? " [OK]" : " [SWITCH NEEDED]"));
+    lines.push("Active Engine:       " + active + activeNote);
+    lines.push("In Keyboard List:    " + (report.inKeyboardList ? "YES [OK]" : "NO [ADD IT]"));
     lines.push("Component File:      " + (report.componentFile ? report.componentFile + " [OK]" : "NOT FOUND [FAIL]"));
     lines.push("Embed Preedit Text:  " + (report.embedPreedit === "true" ? "Enabled [OK]" : report.embedPreedit + " [FAIL — live typing won't work]"));
     lines.push("");
     lines.push("--- Environment Variables ---");
-    lines.push("GTK_IM_MODULE:       " + report.envGtk + (report.envGtk === "ibus" ? " [OK]" : " [WRONG — should be 'ibus']"));
-    lines.push("QT_IM_MODULE:        " + report.envQt + (report.envQt === "ibus" ? " [OK]" : " [WRONG — should be 'ibus']"));
-    lines.push("XMODIFIERS:          " + report.envXmod + (report.envXmod.indexOf("@im=ibus") !== -1 ? " [OK]" : " [WRONG]"));
-    lines.push("Profile Env Script:  " + (report.profileEnvFile ? "/etc/profile.d/avro-linux.sh [OK]" : "MISSING [FAIL]"));
+    let varLine = (value, ok) => value + (ok ? " [OK]" : " [CHECK]");
+    let wayland = report.session === "wayland";
+    lines.push("GTK_IM_MODULE:       " + varLine(report.envGtk, report.envGtk === "ibus" || (wayland && report.envGtk === "unset")));
+    lines.push("QT_IM_MODULE:        " + varLine(report.envQt, report.envQt === "ibus" || (wayland && report.envQt === "unset")));
+    lines.push("XMODIFIERS:          " + varLine(report.envXmod, report.envXmod.indexOf("@im=ibus") !== -1 || (wayland && report.envXmod === "unset")));
+    lines.push("Login Env Script:    " + (report.profileEnvFile ? "/etc/profile.d/avro-linux.sh" : "not installed"));
     lines.push("");
     lines.push("--- Configuration & Fonts ---");
     lines.push("GSettings Schema:    " + (report.schemaValid ? "VALID [OK]" : "MISSING [FAIL]"));
@@ -283,86 +300,50 @@ function formatReportText(report) {
     return lines.join("\n");
 }
 
+/* Repairs what the report finds, for this user only. It never changes the
+   keyboard in use, the Bangla/English mode or how IBus' own panel looks. */
 function autoFixIssues() {
     let fixed = [];
-    try {
-        let [ok, out] = GLib.spawn_command_line_sync("pgrep -x ibus-daemon");
-        if (!ok || !out || out.length === 0) {
-            GLib.spawn_command_line_async("ibus-daemon -drx --panel disable");
-            fixed.push("Started ibus-daemon in background (-drx --panel disable).");
-        } else {
-            // Check if ibus-avro is registered in active engine list
-            let [okEng, outEng] = GLib.spawn_command_line_sync("ibus list-engine");
-            let engStr = (okEng && outEng) ? String.fromCharCode.apply(null, outEng) : "";
-            if (engStr.indexOf("ibus-avro") === -1) {
-                GLib.spawn_command_line_sync("ibus write-cache");
-                GLib.spawn_command_line_sync("sh -c 'systemctl --user restart app-ibus@autostart.service 2>/dev/null || ibus-daemon -drx --replace --panel disable'");
-                fixed.push("Rebuilt IBus registry cache and reloaded IBus daemon.");
-            }
-        }
-    } catch (e) {}
-
-    try {
-        let [ok, out] = GLib.spawn_command_line_sync("gsettings get org.freedesktop.ibus.panel show");
-        if (ok && out) {
-            let str = String.fromCharCode.apply(null, out).trim();
-            if (str !== "0") {
-                GLib.spawn_command_line_sync("gsettings set org.freedesktop.ibus.panel show 0");
-                fixed.push("Disabled IBus floating property panel (show=0).");
-            }
-        }
-    } catch (e) {}
-
-    try {
-        let [ok, out] = GLib.spawn_command_line_sync("gsettings get org.freedesktop.ibus.general embed-preedit-text");
-        if (ok && out) {
-            let str = String.fromCharCode.apply(null, out).trim();
-            if (str !== "true") {
-                GLib.spawn_command_line_sync("gsettings set org.freedesktop.ibus.general embed-preedit-text true");
-                fixed.push("Enabled live inline preedit (embed-preedit-text=true).");
-            }
-        }
-    } catch (e) {}
-
-    try {
-        let source = Gio.SettingsSchemaSource.get_default();
-        if (source && source.lookup('org.freedesktop.ibus.general', true)) {
-            let ibusSettings = new Gio.Settings({ schema_id: 'org.freedesktop.ibus.general' });
-            let peVal = ibusSettings.get_value('preload-engines');
-            let pe = peVal.deep_unpack();
-            if (pe.indexOf('ibus-avro') === -1) {
-                pe.push('ibus-avro');
-                ibusSettings.set_value('preload-engines', new GLib.Variant('as', pe));
-                fixed.push("Added ibus-avro to IBus preload engines.");
-            }
-        }
-        if (source && source.lookup('org.gnome.desktop.input-sources', true)) {
-            let gnomeSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.input-sources' });
-            let sourcesVal = gnomeSettings.get_value('sources');
-            let sources = sourcesVal.deep_unpack();
-            let hasAvro = sources.some(s => s[1] === 'ibus-avro');
-            if (!hasAvro) {
-                let newSources = [['ibus', 'ibus-avro']].concat(sources);
-                gnomeSettings.set_value('sources', new GLib.Variant('a(ss)', newSources));
-                fixed.push("Added ibus-avro to GNOME desktop input sources.");
-            }
-        }
-    } catch (e) {}
-
-    try {
-        GLib.spawn_command_line_sync("ibus engine ibus-avro");
-        fixed.push("Switched active IBus engine to ibus-avro.");
-    } catch (e) {}
-
-    let settings = avroSettings();
-    if (settings) {
-        try {
-            settings.set_boolean("mode-bangla", true);
-            Gio.Settings.sync();
-            fixed.push("Set GSettings mode-bangla to true.");
-        } catch (e) {}
+    let [running, engines] = run("ibus list-engine");
+    if (!running) {
+        // In the background ("ibus start" would stay in the foreground as the
+        // daemon); on GNOME, GNOME Shell is IBus' panel
+        try { GLib.spawn_command_line_async(isGnome() ? "ibus-daemon -drx --panel disable" : "ibus-daemon -drx"); } catch (e) {}
+        GLib.usleep(1500000);
+        fixed.push("Started the IBus input method service.");
+    } else if (engines.indexOf("ibus-avro") === -1) {
+        run("ibus write-cache");
+        run("ibus restart");
+        GLib.usleep(1500000);
+        fixed.push("Reloaded IBus so that it knows the Avro engine.");
     }
 
+    let ibusGeneral = settingsFor('org.freedesktop.ibus.general');
+    if (ibusGeneral) {
+        if (!ibusGeneral.get_boolean('embed-preedit-text')) {
+            ibusGeneral.set_boolean('embed-preedit-text', true);
+            fixed.push("Turned on live inline typing (embed-preedit-text).");
+        }
+        let pe = ibusGeneral.get_strv('preload-engines');
+        if (pe.indexOf('ibus-avro') === -1) {
+            if (pe.length === 0) pe.push('xkb:us::eng');
+            pe.push('ibus-avro');
+            ibusGeneral.set_strv('preload-engines', pe);
+            fixed.push("Added Avro to the IBus input methods.");
+        }
+    }
+    let gnome = settingsFor('org.gnome.desktop.input-sources');
+    if (gnome && isGnome()) {
+        let sources = gnome.get_value('sources').deep_unpack();
+        if (!sources.some(s => s[1] === 'ibus-avro')) {
+            if (sources.length === 0) sources.push(['xkb', 'us']);
+            // At the end: the user's own first keyboard stays the default
+            sources.push(['ibus', 'ibus-avro']);
+            gnome.set_value('sources', new GLib.Variant('a(ss)', sources));
+            fixed.push("Added Avro to the GNOME input sources.");
+        }
+    }
+    Gio.Settings.sync();
     return fixed;
 }
 
@@ -370,10 +351,13 @@ function autoFixIssues() {
    GUI Diagnostic Window & Live Interactive Self-Test
    ═══════════════════════════════════════════════════════════════════════════ */
 function runDoctorGUI() {
-    try {
-        GLib.set_prgname("avro-doctor");
-        GLib.set_application_name("Avro Doctor");
-    } catch (e) {}
+    if (!globalThis.__avroAppIdentity) {
+        globalThis.__avroAppIdentity = true;
+        try {
+            GLib.set_prgname("avro-doctor");
+            GLib.set_application_name("Avro Doctor");
+        } catch (e) {}
+    }
 
     Gtk.init(null);
     try { Gtk.Window.set_default_icon_name("avro-doctor"); } catch (e) {}
@@ -434,11 +418,12 @@ function runDoctorGUI() {
         addCheck("daemon", "IBus daemon", "The input method service that runs Avro"),
         addCheck("registered", "Avro engine registered", "ibus-avro is known to IBus"),
         addCheck("active", "Active input engine", "Engine IBus is using right now"),
+        addCheck("list", "In your keyboard list", "Avro is offered by the desktop's keyboard switcher"),
         addCheck("component", "Component file", "ibus-avro .xml file in /usr/share/ibus/component/"),
         addCheck("preedit", "Embed preedit text", "Live inline typing (needed for VS Code, Konsole, etc.)"),
         addCheck("schema", "Avro settings", "GSettings schema com.omicronlab.avro"),
         addCheck("envvars", "IM environment vars", "GTK_IM_MODULE, QT_IM_MODULE, XMODIFIERS"),
-        addCheck("profile", "Profile env script", "/etc/profile.d/avro-linux.sh"),
+        addCheck("profile", "Login env script", "/etc/profile.d/avro-linux.sh (used when nothing else selects IBus)"),
         addCheck("fonts", "Bengali fonts", "Fonts that can display Bengali text")
     ]);
     vbox.pack_start(checksCard, false, false, 0);
@@ -514,17 +499,19 @@ function runDoctorGUI() {
         textBuffer.set_text(formatted, -1);
 
         setCheck("daemon", r.ibusRunning ? "Running" : "Not running", r.ibusRunning ? "ok" : "err");
+        setCheck("list", r.inKeyboardList ? "Yes" : "Not added", r.inKeyboardList ? "ok" : "warn");
         setCheck("registered", r.ibusRegistered ? "Registered" : "Missing", r.ibusRegistered ? "ok" : "err");
         let active = r.ibusActiveEngine && r.ibusActiveEngine !== "None" ? r.ibusActiveEngine : "None";
-        setCheck("active", active, /avro/i.test(active) ? "ok" : "warn");
+        // English is a normal choice, not a problem
+        setCheck("active", /avro/i.test(active) ? "Avro" : (r.ibusRunning ? active + " (English)" : "None"),
+                 /avro/i.test(active) ? "ok" : (r.ibusRunning ? "info" : "err"));
         setCheck("component", r.componentFile ? "Found" : "Missing", r.componentFile ? "ok" : "err");
         setCheck("preedit", r.embedPreedit === "true" ? "Enabled" : (r.embedPreedit || "Unknown"), r.embedPreedit === "true" ? "ok" : "err");
         setCheck("schema", r.schemaValid ? "Valid" : "Not found", r.schemaValid ? "ok" : "err");
 
-        // Env vars: ok only if all 3 are correct
-        let envOk = r.envGtk === "ibus" && r.envQt === "ibus" && r.envXmod.indexOf("@im=ibus") !== -1;
+        let envOk = r.envIssues.length === 0;
         setCheck("envvars", envOk ? "All set" : "Issues found", envOk ? "ok" : "warn");
-        setCheck("profile", r.profileEnvFile ? "Present" : "Missing", r.profileEnvFile ? "ok" : "err");
+        setCheck("profile", r.profileEnvFile ? "Present" : "Not installed", "info");
 
         let nf = (r.bengaliFonts || []).length;
         setCheck("fonts", nf > 0 ? nf + " found" : "None", nf > 0 ? "ok" : "warn");
@@ -566,11 +553,13 @@ function runDoctorGUI() {
     });
 
     btnCopy.connect("clicked", () => {
-        let clipboard = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD);
+        let clipboard = Gtk.Clipboard.get_default(Gdk.Display.get_default());
         let start = textBuffer.get_start_iter();
         let end = textBuffer.get_end_iter();
         let text = textBuffer.get_text(start, end, false);
         clipboard.set_text(text, -1);
+        // Hand it to the clipboard manager: it stays after the Doctor closes
+        clipboard.store();
 
         let dialog = new Gtk.MessageDialog({
             transient_for: window,

@@ -32,6 +32,11 @@
   </provides>
   <content_rating type="oars-1.1" />
   <releases>
+    <release version="1.3.1" date="2026-10-04">
+      <description>
+        <p>Bug-fix release: Bijoy (ANSI) output identical to Avro Keyboard for Windows, a working Unicode ↔ Bijoy converter, Setup wizard and Doctor fixes, and the installer no longer changes any user's keyboard settings.</p>
+      </description>
+    </release>
     <release version="1.3.0" date="2026-10-03">
       <description>
         <p>The fixed keyboard layouts of Avro Keyboard (Avro Easy, Bornona, Munir Optima, National (Jatiya), Probhat) with its Modern and Old Style Typing, a Layout Viewer for them, TopBar start on login, and an Avro Doctor fix.</p>

@@ -54,6 +54,9 @@ run_test "Deterministic Regression Corpus" "gjs ${ROOT_DIR}/tests/core/test-regr
 # 2. Dictionary & suggestions test
 run_test "Dictionary & Suggestions" "gjs ${ROOT_DIR}/tests/core/test-dictionary.js"
 
+# Unicode <-> Bijoy (ANSI) converter: the same text as Avro Keyboard for Windows
+run_test "Bijoy (ANSI) Converter" "gjs ${ROOT_DIR}/tests/core/test-bijoy-converter.js"
+
 # 3. Autocorrect test
 run_test "Autocorrect" "gjs ${ROOT_DIR}/tests/core/test-autocorrect.js"
 

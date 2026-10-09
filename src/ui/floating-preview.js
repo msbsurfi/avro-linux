@@ -142,8 +142,11 @@ function clampToMonitor(pos, size, monitor) {
 }
 
 /* An application that cannot report its caret sends an empty rectangle. */
+/* A caret in the very top-left corner of the screen is no caret: it is what
+   an application reports when it does not know where its caret is (Chromium
+   and Brave turn an empty caret rectangle into 0,0). */
 function isUsableCursor(cursor) {
-    return !!cursor && !(cursor.x <= 0 && cursor.y <= 0 && cursor.w <= 0 && cursor.h <= 0);
+    return !!cursor && !(cursor.x <= 0 && cursor.y <= 0);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -607,9 +610,26 @@ var PreviewWindow = class PreviewWindow {
         }
     }
 
+    /* The focused window on X11 (_NET_ACTIVE_WINDOW), for placing the window
+       when the application does not say where its caret is. */
+    _x11ActiveWindow() {
+        try {
+            let w = Gdk.Screen.get_default().get_active_window();
+            if (!w) return null;
+            let r = w.get_frame_extents();
+            if (r.width <= 1 || r.height <= 1) return null;
+            return { x: r.x, y: r.y, w: r.width, h: r.height, cls: '', scale: 1 };
+        } catch (e) {
+            return null;
+        }
+    }
+
     _resolveCursor() {
         let cursor = null;
         let win = this._activeWindow;
+        if (!win && !(this._cursor && isUsableCursor(this._cursor))) {
+            win = this._x11ActiveWindow();
+        }
         let mon = this._monitorAt(win ? win.x : 0, win ? win.y : 0);
 
         if (this._cursor && isUsableCursor(this._cursor)) {

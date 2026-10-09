@@ -18,13 +18,10 @@ Avro Linux is engineered to integrate natively across all standard Linux desktop
 * **Session Types**: Wayland (default) and X11.
 * **Input Architecture**: GNOME has native IBus bus integration embedded in `gnome-shell`.
 * **Configuration**:
-  Avro Linux installs a system-wide schema override at:
-  `/usr/share/glib-2.0/schemas/99_avro_gnome_default.gschema.override`
-  This configures:
-  ```ini
-  [org.gnome.desktop.input-sources]
-  sources=[('xkb', 'us'), ('ibus', 'ibus-avro')]
-  ```
+  The package changes no user's input sources. The Avro TopBar asks each user once
+  whether to add `('ibus', 'ibus-avro')` to `org.gnome.desktop.input-sources`
+  (at the end, so the user's first keyboard stays the default); Avro Doctor's
+  Auto-Fix and `avro-setup` can add it too.
   Users can switch between English and Bengali using `Super+Space` or `F12` inside Avro.
 
 ### 2.2 KDE Plasma 5.27 & Plasma 6 (Kubuntu, Debian KDE, KDE Neon)
@@ -33,12 +30,10 @@ Avro Linux is engineered to integrate natively across all standard Linux desktop
   - Under X11: Uses `QT_IM_MODULE=ibus` and `XMODIFIERS=@im=ibus`.
   - Under Wayland: KWin supports input methods via the Wayland `zwp_text_input_v2` / `v3` protocols.
 * **Session Variables**:
-  Configured automatically via `/etc/xdg/plasma-workspace/env/avro-linux.sh`:
-  ```bash
-  export GTK_IM_MODULE=ibus
-  export QT_IM_MODULE=ibus
-  export XMODIFIERS=@im=ibus
-  ```
+  `/etc/xdg/plasma-workspace/env/avro-linux.sh` sets `GTK_IM_MODULE=ibus`,
+  `QT_IM_MODULE=ibus` and `XMODIFIERS=@im=ibus` on X11 only, and only when no
+  input method framework is chosen yet (im-config, the user or fcitx keep theirs).
+  On Wayland it sets nothing: Plasma reaches IBus through its virtual keyboard setting.
 * **KWin Virtual Keyboard Setting**:
   To ensure KWin forwards Wayland keystrokes through IBus on Wayland sessions:
   `System Settings` -> `Input Devices` -> `Virtual Keyboard` -> Select **IBus Wayland**.
@@ -46,8 +41,12 @@ Avro Linux is engineered to integrate natively across all standard Linux desktop
 ### 2.3 XFCE, Cinnamon, MATE, and LXQt
 * **Session Types**: X11.
 * **Input Architecture**: Standard X11 input method protocol with `im-config`.
-* **Autostart**:
-  The system desktop entry `/etc/xdg/autostart/avro-ibus-autostart.desktop` launches `ibus-daemon -drx` automatically upon desktop login.
+* **Session variables**: `/etc/profile.d/avro-linux.sh` sets the IBus variables only
+  when nothing else chose an input method framework.
+* **Autostart**: `/etc/xdg/autostart/avro-topbar.desktop` starts the Avro TopBar on login;
+  Preferences turns that off per user with a `Hidden=true` entry in `~/.config/autostart`.
+  When IBus is not running, the TopBar starts it in the background with `ibus-daemon -drx`
+  (on GNOME it waits for the IBus that GNOME Shell starts).
 
 ---
 

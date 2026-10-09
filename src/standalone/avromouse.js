@@ -49,10 +49,14 @@ let Theme = null;
 })();
 
 var runAvroMouse = function runAvroMouse(parentWindow) {
-    try {
-        GLib.set_prgname("avro-mouse");
-        GLib.set_application_name("Avro Mouse");
-    } catch (e) {}
+    // Only the first part of a program names it (the TopBar opens this too)
+    if (!globalThis.__avroAppIdentity) {
+        globalThis.__avroAppIdentity = true;
+        try {
+            GLib.set_prgname("avro-mouse");
+            GLib.set_application_name("Avro Mouse");
+        } catch (e) {}
+    }
 
     let pal = Theme.apply();
     try {
@@ -146,6 +150,8 @@ var runAvroMouse = function runAvroMouse(parentWindow) {
             let mark = textBuffer.get_insert();
             let iter = textBuffer.get_iter_at_mark(mark);
             if (iter.backward_char()) {
+                // A nukta (়) belongs to the letter before it: ড + ় is ড়
+                if (iter.get_char() === "\u09BC") iter.backward_char();
                 let endIter = textBuffer.get_iter_at_mark(mark);
                 textBuffer.delete(iter, endIter);
             }
@@ -217,7 +223,7 @@ var runAvroMouse = function runAvroMouse(parentWindow) {
         ["ক", "খ", "গ", "ঘ", "ঙ", "চ", "ছ", "জ", "ঝ", "ঞ"],
         ["ট", "ঠ", "ড", "ঢ", "ণ", "ত", "থ", "দ", "ধ", "ন"],
         ["প", "ফ", "ব", "ভ", "ম", "য", "র", "ল", "শ", "ষ"],
-        ["স", "হ", "ড়", "ঢ়", "য়", "ৎ", "ং", "ঃ", "ঁ"]
+        ["স", "হ", "\u09DC", "\u09DD", "\u09DF", "ৎ", "ং", "ঃ", "ঁ"]
     ];
     CONSONANT_ROWS.forEach(rowList => keyBox.pack_start(keyRow(rowList, null), false, false, 0));
 

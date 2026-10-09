@@ -78,11 +78,26 @@ grep -q "\./usr/share/fontconfig/conf.avail/64-avro-bengali.conf" "${TMP_DIR}/co
 grep "\./etc/fonts/conf.d/64-avro-bengali.conf" "${TMP_DIR}/contents.txt" | grep -q -- "-> /usr/share/fontconfig/conf.avail/64-avro-bengali.conf"
 echo "  ✓ Critical file locations present."
 
-# Verify automatic IBus and Avro configuration in postinst
-echo "[3/5] Checking automatic IBus configuration in maintainer scripts..."
+# The package must not claim ownership of desktop-wide IM configuration:
+# no user's input sources, IBus daemon or session is touched by the
+# maintainer scripts, no schema override changes everyone's defaults, and
+# Avro Setup does not take over the opening of every .deb file.
+echo "[3/5] Checking non-invasive maintainer scripts..."
 dpkg-deb -e "${DEB_FILE}" "${TMP_DIR}/control"
-grep -q "ibus-avro" "${TMP_DIR}/control/postinst"
-echo "  ✓ Automatic IBus and Avro configuration present in postinst."
+# ("! grep" would not stop the script: set -e ignores an inverted status)
+must_not() { if "$@"; then echo "FAIL: found by: $*"; exit 1; fi; }
+must_not grep -Eq 'org\.gnome\.desktop\.input-sources|org/gnome/desktop/input-sources|preload-engines|GTK_IM_MODULE=|QT_IM_MODULE=|ibus-daemon|ibus restart|ibus engine|systemctl|dconf write|su '     "${TMP_DIR}/control/postinst" "${TMP_DIR}/control/postrm"
+must_not grep -q "gschema.override" "${TMP_DIR}/contents.txt"
+dpkg-deb --fsys-tarfile "${DEB_FILE}" | tar -xO ./usr/share/applications/avro-setup.desktop > "${TMP_DIR}/avro-setup.desktop"
+must_not grep -q "^MimeType=" "${TMP_DIR}/avro-setup.desktop"
+# The login scripts only fill in what nothing else has chosen
+dpkg-deb --fsys-tarfile "${DEB_FILE}" | tar -xO ./etc/profile.d/avro-linux.sh > "${TMP_DIR}/profile.sh"
+(unset GTK_IM_MODULE QT_IM_MODULE XMODIFIERS; export HOME="${TMP_DIR}" GTK_IM_MODULE=fcitx; . "${TMP_DIR}/profile.sh"; test "${GTK_IM_MODULE}" = fcitx && test -z "${XMODIFIERS:-}")
+# /etc files are conffiles, so the admin's changes survive upgrades
+grep -qx "/etc/profile.d/avro-linux.sh" "${TMP_DIR}/control/conffiles"
+grep -qx "/etc/xdg/autostart/avro-topbar.desktop" "${TMP_DIR}/control/conffiles"
+grep -qx "/etc/xdg/plasma-workspace/env/avro-linux.sh" "${TMP_DIR}/control/conffiles"
+echo "  ✓ Per-user input-method configuration is preserved."
 
 # 3. Check file permissions
 echo "[4/5] Checking executable permissions..."
@@ -97,9 +112,10 @@ echo "  ✓ Executables properly flagged with 0755."
 
 # 4. Check maintainer scripts
 echo "[5/5] Checking maintainer scripts in control archive..."
+test -f "${TMP_DIR}/control/preinst"
 test -f "${TMP_DIR}/control/postinst"
 test -f "${TMP_DIR}/control/postrm"
 test -f "${TMP_DIR}/control/md5sums"
-echo "  ✓ Maintainer scripts postinst, postrm, and md5sums present."
+echo "  ✓ Maintainer scripts preinst, postinst, postrm, and md5sums present."
 
 echo "Package verification completed successfully!"

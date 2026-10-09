@@ -57,7 +57,20 @@ Description: Avro Phonetic Bengali input method for IBus
   * No network processing, telemetry, global keyboard hooks, or IM takeover
 EOF
 
+# Every regular file under /etc is a conffile: dpkg keeps the admin's
+# changes on upgrade (symbolic links cannot be conffiles)
+(
+    cd "${STAGING_DIR}"
+    find etc -type f | sort | sed 's|^|/|' > "${STAGING_DIR}/DEBIAN/conffiles"
+    chmod 0644 "${STAGING_DIR}/DEBIAN/conffiles"
+)
+
 # Copy maintainer scripts
+if [ -f "${ROOT_DIR}/debian/preinst" ]; then
+    cp "${ROOT_DIR}/debian/preinst" "${STAGING_DIR}/DEBIAN/preinst"
+    chmod 0755 "${STAGING_DIR}/DEBIAN/preinst"
+fi
+
 if [ -f "${ROOT_DIR}/debian/postinst" ]; then
     cp "${ROOT_DIR}/debian/postinst" "${STAGING_DIR}/DEBIAN/postinst"
     chmod 0755 "${STAGING_DIR}/DEBIAN/postinst"

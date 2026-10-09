@@ -1,0 +1,27 @@
+#!/bin/sh
+set -e
+
+# From 1.3.1 on, the files in /etc are conffiles. Older versions shipped them
+# as plain files, so on upgrade dpkg would take them for files "created by
+# you or by a script" and stop to ask (and fail without a terminal). The ones
+# the admin did not change are removed first; a changed one is kept, and
+# dpkg asks about it, as it should.
+case "$1" in
+    install|upgrade)
+        if [ -n "$2" ] && dpkg --compare-versions "$2" lt "1.3.1~"; then
+            md5sums=/var/lib/dpkg/info/avro-linux.md5sums
+            for f in /etc/profile.d/avro-linux.sh \
+                     /etc/xdg/plasma-workspace/env/avro-linux.sh \
+                     /etc/xdg/autostart/avro-topbar.desktop; do
+                [ -f "$f" ] && [ -r "$md5sums" ] || continue
+                shipped=$(awk -v f="${f#/}" '$2 == f { print $1 }' "$md5sums")
+                current=$(md5sum < "$f" | cut -d ' ' -f 1)
+                if [ -n "$shipped" ] && [ "$shipped" = "$current" ]; then
+                    rm -f "$f"
+                fi
+            done
+        fi
+        ;;
+esac
+
+exit 0

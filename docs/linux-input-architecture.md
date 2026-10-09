@@ -99,9 +99,9 @@ Avro Linux targets all major Debian-based distributions:
 * **Linux Mint 21 & 22**
 * **Pop!_OS 22.04 & 24.04**
 
-System integration files installed automatically:
-1. `/etc/profile.d/avro-linux.sh`: Configures session environment (`GTK_IM_MODULE=ibus`, `QT_IM_MODULE=ibus`, `XMODIFIERS=@im=ibus`).
-2. `/etc/environment.d/99-avro-linux.conf`: Configures systemd user sessions.
-3. `/etc/xdg/plasma-workspace/env/avro-linux.sh`: Configures KDE Plasma sessions.
-4. `/etc/xdg/autostart/avro-ibus-autostart.desktop`: Ensures the IBus daemon launches cleanly on login.
-5. `/usr/share/glib-2.0/schemas/99_avro_gnome_default.gschema.override`: Automatically registers `ibus-avro` in GNOME's input source list.
+System integration files installed by the package:
+1. `/etc/profile.d/avro-linux.sh`: sets `GTK_IM_MODULE=ibus`, `QT_IM_MODULE=ibus`, `XMODIFIERS=@im=ibus` only when no input method framework is chosen yet, and not on GNOME or KDE Wayland.
+2. `/etc/xdg/plasma-workspace/env/avro-linux.sh`: the same for KDE Plasma sessions.
+3. `/etc/xdg/autostart/avro-topbar.desktop`: starts the Avro TopBar on login (each user can turn it off in Preferences).
+
+The package does not change any user's settings and restarts no running session. Adding Avro to a user's keyboard list is that user's choice: the TopBar offers it once; Avro Doctor's Auto-Fix and `avro-setup` do it on request.

@@ -84,6 +84,33 @@ try {
     bijoyConverter = null;
 }
 
+/* Diagnostics for support. Only when the file ~/.cache/avro/engine-debug
+   exists as the engine starts: what applications report to the engine (focus,
+   capabilities, caret position, field type) goes to
+   ~/.cache/avro/engine-debug.log. Never the keys or the text typed: only
+   whether a key was used and how long the shown word is. */
+var debugLog = null;
+var debugSeq = 0;
+try {
+    let dir = GLib.build_filenamev([GLib.get_user_cache_dir(), 'avro']);
+    if (GLib.file_test(GLib.build_filenamev([dir, 'engine-debug']), GLib.FileTest.EXISTS)) {
+        debugLog = Gio.File.new_for_path(GLib.build_filenamev([dir, 'engine-debug.log']))
+            .append_to(Gio.FileCreateFlags.NONE, null);
+    }
+} catch (e) {
+    debugLog = null;
+}
+
+function dbg(engine, message) {
+    if (!debugLog) return;
+    try {
+        if (engine && !engine._debugId) engine._debugId = ++debugSeq;
+        let line = new Date().toISOString().slice(11, 23) + ' [' + (engine ? engine._debugId : '-') + '] ' + message + '\n';
+        debugLog.write_all(new TextEncoder().encode(line), null);
+        debugLog.flush(null);
+    } catch (e) {}
+}
+
 function formatOutput(engine, text) {
     if (!text) return "";
     if (engine && engine.output_encoding === 'ansi' && bijoyConverter && typeof bijoyConverter.unicodeToBijoy === 'function') {
@@ -158,7 +185,11 @@ if (bus.is_connected()) {
         engine.altGrDown = false;
         engine.setting_numpad_bangla = true;
 
-        engine.connect('process-key-event', engine_process_key_event);
+        engine.connect('process-key-event', function(eng, keyval, keycode, state) {
+            let used = engine_process_key_event(eng, keyval, keycode, state);
+            if (debugLog && !(state & IBus.ModifierType.RELEASE_MASK)) dbg(eng, 'key ' + (used ? 'used' : 'passed on'));
+            return used;
+        });
         engine.connect('candidate-clicked', engine_candidate_clicked);
         engine.connect('focus-out', engine_focus_out);
         engine.connect('focus-in', engine_focus_in);
@@ -167,6 +198,19 @@ if (bus.is_connected()) {
         engine.connect('disable', engine_disable);
         engine.connect('property-activate', engine_property_activate);
         engine.connect('set-content-type', engine_set_content_type);
+        if (debugLog) {
+            dbg(engine, 'engine created');
+            engine.connect('set-capabilities', (eng, caps) => dbg(eng, 'capabilities ' + caps +
+                ' (preedit ' + !!(caps & 1) + ', aux ' + !!(caps & 2) + ', lookup table ' + !!(caps & 4) +
+                ', focus ' + !!(caps & 8) + ', property ' + !!(caps & 16) + ', surrounding text ' + !!(caps & 32) + ')'));
+            engine.connect('focus-in', (eng) => dbg(eng, 'focus in'));
+            engine.connect('focus-out', (eng) => dbg(eng, 'focus out'));
+            engine.connect('enable', (eng) => dbg(eng, 'enable'));
+            engine.connect('disable', (eng) => dbg(eng, 'disable'));
+            engine.connect('reset', (eng) => dbg(eng, 'reset'));
+            engine.connect('set-content-type', (eng, purpose, hints) => dbg(eng, 'content type: purpose ' + purpose + ', hints ' + hints));
+            engine.connect('set-cursor-location', (eng, x, y, w, h) => dbg(eng, 'cursor location ' + x + ',' + y + ' ' + w + 'x' + h));
+        }
         engine.connect('set-cursor-location', function(eng, x, y, w, h) {
             eng.cursorRect = { x: x, y: y, w: w, h: h };
             if (previewUI) {
@@ -514,6 +558,7 @@ if (bus.is_connected()) {
     }
 
     function commitText(engine, text) {
+        dbg(engine, 'commit (' + Array.from(text || '').length + ' characters)');
         engine.commit_text(IBus.Text.new_from_string(formatOutput(engine, text)));
         engine.hide_preedit_text();
     }
@@ -1050,6 +1095,11 @@ if (bus.is_connected()) {
             engine.hide_preedit_text();
             return;
         }
+        // Output as ANSI: the word in progress is shown as it will be
+        // committed, so when focus moves away and the client keeps the
+        // preedit (PreeditFocusMode.COMMIT), the text is Bijoy as well.
+        word = formatOutput(engine, word);
+        dbg(engine, 'preedit shown (' + Array.from(word).length + ' characters)');
         var preeditText = IBus.Text.new_from_string(word);
         var attrs = new IBus.AttrList();
         let cursorPos = Array.from(word).length;
@@ -1076,6 +1126,7 @@ if (bus.is_connected()) {
         if (engine.buffertext.length > 0 && engine.currentSuggestions.length > 0) {
             var selectedWord = engine.currentSuggestions[engine.currentSelection] || engine.buffertext;
             var textToCommit = selectedWord + (suffix !== undefined ? suffix : "");
+            dbg(engine, 'commit (' + Array.from(textToCommit).length + ' characters)');
             var formatted = formatOutput(engine, textToCommit);
             var commitText = IBus.Text.new_from_string(formatted);
             engine.commit_text(commitText);
