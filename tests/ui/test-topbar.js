@@ -218,6 +218,22 @@ assertEqual(tb.parseTopBarCommand(["RESTORE"]), "restore", "Commands ignore case
 assertEqual(tb.parseTopBarCommand(["--standalone"]), null, "Other arguments are not commands");
 assertEqual(tb.parseTopBarCommand([]), null, "No arguments, no command");
 
+// The one-time keyboard list question, and KDE Plasma (Wayland)'s input method
+let offer = tb.keyboardOffer(false, { relevant: false });
+assertTrue(offer.show && offer.addList && !offer.chooseKde, "Avro not in the list: offer to add it (not KDE Wayland)");
+offer = tb.keyboardOffer(true, { relevant: false });
+assertTrue(!offer.show, "Avro already in the list: no question");
+offer = tb.keyboardOffer(false, { relevant: true, kind: "none" });
+assertTrue(offer.show && offer.addList && offer.chooseKde, "KDE Wayland without input method: add Avro and choose IBus Wayland");
+offer = tb.keyboardOffer(true, { relevant: true, kind: "none" });
+assertTrue(offer.show && !offer.addList && offer.chooseKde, "KDE Wayland, Avro in the list: still offer IBus Wayland");
+offer = tb.keyboardOffer(true, { relevant: true, kind: "other" });
+assertTrue(!offer.show, "Another input method on KDE Wayland (fcitx, Maliit) is left alone");
+offer = tb.keyboardOffer(true, { relevant: true, kind: "ibus" });
+assertTrue(!offer.show, "IBus Wayland already chosen: no question");
+offer = tb.keyboardOffer(false, null);
+assertTrue(offer.show && !offer.chooseKde, "Without the KDE module the list is still offered");
+
 // 8. Icons
 for (let name in tb.ICONS) {
     let pixbuf = tb.iconPixbuf(name, 16);

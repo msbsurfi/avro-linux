@@ -35,8 +35,14 @@ Avro Linux is engineered to integrate natively across all standard Linux desktop
   input method framework is chosen yet (im-config, the user or fcitx keep theirs).
   On Wayland it sets nothing: Plasma reaches IBus through its virtual keyboard setting.
 * **KWin Virtual Keyboard Setting**:
-  To ensure KWin forwards Wayland keystrokes through IBus on Wayland sessions:
-  `System Settings` -> `Input Devices` -> `Virtual Keyboard` -> Select **IBus Wayland**.
+  On Wayland, KWin forwards keystrokes to IBus only when **IBus Wayland** is chosen in
+  `System Settings` -> `Keyboard` -> `Virtual Keyboard` (Plasma 5: `Input Devices` ->
+  `Virtual Keyboard`), stored as `[Wayland] InputMethod` in `~/.config/kwinrc`.
+  When no input method is chosen there, the TopBar's one-time question, Avro Setup's
+  "Add Avro to my keyboard list" and Avro Doctor's Auto-Fix choose IBus Wayland
+  (`kwriteconfig6 --file kwinrc --group Wayland --key InputMethod --notify …`); it
+  takes effect for sure after logging out and in. Another input method (fcitx, Maliit)
+  is never replaced: Avro Doctor reports it (`src/common/kdewayland.js`).
 
 ### 2.3 XFCE, Cinnamon, MATE, and LXQt
 * **Session Types**: X11.
