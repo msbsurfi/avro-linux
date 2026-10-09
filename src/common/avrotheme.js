@@ -352,12 +352,18 @@ function addClass(widget, ...classes) {
     return widget;
 }
 
-/* Modern client-side header bar: app icon + title + subtitle. */
+/* Modern client-side header bar: app icon + title + subtitle.
+   opts.windowTitle (default: opts.title) is the title the taskbar and window
+   switcher show. GtkWindow takes its title from a header bar used as its
+   title bar, so the header bar carries it, behind an empty custom title
+   widget that keeps GTK from drawing it a second time. */
 function headerBar(opts) {
     apply();
     opts = opts || {};
     let hb = new Gtk.HeaderBar({ show_close_button: false });
     hb.get_style_context().add_class('avro-header');
+    hb.set_custom_title(new Gtk.Box());
+    hb.set_title(opts.windowTitle || opts.title || '');
 
     let box = new Gtk.Box({ orientation: Gtk.Orientation.HORIZONTAL, spacing: 10 });
     if (opts.icon) {

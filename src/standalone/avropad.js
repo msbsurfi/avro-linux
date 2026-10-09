@@ -35,13 +35,15 @@ const Pango = imports.gi.Pango;
 /* ─── Search paths ──────────────────────────────────────────────────────── */
 let baseDir = '/usr/share/avro-linux';
 try {
-    // gjs does not put the script itself in ARGV; programPath is its real location.
-    let scriptPath = imports.system.programPath || imports.system.programInvocationName || '.';
-    let scriptDir  = GLib.path_get_dirname(scriptPath);
+    // The tree this file belongs to (source checkout or installed copy), also
+    // when another program imports it: that program's location says nothing
+    // about where Avro Pad's modules are.
+    let m = new Error().stack.match(/(?:^|@|\()(?:file:\/\/)?([^\s:()@]+\.js):\d+/m);
+    let scriptPath = m ? GLib.canonicalize_filename(m[1], GLib.get_current_dir())
+                       : (imports.system.programPath || '.');
+    let scriptDir = GLib.path_get_dirname(scriptPath);
     if (GLib.file_test(scriptDir + '/../avro-core/phonetic/avrolib.js', GLib.FileTest.EXISTS)) {
         baseDir = GLib.path_get_dirname(scriptDir);
-    } else if (GLib.file_test(scriptDir + '/../src/avro-core/phonetic/avrolib.js', GLib.FileTest.EXISTS)) {
-        baseDir = GLib.path_get_dirname(scriptDir) + '/src';
     }
 } catch (e) {}
 
@@ -99,8 +101,10 @@ function buildPadCss(p) {
     font-size: 14px;
     font-family: 'Noto Sans Bengali', 'Kalpurush', 'SolaimanLipi', sans-serif;
 }
-.avro-win textview text {
+.avro-win textview {
     font-family: 'Noto Sans Bengali', 'Kalpurush', 'Siyam Rupali', 'SolaimanLipi', sans-serif;
+}
+.avro-win textview text {
     caret-color: ${p.accent};
 }
 .avro-win button.avro-mode { min-width: 118px; }
@@ -111,10 +115,14 @@ function buildPadCss(p) {
    runAvroPad()
    ═══════════════════════════════════════════════════════════════════════════ */
 function runAvroPad(initialText) {
-    try {
-        GLib.set_prgname("avro-pad");
-        GLib.set_application_name("Avro Pad");
-    } catch (e) {}
+    // Only the first part of a program names it (the TopBar opens this too)
+    if (!globalThis.__avroAppIdentity) {
+        globalThis.__avroAppIdentity = true;
+        try {
+            GLib.set_prgname("avro-pad");
+            GLib.set_application_name("Avro Pad");
+        } catch (e) {}
+    }
 
     /* Apply the shared theme plus Avro Pad specifics */
     let pal = Theme.apply();
@@ -262,19 +270,26 @@ function runAvroPad(initialText) {
         margin_start: 16, margin_end: 16, margin_bottom: 12
     });
     scrolled.get_style_context().add_class("avro-framed");
+    // Avro Pad composes Bangla itself. GTK's simple input context keeps a
+    // system input method (IBus with the Avro engine, for one) from taking
+    // the keys first: with it, the suggestion bar, F12 and Enter would be
+    // IBus' and the Pad's own composition would never see a key.
     let textView = new Gtk.TextView({
         wrap_mode: Gtk.WrapMode.WORD,
         left_margin:   22,
         right_margin:  22,
         top_margin:    20,
-        bottom_margin: 20
+        bottom_margin: 20,
+        im_module: "gtk-im-context-simple"
     });
 
     let textCss = new Gtk.CssProvider();
     function applyFontCss() {
         try {
+            // GTK 3 lays the text out with the font of the textview node; a
+            // font size on its "text" subnode is ignored
             textCss.load_from_data(
-                "textview text { font-size: " + fontSize + "pt; }"
+                "textview { font-size: " + fontSize + "pt; }"
             );
             textView.get_style_context().add_provider(textCss, Gtk.STYLE_PROVIDER_PRIORITY_USER);
         } catch (e) {}

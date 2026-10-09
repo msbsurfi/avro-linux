@@ -110,9 +110,15 @@ function main() {
     else if (args.indexOf('--mouse') !== -1 || args.indexOf('-m') !== -1) prgName = "avro-mouse";
     else if (args.indexOf('--preferences') !== -1) prgName = "avro-preferences";
 
+    const APP_NAMES = {
+        "avro-topbar": "Avro Keyboard", "avro-pad": "Avro Pad", "avro-converter": "Avro Converter",
+        "avro-layout": "Avro Layout Viewer", "avro-mouse": "Avro Mouse", "avro-preferences": "Avro Preferences"
+    };
+    // The tools name the program themselves only when nobody did before
+    globalThis.__avroAppIdentity = true;
     try {
         GLib.set_prgname(prgName);
-        GLib.set_application_name("Avro Keyboard");
+        GLib.set_application_name(APP_NAMES[prgName] || "Avro Keyboard");
     } catch (e) {}
 
     Gtk.init(null);

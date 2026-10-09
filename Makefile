@@ -3,7 +3,7 @@
 
 SHELL := /bin/bash
 # The one place the version number lives; everything else reads it from here.
-VERSION := 1.3.0
+VERSION := 1.3.1
 prefix ?= /usr
 pkgdatadir ?= $(prefix)/share/avro-linux
 libexecdir ?= $(prefix)/libexec/avro-linux
@@ -152,7 +152,6 @@ install: build
 	# Integration files
 	install -m 0644 data/ibus/ibus-avro.xml $(DESTDIR)$(datadir)/ibus/component/ibus-avro.xml
 	install -m 0644 data/gsettings/com.omicronlab.avro.gschema.xml $(DESTDIR)$(datadir)/glib-2.0/schemas/com.omicronlab.avro.gschema.xml
-	install -m 0644 data/gsettings/50_avro-linux.gschema.override $(DESTDIR)$(datadir)/glib-2.0/schemas/50_avro-linux.gschema.override
 	install -m 0644 data/applications/com.github.avrolinux.Avro.desktop $(DESTDIR)$(datadir)/applications/com.github.avrolinux.Avro.desktop
 	install -m 0644 data/applications/avro-topbar.desktop $(DESTDIR)$(datadir)/applications/avro-topbar.desktop
 	install -m 0644 data/applications/avro-pad.desktop $(DESTDIR)$(datadir)/applications/avro-pad.desktop

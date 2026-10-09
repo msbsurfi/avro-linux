@@ -187,6 +187,12 @@
       <description>Internal: whether the TopBar has added itself to the programs that start on login. Like Avro Keyboard, which starts with Windows unless that is turned off, the TopBar does this once, the first time it runs; after that only the user's choice in Preferences counts.</description>
     </key>
 
+    <key type="b" name="keyboard-list-offered">
+      <default>false</default>
+      <summary>Adding Avro to the keyboard list offered</summary>
+      <description>Internal: whether the TopBar has asked once if Avro should be added to the desktop's keyboard list (GNOME input sources, IBus input methods). The package itself never changes a user's keyboards.</description>
+    </key>
+
     <key type="b" name="switch-splash">
       <default>true</default>
       <summary>Show splash screen on startup</summary>

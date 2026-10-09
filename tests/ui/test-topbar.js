@@ -12,6 +12,10 @@ const rootDir = GLib.get_current_dir();
 GLib.setenv("GSETTINGS_SCHEMA_DIR", rootDir + "/data/gsettings", true);
 GLib.setenv("GSETTINGS_BACKEND", "memory", true);
 GLib.setenv("XDG_CONFIG_HOME", GLib.dir_make_tmp("avro-topbar-test-XXXXXX"), true);
+// A system-wide autostart directory of our own (the package installs the
+// TopBar's entry in /etc/xdg/autostart); empty for now
+const systemConfig = GLib.dir_make_tmp("avro-topbar-xdg-XXXXXX");
+GLib.setenv("XDG_CONFIG_DIRS", systemConfig, true);
 imports.searchPath.unshift(rootDir + "/src/common");
 imports.searchPath.unshift(rootDir + "/src/avro-core/fixed");
 imports.searchPath.unshift(rootDir + "/src/standalone");
@@ -154,12 +158,56 @@ assertTrue(!autostart.hasEntry(), "No autostart entry at first");
 assertTrue(tb.setUpStartOnLogin(fakeSettings), "First run adds the TopBar to the login programs");
 assertTrue(autostart.isEnabled() && fakeSettings.values["topbar-autostart-done"], "Autostart entry written and remembered");
 autostart.setEnabled(false);
-assertTrue(!tb.setUpStartOnLogin(fakeSettings) && !autostart.hasEntry(), "Turned off by the user, it stays off");
+assertTrue(!tb.setUpStartOnLogin(fakeSettings) && !autostart.isEnabled(), "Turned off by the user, it stays off");
 GLib.file_set_contents(autostart.entryPath(), autostart.ENTRY.replace("X-GNOME-Autostart-enabled=true", "Hidden=true"));
 assertTrue(!autostart.isEnabled(), "An entry switched off by the desktop (Hidden=true) counts as off");
 fakeSettings.values["topbar-autostart-done"] = false;
 assertTrue(tb.setUpStartOnLogin(fakeSettings) && !autostart.isEnabled(), "An existing entry of the user is never overwritten");
+assertTrue(autostart.ENTRY.indexOf("TryExec=avro-topbar") !== -1, "A left-over entry is ignored once Avro is uninstalled (TryExec)");
+
+// 6c. The package's system-wide entry: off means a Hidden=true entry of the user
+GLib.unlink(autostart.entryPath());
+GLib.mkdir_with_parents(systemConfig + "/autostart", 0o755);
+GLib.file_set_contents(systemConfig + "/autostart/avro-topbar.desktop", autostart.ENTRY);
+assertTrue(autostart.isEnabled(), "The system-wide entry starts the TopBar when the user has none");
 autostart.setEnabled(false);
+assertTrue(autostart.hasEntry() && !autostart.isEnabled(), "Switched off, a Hidden=true entry overrides the system-wide one");
+let [, hiddenEntry] = GLib.file_get_contents(autostart.entryPath());
+assertTrue(new TextDecoder().decode(hiddenEntry).indexOf("Hidden=true") !== -1, "The user's entry says Hidden=true");
+autostart.setEnabled(true);
+assertTrue(autostart.isEnabled(), "Switched on again, it starts on login");
+autostart.setEnabled(false);
+
+// 6d. Starting IBus never blocks the TopBar: with IBus not running, it is
+// started in the background ("ibus start" would stay in the foreground as the
+// daemon, and the TopBar would never appear). Fake ibus / ibus-daemon tools.
+{
+    let fakeBin = GLib.dir_make_tmp("avro-topbar-ibus-XXXXXX");
+    let log = fakeBin + "/calls.log";
+    GLib.file_set_contents(fakeBin + "/ibus",
+        "#!/bin/sh\necho \"ibus $*\" >> " + log + "\n[ \"$1\" = start ] && sleep 30\nexit 1\n");
+    GLib.file_set_contents(fakeBin + "/ibus-daemon", "#!/bin/sh\necho \"ibus-daemon $*\" >> " + log + "\n");
+    GLib.spawn_command_line_sync("chmod +x " + fakeBin + "/ibus " + fakeBin + "/ibus-daemon");
+    let oldPath = GLib.getenv("PATH"), oldDesktop = GLib.getenv("XDG_CURRENT_DESKTOP");
+    GLib.setenv("PATH", fakeBin + ":" + oldPath, true);
+    GLib.setenv("XDG_CURRENT_DESKTOP", "XFCE", true);
+    let t0 = GLib.get_monotonic_time();
+    tb.ensureIBusRunning();
+    let seconds = (GLib.get_monotonic_time() - t0) / 1e6;
+    GLib.usleep(500000);
+    let [, calls] = GLib.file_get_contents(log);
+    calls = new TextDecoder().decode(calls);
+    assertTrue(seconds < 5, "IBus check returns at once when IBus is not running (" + seconds.toFixed(1) + " s)");
+    assertTrue(/ibus-daemon -drx/.test(calls) && !/ibus start/.test(calls), "IBus is started in the background with ibus-daemon -drx");
+    GLib.file_set_contents(log, "");
+    GLib.setenv("XDG_CURRENT_DESKTOP", "ubuntu:GNOME", true);
+    tb.ensureIBusRunning();
+    GLib.usleep(500000);
+    [, calls] = GLib.file_get_contents(log);
+    assertTrue(!/ibus-daemon/.test(new TextDecoder().decode(calls)), "On GNOME the TopBar leaves starting IBus to GNOME Shell");
+    GLib.setenv("PATH", oldPath, true);
+    if (oldDesktop) GLib.setenv("XDG_CURRENT_DESKTOP", oldDesktop, true); else GLib.unsetenv("XDG_CURRENT_DESKTOP");
+}
 
 // 7. Avro Keyboard command-line switches
 assertEqual(tb.parseTopBarCommand(["toggle"]), "toggle", "toggle");

@@ -64,6 +64,7 @@ assertTrue(p.y >= 0 && p.y + 1070 <= 1080, "Oversized window is clamped to the s
 // 6. Caret rectangles
 assertTrue(!fp.isUsableCursor({ x: 0, y: 0, w: 0, h: 0 }), "Empty caret rectangle is ignored");
 assertTrue(fp.isUsableCursor({ x: 0, y: 40, w: 0, h: 18 }), "Caret at the left screen edge is usable");
+assertTrue(!fp.isUsableCursor({ x: 0, y: 0, w: 1, h: 17 }), "A caret in the top-left screen corner (Chromium/Brave without caret bounds) is ignored");
 assertTrue(!fp.isUsableCursor(null), "Missing caret is ignored");
 
 // 7. Pinned position is kept on screen

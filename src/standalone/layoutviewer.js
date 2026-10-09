@@ -389,10 +389,14 @@ function buildPhoneticGuide() {
 }
 
 function runLayoutViewerDialog(parentWindow, layoutId) {
-    try {
-        GLib.set_prgname("avro-layout");
-        GLib.set_application_name("Avro Layout Viewer");
-    } catch (e) {}
+    // Only the first part of a program names it (the TopBar opens this too)
+    if (!globalThis.__avroAppIdentity) {
+        globalThis.__avroAppIdentity = true;
+        try {
+            GLib.set_prgname("avro-layout");
+            GLib.set_application_name("Avro Layout Viewer");
+        } catch (e) {}
+    }
     if (Theme) Theme.apply();
 
     let settings = avroSettings();

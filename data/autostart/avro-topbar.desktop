@@ -4,6 +4,7 @@ Name=Avro TopBar
 GenericName=Bengali Input Method Toolbar
 Comment=Floating Avro Keyboard toolbar
 Exec=avro-topbar
+TryExec=avro-topbar
 Icon=avro-bangla
 Terminal=false
 Categories=Utility;

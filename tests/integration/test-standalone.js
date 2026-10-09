@@ -101,6 +101,27 @@ try {
 try {
     const sw = imports["setup-wizard"];
     assert(sw && typeof sw.runSetupWizard === 'function', "setup-wizard exports runSetupWizard");
+    // avro-setup FILE.deb: the launcher's --standalone is not the file
+    assert(sw.packageArgument(["--standalone", "/tmp/x.deb"]) === "/tmp/x.deb", "avro-setup takes the package it was given");
+    assert(sw.packageArgument(["--standalone"]) === null, "Without a file, Setup asks for one");
+    assert(typeof sw.findDebPackage === 'undefined', "Setup never searches folders (the current one, /tmp) for a package");
+    assert(!sw.inspectPackage("/nonexistent/avro-linux.deb").ok, "A missing package file is refused");
+    assert(/cancelled/.test(sw.describeFailure(126, "")), "A dismissed password prompt is reported as cancelled");
+    // Only avro-linux packages: Setup is not a general package installer
+    if (GLib.find_program_in_path("dpkg-deb")) {
+        let tmp = GLib.dir_make_tmp("avro-setup-test-XXXXXX");
+        let build = (name) => {
+            GLib.mkdir_with_parents(tmp + "/" + name + "/DEBIAN", 0o755);
+            GLib.file_set_contents(tmp + "/" + name + "/DEBIAN/control",
+                "Package: " + name + "\nVersion: 9.9-1\nArchitecture: all\nMaintainer: Test <test@example.com>\nDescription: test\n");
+            GLib.spawn_sync(null, ["dpkg-deb", "--build", tmp + "/" + name, tmp + "/" + name + ".deb"], null, GLib.SpawnFlags.SEARCH_PATH, null);
+            return tmp + "/" + name + ".deb";
+        };
+        let other = sw.inspectPackage(build("hello-world"));
+        assert(!other.ok && /not Avro Keyboard/.test(other.error), "Another package is refused");
+        let avro = sw.inspectPackage(build("avro-linux"));
+        assert(avro.ok && avro.version === "9.9-1", "An avro-linux package is accepted with its version");
+    }
 } catch (e) {
     assert(false, "Failed to load setup-wizard module: " + e.message);
 }

@@ -1,3 +1,52 @@
+avro-linux (1.3.1-1) unstable; urgency=medium
+
+  * Output as ANSI (Bijoy): port of Avro Keyboard for Windows' Unicode to
+    Bijoy converter (TUnicodeToBijoy2000), so conjuncts and vowel signs come
+    out as on Windows (প্রোগ্রাম = †cÖvMÖvg, স্কুল = ¯‹zj, শব্দ = kã) instead
+    of a visible "&". A word still being typed is shown and kept in Bijoy
+    when focus moves away. য় ড় ঢ় written as letter + nukta convert too.
+  * Unicode ↔ Bijoy converter: "Convert to Unicode" works (it called a
+    function that does not exist) and reads Bijoy text back properly; the
+    window uses the same converter as the engine.
+  * Setup wizard (avro-setup): no longer crashes on start; installs only the
+    avro-linux package it was given or that the user picks (it searched the
+    current folder and /tmp before), with apt and without a shell; no
+    automatic restart (logging out is enough); the "Start Avro TopBar" and
+    "Add Avro to my keyboard list" choices work. It no longer registers
+    itself as the program that opens every .deb file.
+  * Installation changes no user's settings: the maintainer script no longer
+    rewrites every user's input sources (with a broken value for users who
+    had some) or restarts their IBus, and no schema override changes
+    everyone's default keyboards. The TopBar offers once to add Avro to the
+    keyboard list; Avro Doctor's Auto-Fix and avro-setup can do it.
+  * TopBar: no longer puts Avro back into the keyboard list at every start or
+    hides the IBus panel; starts IBus only when it is not running (without
+    disabling its panel). In the "Output as ANSI" question Enter means OK.
+  * "Start Avro TopBar when I log in" can be turned off: a Hidden=true entry
+    in ~/.config/autostart overrides the system-wide one. Autostart entries
+    have TryExec, so they are ignored once Avro is uninstalled.
+  * Avro Doctor: "Copy Report" works; typing English is not reported as a
+    problem; reports whether Avro is in the keyboard list; reads Bengali font
+    names correctly; checks this session's IBus; Auto-Fix no longer switches
+    the keyboard or the Bangla mode, or disables the IBus panel.
+  * Avro Pad: zoom works and the editor gets its intended font (GTK 3 ignores
+    a font size on the "text" node); its own composition works while the
+    Avro IBus keyboard is on.
+  * Avro Mouse: য় ড় ঢ় are one character each; Backspace removes a letter
+    with its nukta.
+  * The IBus variables in /etc/profile.d and Plasma's env are set only when
+    no input method framework is chosen yet (never over fcitx), and not on
+    GNOME or KDE Wayland. Files in /etc are conffiles.
+  * Windows show their own title in the taskbar (Avro Pad, Avro Converter, …);
+    no more "g_set_application_name() called multiple times" warnings; the
+    splash screen no longer renames the TopBar.
+  * Tests: the packaging test checks again that the maintainer scripts leave
+    users' input settings alone (and now really fails when they do not); the
+    Bengali digit check is back; the live engine test runs its IBus on a
+    private D-Bus again; new Bijoy converter tests with যুক্তবর্ণ words.
+
+ -- MD Shifat Bin Siddique Urfi and MD Mehedi Hasan <hello@msbsu.com>  Sun, 04 Oct 2026 18:00:00 +0600
+
 avro-linux (1.3.0-1) unstable; urgency=medium
 
   * Attribution updated: "Remastered by MD Shifat Bin Siddique Urfi

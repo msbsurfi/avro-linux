@@ -3,6 +3,9 @@ set -e
 
 # Avro is an IBus component. Desktop input-method selection remains a per-user
 # setting; installing this package must not overwrite another IM configuration.
+# Only system caches are refreshed here. Each user adds Avro to their own
+# keyboard list: the Avro TopBar offers it once, and Avro Doctor's Auto-Fix
+# and avro-setup can do it. No running session is restarted.
 case "$1" in
     configure)
         if command -v glib-compile-schemas >/dev/null 2>&1; then
@@ -23,64 +26,6 @@ case "$1" in
         if command -v ibus >/dev/null 2>&1; then
             ibus write-cache --system 2>/dev/null || true
         fi
-
-        # Automatically configure IBus and register Avro as an input source for system users
-        for udir in /home/*; do
-            [ -d "$udir" ] || continue
-            uname=$(basename "$udir")
-            uid=$(id -u "$uname" 2>/dev/null || true)
-            [ -n "$uid" ] && [ "$uid" -ge 1000 ] || continue
-
-            # Determine user session runtime and bus
-            if [ -S "/run/user/$uid/bus" ]; then
-                uenv="export XDG_RUNTIME_DIR=/run/user/$uid; export DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$uid/bus;"
-            else
-                uenv="export XDG_RUNTIME_DIR=/run/user/$uid;"
-            fi
-
-            # Update dconf settings for GNOME / IBus
-            if command -v dconf >/dev/null 2>&1; then
-                cur_src=$(su "$uname" -s /bin/sh -c "$uenv dconf read /org/gnome/desktop/input-sources/sources" 2>/dev/null || true)
-                if [ -z "$cur_src" ]; then
-                    su "$uname" -s /bin/sh -c "$uenv dconf write /org/gnome/desktop/input-sources/sources \"[('ibus', 'ibus-avro'), ('xkb', 'us')]\"" 2>/dev/null || true
-                elif ! echo "$cur_src" | grep -q "'ibus-avro'"; then
-                    new_src="[('ibus', 'ibus-avro'), $(echo "$cur_src" | sed -e 's/^\[//')]"
-                    su "$uname" -s /bin/sh -c "$uenv dconf write /org/gnome/desktop/input-sources/sources \"$new_src\"" 2>/dev/null || true
-                fi
-
-                cur_pe=$(su "$uname" -s /bin/sh -c "$uenv dconf read /org/freedesktop/ibus/general/preload-engines" 2>/dev/null || true)
-                if ! echo "$cur_pe" | grep -q "'ibus-avro'"; then
-                    if [ -z "$cur_pe" ]; then
-                        su "$uname" -s /bin/sh -c "$uenv dconf write /org/freedesktop/ibus/general/preload-engines \"['xkb:us::eng', 'ibus-avro']\"" 2>/dev/null || true
-                    else
-                        new_pe="$(echo "$cur_pe" | sed -e "s/\]$/, 'ibus-avro']/")"
-                        su "$uname" -s /bin/sh -c "$uenv dconf write /org/freedesktop/ibus/general/preload-engines \"$new_pe\"" 2>/dev/null || true
-                    fi
-                fi
-
-                su "$uname" -s /bin/sh -c "$uenv dconf write /org/freedesktop/ibus/general/embed-preedit-text true" 2>/dev/null || true
-            fi
-
-            # Refresh user ibus cache and daemon if running
-            if command -v ibus >/dev/null 2>&1; then
-                su "$uname" -s /bin/sh -c "$uenv ibus write-cache" 2>/dev/null || true
-
-                if pgrep -u "$uid" -x ibus-daemon >/dev/null 2>&1; then
-                    if su "$uname" -s /bin/sh -c "$uenv systemctl --user is-active app-ibus@autostart.service" >/dev/null 2>&1; then
-                        su "$uname" -s /bin/sh -c "$uenv systemctl --user restart app-ibus@autostart.service" 2>/dev/null || true
-                    elif su "$uname" -s /bin/sh -c "$uenv systemctl --user is-active ibus-daemon.service" >/dev/null 2>&1; then
-                        su "$uname" -s /bin/sh -c "$uenv systemctl --user restart ibus-daemon.service" 2>/dev/null || true
-                    else
-                        su "$uname" -s /bin/sh -c "$uenv ibus-daemon -drx --replace --panel disable" 2>/dev/null || true
-                    fi
-
-                    # Allow ibus-daemon to register engine and switch active engine to ibus-avro
-                    sleep 1
-                    su "$uname" -s /bin/sh -c "$uenv ibus engine ibus-avro" 2>/dev/null || true
-                    su "$uname" -s /bin/sh -c "$uenv notify-send -i avro-bangla 'Avro Keyboard Installed' 'Installation successful! A system restart is recommended to finalize input method settings.'" 2>/dev/null || true
-                fi
-            fi
-        done
         ;;
 esac
 

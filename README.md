@@ -63,21 +63,43 @@
 
 ### Option 1: Install from Debian Package (`.deb`)
 
-Download the release `.deb` package from the [Releases](https://github.com/msbsurfi/avro-linux/releases) page and install:
+Download `avro-linux_1.3.1-1_all.deb` from the [Releases](https://github.com/msbsurfi/avro-linux/releases) page.
+
+* **Double-click** works only where a graphical package installer opens `.deb` files
+  (GDebi, or the software center of some Ubuntu / Kubuntu releases). Click **Install** there.
+* Everywhere else (Xubuntu / XFCE, for example, where a double-click only opens the
+  file in an archive viewer), install it from a terminal in the folder of the file:
 
 ```bash
-sudo apt update
-sudo apt install ./avro-linux_1.3.0-1_all.deb
+cd ~/Downloads
+sudo apt install ./avro-linux_1.3.1-1_all.deb
 ```
 
-### Option 2: Enable Avro in Desktop Settings
+`apt` also installs what Avro needs (IBus, GJS, …); keep the `./`. `sudo dpkg -i` works
+only when all of that is installed already.
 
-Once installed, enable Avro in your desktop environment:
+### Option 2: Turn Avro on
 
-1. Open your desktop's **Settings** → **Keyboard** → **Input Sources** (or **Region & Language**).
+Log out and log in again once (there is no need to restart the computer). The Avro TopBar
+starts and asks once whether to add Avro to your keyboard list; the installer itself never
+changes anyone's keyboard settings. To add it yourself:
+
+1. Open your desktop's **Settings** → **Keyboard** → **Input Sources** (on XFCE and others: **IBus Preferences** → **Input Method**).
 2. Click **+** (Add) and select **Bengali** → **Bengali (Avro Phonetic)**.
 3. Switch input source using your standard desktop shortcut (usually `Super + Space` or `Ctrl + Space`).
 4. Press **`F12`** anytime to switch between Bangla (**BN**) and English (**EN**)!
+
+`avro-setup avro-linux_1.3.1-1_all.deb` installs or updates Avro from a package file with
+a wizard and does these steps for you.
+
+### Uninstall
+
+```bash
+sudo apt remove avro-linux
+```
+
+Your personal dictionary and settings (`~/.config/avro`) stay. Remove Avro from your keyboard
+list first if you added it.
 
 ---
 
@@ -114,7 +136,7 @@ make test
 make package
 ```
 
-The resulting package will be generated as `build/package/avro-linux_1.3.0-1_all.deb`.
+The resulting package is written to `avro-linux_1.3.1-1_all.deb` in the top folder of the source tree.
 
 ---
 

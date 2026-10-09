@@ -55,6 +55,10 @@ print("Running Avro Doctor Integration Tests...");
 let withSchema = run(["gjs", "src/standalone/doctor.js", "--cli"], { GSETTINGS_SCHEMA_DIR: "data/gsettings" });
 checkReport(withSchema, "doctor.js --cli");
 assert(withSchema.out.indexOf("GSettings Schema:    VALID [OK]") !== -1, "An installed schema is reported as valid");
+assert(withSchema.out.indexOf("\u00e0\u00a6") === -1, "Bengali font names are read as UTF-8 (no mojibake)");
+assert(withSchema.out.indexOf("In Keyboard List:") !== -1, "The report says whether Avro is in the keyboard list");
+assert(withSchema.out.indexOf("SWITCH NEEDED") === -1 && withSchema.out.indexOf("instead of 'ibus-avro'") === -1,
+       "Typing English is not reported as a problem");
 
 // 2. A missing schema is reported, not a crash (Gio.Settings.new() aborts)
 let noSchema = run(["gjs", "src/standalone/doctor.js", "--cli"],

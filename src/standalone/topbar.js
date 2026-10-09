@@ -33,11 +33,6 @@ const Pango = imports.gi.Pango;
 const PangoCairo = imports.gi.PangoCairo;
 const Cairo = imports.cairo;
 
-try {
-    GLib.set_prgname("avro-topbar");
-    GLib.set_application_name("Avro Keyboard");
-} catch (e) {}
-
 let IBus = null;
 try { IBus = imports.gi.IBus; } catch (e) {}
 
@@ -251,49 +246,102 @@ function setUpStartOnLogin(settings) {
     return ok;
 }
 
-function ensureIBusConfigured() {
+/* Runs a command line: [succeeded (exit status 0), standard output]. */
+function runCommand(cmd) {
     try {
-        let source = Gio.SettingsSchemaSource.get_default();
-        if (source && source.lookup('org.gnome.desktop.input-sources', true)) {
-            let gnomeSettings = new Gio.Settings({ schema_id: 'org.gnome.desktop.input-sources' });
-            let sourcesVal = gnomeSettings.get_value('sources');
-            let sources = sourcesVal.deep_unpack();
-            let hasAvro = false;
-            for (let s of sources) {
-                if (s[1] === 'ibus-avro') { hasAvro = true; break; }
-            }
-            if (!hasAvro) {
-                let newSources = [['ibus', 'ibus-avro']].concat(sources);
-                gnomeSettings.set_value('sources', new GLib.Variant('a(ss)', newSources));
-            }
+        let [ok, out, , status] = GLib.spawn_command_line_sync(cmd);
+        return [ok && status === 0, ok && out ? new TextDecoder('utf-8').decode(out) : ''];
+    } catch (e) {
+        return [false, ''];
+    }
+}
+
+/* The TopBar types through IBus, so IBus must run in this session and know
+   the Avro engine. This starts IBus when it is not running and reloads it
+   when it was started before Avro was installed. It changes no settings: the
+   user's keyboard list and IBus' own options are the user's (adding Avro to
+   the list is offered once, see offerKeyboardList). */
+function ensureIBusRunning() {
+    // 'ibus list-engine' needs this session's IBus, unlike pgrep, which
+    // also finds the IBus of other users and sessions
+    let [running, engines] = runCommand("ibus list-engine");
+    if (!running) {
+        // GNOME Shell starts and manages IBus itself; the TopBar connects as
+        // soon as it is there. Elsewhere IBus is started in the background:
+        // "ibus start" would never return, it stays in the foreground as the
+        // daemon.
+        let gnome = (GLib.getenv("XDG_CURRENT_DESKTOP") || "").toUpperCase().indexOf("GNOME") !== -1;
+        if (!gnome) {
+            try { GLib.spawn_command_line_async("ibus-daemon -drx"); } catch (e) {}
         }
-        if (source && source.lookup('org.freedesktop.ibus.general', true)) {
-            let ibusSettings = new Gio.Settings({ schema_id: 'org.freedesktop.ibus.general' });
-            let peVal = ibusSettings.get_value('preload-engines');
-            let pe = peVal.deep_unpack();
-            if (pe.indexOf('ibus-avro') === -1) {
-                pe.push('ibus-avro');
-                ibusSettings.set_value('preload-engines', new GLib.Variant('as', pe));
-            }
+    } else if (engines.indexOf("ibus-avro") === -1) {
+        runCommand("ibus write-cache");
+        runCommand("ibus restart");
+    }
+}
+
+/* Is Avro in the keyboard list the desktop offers? GNOME keeps its own list
+   (input sources); other desktops show IBus' preload engines. */
+function avroInKeyboardList() {
+    let gnome = (GLib.getenv("XDG_CURRENT_DESKTOP") || "").toUpperCase().indexOf("GNOME") !== -1;
+    if (gnome) {
+        let sources = new SafeSettings('org.gnome.desktop.input-sources');
+        if (sources.has('sources')) return sources.get('sources', []).some(s => s[1] === 'ibus-avro');
+    }
+    return new SafeSettings('org.freedesktop.ibus.general').get('preload-engines', []).indexOf('ibus-avro') !== -1;
+}
+
+/* Adds Avro at the end of the user's keyboard lists: their own first
+   keyboard stays the default. */
+function addAvroToKeyboardList() {
+    let ibusGeneral = new SafeSettings('org.freedesktop.ibus.general');
+    let pe = ibusGeneral.get('preload-engines', []);
+    if (ibusGeneral.has('preload-engines') && pe.indexOf('ibus-avro') === -1) {
+        if (pe.length === 0) pe.push('xkb:us::eng');
+        pe.push('ibus-avro');
+        ibusGeneral.set('preload-engines', pe);
+    }
+    let gnome = new SafeSettings('org.gnome.desktop.input-sources');
+    if (gnome.has('sources')) {
+        let sources = gnome.get('sources', []);
+        if (!sources.some(s => s[1] === 'ibus-avro')) {
+            if (sources.length === 0) sources.push(['xkb', 'us']);
+            sources.push(['ibus', 'ibus-avro']);
             try {
-                ibusSettings.set_boolean('embed-preedit-text', true);
+                gnome.settings.set_value('sources', new GLib.Variant('a(ss)', sources));
             } catch (e) {}
         }
+    }
+    Gio.Settings.sync();
+}
 
-        // Check if ibus-daemon is running; if not, launch it
-        let [okRun, outRun] = GLib.spawn_command_line_sync("pgrep -x ibus-daemon");
-        if (!okRun || !outRun || outRun.length === 0) {
-            GLib.spawn_command_line_async("ibus-daemon -drx --panel disable");
-        } else {
-            // Verify if ibus-avro is registered in active daemon
-            let [okEng, outEng] = GLib.spawn_command_line_sync("ibus list-engine");
-            let engStr = (okEng && outEng) ? String.fromCharCode.apply(null, outEng) : "";
-            if (engStr.indexOf("ibus-avro") === -1) {
-                GLib.spawn_command_line_sync("ibus write-cache");
-                GLib.spawn_command_line_sync("sh -c 'systemctl --user restart app-ibus@autostart.service 2>/dev/null || ibus-daemon -drx --replace --panel disable'");
-            }
-        }
-    } catch (e) {}
+/* Asked once per user (the installer no longer changes anyone's keyboards):
+   add Avro to the desktop's keyboard list as well. */
+function offerKeyboardList(bar) {
+    let s = bar.settings;
+    if (!s.has('keyboard-list-offered') || s.get('keyboard-list-offered', true)) return;
+    s.set('keyboard-list-offered', true);
+    if (avroInKeyboardList()) return;
+    let dlg = new Gtk.MessageDialog({
+        modal: false,
+        message_type: Gtk.MessageType.QUESTION,
+        buttons: Gtk.ButtonsType.NONE,
+        text: "Add Avro to your keyboard list?",
+        secondary_text: "The Avro TopBar switches between বাংলা and English by itself. " +
+                        "If Avro Phonetic is also in your keyboard list, your desktop's own " +
+                        "keyboard switcher can use it too.\n\n" +
+                        "You can change this any time in your keyboard settings."
+    });
+    dlg.set_title("Avro Keyboard");
+    dlg.add_button("Not Now", Gtk.ResponseType.CANCEL);
+    dlg.add_button("Add Avro", Gtk.ResponseType.OK);
+    dlg.set_default_response(Gtk.ResponseType.OK);
+    dlg.set_keep_above(true);
+    dlg.connect('response', (d, response) => {
+        if (response === Gtk.ResponseType.OK) addAvroToKeyboardList();
+        d.destroy();
+    });
+    dlg.show_all();
 }
 
 /* Avro Keyboard command-line switches: toggle, bn, sys, minimize, restore —
@@ -996,7 +1044,9 @@ var AvroTopBar = class AvroTopBar {
     constructor(app, opts) {
         opts = opts || {};
         this.app = app;
-        try { ensureIBusConfigured(); } catch (e) {}
+        if (opts.ibus !== false) {
+            try { ensureIBusRunning(); } catch (e) {}
+        }
         this.settings = new SafeSettings(SCHEMA_ID);
         this.ibusSettings = new SafeSettings('org.freedesktop.ibus.general');
         this.scale = 1;
@@ -1393,8 +1443,19 @@ var AvroTopBar = class AvroTopBar {
     _keepOnTop() {
         if (this.window.get_visible()) {
             this.window.set_keep_above(true);
+            this._keepInWorkarea();
         }
         return GLib.SOURCE_CONTINUE;
+    }
+
+    /* A panel that reserves its space only after the bar was placed (GNOME's
+       top bar at login, for one) would cover it: the bar moves down into the
+       work area, as a drag would put it. */
+    _keepInWorkarea() {
+        if (this.drag) return;
+        let [x, y] = this.window.get_position();
+        let area = this._workareaAt(x + this.width / 2, y + this.height / 2);
+        if (y < area.y) this.window.move(x, area.y);
     }
 
     /* ── transparency (Windows: fade after 5 s without activity) ─────── */
@@ -1629,6 +1690,7 @@ var AvroTopBar = class AvroTopBar {
             secondary_text: "In ANSI mode, Avro outputs legacy 8-bit characters (Bijoy format).\n\nIMPORTANT: You MUST select an ANSI font (such as SutonnyMJ) in your target application to view the text properly.\n\nDo you want to switch to ANSI output mode?"
         });
         dlg.set_title("Avro Keyboard - Output as ANSI");
+        dlg.set_default_response(Gtk.ResponseType.OK);
         let res = dlg.run();
         dlg.destroy();
         if (res === Gtk.ResponseType.OK) {
@@ -2379,11 +2441,6 @@ var AvroTopBar = class AvroTopBar {
 
     /* Show according to the start-up setting (TopBar / tray / last used). */
     start(command) {
-        // Enforce IBus panel disabled (prevents unwanted 8.8x32.8 window)
-        try {
-            GLib.spawn_command_line_async("gsettings set org.freedesktop.ibus.panel show 0");
-        } catch (e) {}
-
         let mode = this.settings.get('topbar-startup-ui', 'last');
         if (mode === 'last') mode = this.settings.get('topbar-last-ui', 'topbar');
         if (command === 'minimize') mode = 'tray';
@@ -2447,6 +2504,13 @@ var AvroTopBar = class AvroTopBar {
    ═══════════════════════════════════════════════════════════════════════════ */
 function runAvroTopBar(args) {
     args = args || [];
+    if (!globalThis.__avroAppIdentity) {
+        globalThis.__avroAppIdentity = true;
+        try {
+            GLib.set_prgname("avro-topbar");
+            GLib.set_application_name("Avro Keyboard");
+        } catch (e) {}
+    }
     let app = new Gtk.Application({
         application_id: APP_ID,
         flags: Gio.ApplicationFlags.HANDLES_COMMAND_LINE
@@ -2458,6 +2522,11 @@ function runAvroTopBar(args) {
             bar = new AvroTopBar(application);
             bar.start(command);
             setUpStartOnLogin(bar.settings);
+            // After the splash screen
+            GLib.timeout_add(GLib.PRIORITY_DEFAULT, 2600, () => {
+                try { offerKeyboardList(bar); } catch (e) {}
+                return GLib.SOURCE_REMOVE;
+            });
         } else {
             bar.handleCommand(command || 'restore');
         }
