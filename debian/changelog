@@ -29,6 +29,11 @@ avro-linux (1.3.1-1) unstable; urgency=medium
     problem; reports whether Avro is in the keyboard list; reads Bengali font
     names correctly; checks this session's IBus; Auto-Fix no longer switches
     the keyboard or the Bangla mode, or disables the IBus panel.
+  * KDE Plasma (Wayland): Avro types there only when IBus Wayland is KWin's
+    input method (System Settings → Keyboard → Virtual Keyboard). Avro Doctor
+    reports it; when no input method is chosen, Auto-Fix, the TopBar's
+    one-time question and avro-setup choose IBus Wayland. Another input
+    method (fcitx, Maliit) is never replaced.
   * Avro Pad: zoom works and the editor gets its intended font (GTK 3 ignores
     a font size on the "text" node); its own composition works while the
     Avro IBus keyboard is on.

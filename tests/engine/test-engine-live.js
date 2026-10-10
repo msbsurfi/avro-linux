@@ -222,6 +222,22 @@ function setLayout(id, expectLabel) {
     return waitFor(() => label === expectLabel, 5000);
 }
 
+/* What typing keys gives once the engine follows a changed setting. The
+   engine process reads the settings file through a file monitor, which is
+   late under load and announces nothing: type again until the result comes
+   (or the time is up), starting from an empty word each time. */
+function typedSoon(keys, expected, ms) {
+    let result = "";
+    let end = GLib.get_monotonic_time() + ms * 1000;
+    do {
+        reset();
+        result = type(keys);
+        if (result === expected) break;
+        pump(100);
+    } while (GLib.get_monotonic_time() < end);
+    return result;
+}
+
 // 1. Avro Phonetic
 assertEqual(type("ami "), "আমি |", "Avro Phonetic: ami + Space commits আমি");
 reset();
@@ -261,9 +277,7 @@ assertTrue(waitFor(() => label === "বাংলা (National (Jatiya))", 3000),
 // 3. Old Style Typing
 settings.set_string("fixed-typing-style", "old");
 Gio.Settings.sync();
-pump(800);
-reset();
-assertEqual(type("cj"), "|কে", "Old Style Typing: e-kar typed before ক");
+assertEqual(typedSoon("cj", "|কে", 5000), "|কে", "Old Style Typing: e-kar typed before ক");
 reset();
 assertEqual(type("cjh"), "|কো", "Old Style Typing: e-kar + ক + a-kar = কো");
 settings.set_string("fixed-typing-style", "modern");
@@ -271,8 +285,7 @@ Gio.Settings.sync();
 
 // 4. Avro Easy (reph key) and back to Avro Phonetic
 assertTrue(setLayout("avro-easy", "বাংলা (Avro Easy)"), "The engine switches to Avro Easy");
-pump(800);
-assertEqual(type("kZ"), "|র্ক", "Old Style Reph in Modern Style Typing");
+assertEqual(typedSoon("kZ", "|র্ক", 5000), "|র্ক", "Old Style Reph in Modern Style Typing");
 assertTrue(setLayout("phonetic", "বাংলা (Avro)"), "The engine switches back to Avro Phonetic");
 assertEqual(type("ami "), "আমি |", "Avro Phonetic works again");
 
@@ -283,7 +296,7 @@ Gio.Settings.sync();
 waitFor(() => label === "বাংলা (National (Jatiya))", 5000);
 type("jh");
 ic.focus_out();
-pump(200);
+waitFor(() => committed !== "", 3000);
 assertEqual(committed, "কা", "Focus out commits the word being typed");
 
 finish(failed > 0 ? 1 : 0);

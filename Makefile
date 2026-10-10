@@ -101,6 +101,7 @@ install: build
 	install -m 0644 src/common/evars.js $(DESTDIR)$(pkgdatadir)/common/evars.js
 	install -m 0644 src/common/autostart.js $(DESTDIR)$(pkgdatadir)/common/autostart.js
 	install -m 0644 src/common/avrotheme.js $(DESTDIR)$(pkgdatadir)/common/avrotheme.js
+	install -m 0644 src/common/kdewayland.js $(DESTDIR)$(pkgdatadir)/common/kdewayland.js
 	install -m 0755 src/engine/avro-engine $(DESTDIR)$(pkgdatadir)/engine/avro-engine
 	install -m 0755 src/engine/main-gjs.js $(DESTDIR)$(pkgdatadir)/engine/main-gjs.js
 
