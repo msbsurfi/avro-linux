@@ -315,30 +315,58 @@ function addAvroToKeyboardList() {
     Gio.Settings.sync();
 }
 
+/* KDE Plasma on Wayland: IBus as KWin's input method (src/common/kdewayland.js) */
+function kdeWayland() {
+    try {
+        return imports.kdewayland;
+    } catch (e) {
+        return null;
+    }
+}
+
+/* What the one-time question offers: Avro in the keyboard list and, on KDE
+   Plasma (Wayland) without any input method chosen, IBus Wayland as KWin's
+   input method, without which Avro cannot type there. Another input method
+   (fcitx, Maliit) is the user's choice; Avro Doctor explains that case. */
+function keyboardOffer(inList, kde) {
+    let chooseKde = !!(kde && kde.relevant && kde.kind === 'none');
+    return { addList: !inList, chooseKde: chooseKde, show: !inList || chooseKde };
+}
+
 /* Asked once per user (the installer no longer changes anyone's keyboards):
    add Avro to the desktop's keyboard list as well. */
 function offerKeyboardList(bar) {
     let s = bar.settings;
     if (!s.has('keyboard-list-offered') || s.get('keyboard-list-offered', true)) return;
     s.set('keyboard-list-offered', true);
-    if (avroInKeyboardList()) return;
+    let kde = kdeWayland();
+    let offer = keyboardOffer(avroInKeyboardList(), kde ? kde.status() : null);
+    if (!offer.show) return;
+    let kdeText = "KDE Plasma on Wayland passes your typing to Avro only when IBus Wayland is " +
+                  "chosen as the virtual keyboard (System Settings → Keyboard → Virtual Keyboard).";
     let dlg = new Gtk.MessageDialog({
         modal: false,
         message_type: Gtk.MessageType.QUESTION,
         buttons: Gtk.ButtonsType.NONE,
-        text: "Add Avro to your keyboard list?",
-        secondary_text: "The Avro TopBar switches between বাংলা and English by itself. " +
-                        "If Avro Phonetic is also in your keyboard list, your desktop's own " +
-                        "keyboard switcher can use it too.\n\n" +
-                        "You can change this any time in your keyboard settings."
+        text: offer.addList ? "Add Avro to your keyboard list?" : "Let KDE Plasma pass your typing to Avro?",
+        secondary_text: offer.addList ?
+            "The Avro TopBar switches between বাংলা and English by itself. " +
+            "If Avro Phonetic is also in your keyboard list, your desktop's own " +
+            "keyboard switcher can use it too.\n\n" +
+            (offer.chooseKde ? kdeText + " This chooses it too; log out and log in again once afterwards.\n\n" : "") +
+            "You can change this any time in your keyboard settings." :
+            kdeText + "\n\nChoose IBus Wayland now? Log out and log in again once afterwards."
     });
     dlg.set_title("Avro Keyboard");
     dlg.add_button("Not Now", Gtk.ResponseType.CANCEL);
-    dlg.add_button("Add Avro", Gtk.ResponseType.OK);
+    dlg.add_button(offer.addList ? "Add Avro" : "Choose IBus Wayland", Gtk.ResponseType.OK);
     dlg.set_default_response(Gtk.ResponseType.OK);
     dlg.set_keep_above(true);
     dlg.connect('response', (d, response) => {
-        if (response === Gtk.ResponseType.OK) addAvroToKeyboardList();
+        if (response === Gtk.ResponseType.OK) {
+            if (offer.addList) addAvroToKeyboardList();
+            if (offer.chooseKde) kde.chooseIBusWayland();
+        }
         d.destroy();
     });
     dlg.show_all();

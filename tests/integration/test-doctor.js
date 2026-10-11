@@ -71,6 +71,26 @@ assert(noSchema.out.indexOf("is not installed") !== -1, "The report says the sch
 checkReport(run(["bin/avro-doctor", "--cli"], { GSETTINGS_SCHEMA_DIR: "data/gsettings" }), "bin/avro-doctor --cli");
 checkReport(run(["bin/avro-linux-doctor", "--cli"], { GSETTINGS_SCHEMA_DIR: "data/gsettings" }), "bin/avro-linux-doctor --cli");
 
+// 4. KDE Plasma on Wayland: Avro types only with IBus Wayland as KWin's input method
+let kdeHome = GLib.dir_make_tmp("avro-doctor-kde-XXXXXX");
+let kdeXdg = GLib.dir_make_tmp("avro-doctor-xdg-XXXXXX");
+let kdeEnv = { GSETTINGS_SCHEMA_DIR: "data/gsettings", XDG_CURRENT_DESKTOP: "KDE", XDG_SESSION_TYPE: "wayland",
+               XDG_CONFIG_HOME: kdeHome, XDG_CONFIG_DIRS: kdeXdg };
+let kdeNone = run(["gjs", "src/standalone/doctor.js", "--cli"], kdeEnv);
+checkReport(kdeNone, "doctor.js --cli on KDE Plasma (Wayland)");
+assert(kdeNone.out.indexOf("KDE Virtual Keyboard: none [CHOOSE IBUS WAYLAND]") !== -1, "KDE Wayland without an input method is reported");
+assert(kdeNone.out.indexOf("Virtual Keyboard, then log out and in again") !== -1, "The report says where to choose IBus Wayland");
+GLib.file_set_contents(kdeHome + "/kwinrc", "[Wayland]\nInputMethod[$e]=/usr/share/applications/org.freedesktop.IBus.Panel.Wayland.Gtk3.desktop\n");
+let kdeIBus = run(["gjs", "src/standalone/doctor.js", "--cli"], kdeEnv);
+assert(kdeIBus.out.indexOf("KDE Virtual Keyboard: IBus Wayland [OK]") !== -1, "IBus Wayland chosen: reported as OK");
+assert(kdeIBus.out.indexOf("does not pass typing to IBus") === -1, "IBus Wayland chosen: no KDE issue");
+GLib.file_set_contents(kdeHome + "/kwinrc", "[Wayland]\nInputMethod=/usr/share/applications/org.fcitx.Fcitx5.desktop\n");
+let kdeFcitx = run(["gjs", "src/standalone/doctor.js", "--cli"], kdeEnv);
+assert(kdeFcitx.out.indexOf("another input method (org.fcitx.Fcitx5)") !== -1, "Another input method on KDE Wayland is named");
+let gnome = run(["gjs", "src/standalone/doctor.js", "--cli"],
+                { GSETTINGS_SCHEMA_DIR: "data/gsettings", XDG_CURRENT_DESKTOP: "GNOME", XDG_SESSION_TYPE: "wayland" });
+assert(gnome.out.indexOf("KDE Virtual Keyboard") === -1, "No KDE line on GNOME");
+
 print("\nDoctor Integration Test Summary:");
 print("  Total Passed: " + passedCount);
 print("  Total Failed: " + failedCount);

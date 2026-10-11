@@ -39,6 +39,10 @@ Updating from 1.3.0 works the same way.
   IBus panel. "Start Avro TopBar when I log in" can now really be turned off.
 * **Avro Doctor:** "Copy Report" works, typing English is not shown as a problem, and
   Bengali font names display correctly. Auto-Fix no longer switches your keyboard.
+* **KDE Plasma on Wayland:** Avro can type there only when **IBus Wayland** is chosen in
+  System Settings → Keyboard → Virtual Keyboard. Avro Doctor now says so, and the TopBar's
+  first question, Avro Setup and Doctor's Auto-Fix choose it for you when no other input
+  method is set there. Log out and in once afterwards.
 * **Avro Pad:** zoom works, and its own typing works while the Avro IBus keyboard is on.
 * **Avro Mouse:** Backspace after য় ড় ঢ় removes the whole letter.
 * Input method settings are added at login only when no other input method (such as fcitx)

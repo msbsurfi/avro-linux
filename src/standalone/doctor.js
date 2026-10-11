@@ -46,6 +46,10 @@ let Theme = null;
     }
 })();
 
+// KDE Plasma on Wayland: IBus as KWin's input method (src/common/kdewayland.js)
+let KdeWayland = null;
+try { KdeWayland = imports.kdewayland; } catch (e) {}
+
 /* Command output as text. UTF-8: font names, for one, can be Bengali. */
 function decode(bytes) {
     try {
@@ -179,6 +183,17 @@ function runDiagnosticCheck() {
         report.recommendations.push("Choose IBus as the input method framework (Debian/Ubuntu: 'im-config -n ibus'), then log out and in again.");
     }
 
+    // KDE Plasma on Wayland hands the keyboard to IBus only when "IBus
+    // Wayland" is chosen as the virtual keyboard
+    report.kde = KdeWayland ? KdeWayland.status() : { relevant: false };
+    if (report.kde.relevant && report.kde.kind !== "ibus") {
+        report.issues.push(report.kde.kind === "none" ?
+            "KDE Plasma (Wayland) does not pass typing to IBus: no virtual keyboard is chosen, so Avro cannot type in Wayland programs." :
+            "KDE Plasma (Wayland) passes typing to another input method (" + report.kde.name + "), not to IBus.");
+        report.recommendations.push((report.kde.kind === "none" ? "Click Auto-Fix, or choose" : "To type with Avro, choose") +
+            " IBus Wayland in System Settings → Keyboard → Virtual Keyboard, then log out and in again.");
+    }
+
     // Check Bengali fonts
     let [fontsOk, fontsOut] = run("fc-list :lang=bn family");
     if (fontsOk) {
@@ -262,6 +277,10 @@ function formatReportText(report) {
     lines.push("ibus-avro Registered:" + (report.ibusRegistered ? "YES [OK]" : "NO [FAIL]"));
     lines.push("Active Engine:       " + active + activeNote);
     lines.push("In Keyboard List:    " + (report.inKeyboardList ? "YES [OK]" : "NO [ADD IT]"));
+    if (report.kde && report.kde.relevant) {
+        lines.push("KDE Virtual Keyboard:" + (report.kde.kind === "ibus" ? " IBus Wayland [OK]" :
+            report.kde.kind === "none" ? " none [CHOOSE IBUS WAYLAND]" : " " + report.kde.name + " [CHOOSE IBUS WAYLAND]"));
+    }
     lines.push("Component File:      " + (report.componentFile ? report.componentFile + " [OK]" : "NOT FOUND [FAIL]"));
     lines.push("Embed Preedit Text:  " + (report.embedPreedit === "true" ? "Enabled [OK]" : report.embedPreedit + " [FAIL — live typing won't work]"));
     lines.push("");
@@ -344,6 +363,15 @@ function autoFixIssues() {
         }
     }
     Gio.Settings.sync();
+
+    // KDE Plasma on Wayland, only when no input method is chosen: another
+    // one (fcitx, Maliit) is the user's choice
+    let kde = KdeWayland ? KdeWayland.status() : { relevant: false };
+    if (kde.relevant && kde.kind === "none") {
+        fixed.push(KdeWayland.chooseIBusWayland() ?
+            "Chose IBus Wayland as KDE Plasma's virtual keyboard. Log out and in again to finish." :
+            "Could not choose IBus Wayland as KDE Plasma's virtual keyboard: choose it in System Settings → Keyboard → Virtual Keyboard.");
+    }
     return fixed;
 }
 
@@ -414,18 +442,24 @@ function runDoctorGUI() {
         checkRows[key] = value;
         return row;
     }
-    Theme.fillCard(checksCard, [
+    let checks = [
         addCheck("daemon", "IBus daemon", "The input method service that runs Avro"),
         addCheck("registered", "Avro engine registered", "ibus-avro is known to IBus"),
         addCheck("active", "Active input engine", "Engine IBus is using right now"),
-        addCheck("list", "In your keyboard list", "Avro is offered by the desktop's keyboard switcher"),
+        addCheck("list", "In your keyboard list", "Avro is offered by the desktop's keyboard switcher")
+    ];
+    // Only KDE Plasma on Wayland has this setting
+    if (KdeWayland && KdeWayland.isKdeWayland()) {
+        checks.push(addCheck("kde", "KDE virtual keyboard", "Plasma on Wayland passes typing to IBus only with IBus Wayland"));
+    }
+    Theme.fillCard(checksCard, checks.concat([
         addCheck("component", "Component file", "ibus-avro .xml file in /usr/share/ibus/component/"),
         addCheck("preedit", "Embed preedit text", "Live inline typing (needed for VS Code, Konsole, etc.)"),
         addCheck("schema", "Avro settings", "GSettings schema com.omicronlab.avro"),
         addCheck("envvars", "IM environment vars", "GTK_IM_MODULE, QT_IM_MODULE, XMODIFIERS"),
         addCheck("profile", "Login env script", "/etc/profile.d/avro-linux.sh (used when nothing else selects IBus)"),
         addCheck("fonts", "Bengali fonts", "Fonts that can display Bengali text")
-    ]);
+    ]));
     vbox.pack_start(checksCard, false, false, 0);
 
     function setCheck(key, text, kind) {
@@ -500,6 +534,10 @@ function runDoctorGUI() {
 
         setCheck("daemon", r.ibusRunning ? "Running" : "Not running", r.ibusRunning ? "ok" : "err");
         setCheck("list", r.inKeyboardList ? "Yes" : "Not added", r.inKeyboardList ? "ok" : "warn");
+        if (r.kde && r.kde.relevant) {
+            setCheck("kde", r.kde.kind === "ibus" ? "IBus Wayland" : (r.kde.kind === "none" ? "None chosen" : r.kde.name),
+                     r.kde.kind === "ibus" ? "ok" : "err");
+        }
         setCheck("registered", r.ibusRegistered ? "Registered" : "Missing", r.ibusRegistered ? "ok" : "err");
         let active = r.ibusActiveEngine && r.ibusActiveEngine !== "None" ? r.ibusActiveEngine : "None";
         // English is a normal choice, not a problem

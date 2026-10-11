@@ -89,6 +89,11 @@ changes anyone's keyboard settings. To add it yourself:
 3. Switch input source using your standard desktop shortcut (usually `Super + Space` or `Ctrl + Space`).
 4. Press **`F12`** anytime to switch between Bangla (**BN**) and English (**EN**)!
 
+**KDE Plasma on Wayland:** also choose **IBus Wayland** in **System Settings** → **Keyboard** →
+**Virtual Keyboard**, then log out and in again. Without it Avro cannot type in Wayland programs.
+The TopBar's question, `avro-setup` and Avro Doctor's Auto-Fix do this for you when no other
+input method is chosen there.
+
 `avro-setup avro-linux_1.3.1-1_all.deb` installs or updates Avro from a package file with
 a wizard and does these steps for you.
 

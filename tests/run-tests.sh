@@ -90,6 +90,9 @@ run_test "Standalone Suite & Windows UI Integration" "gjs ${ROOT_DIR}/tests/inte
 # 8. Avro Doctor Diagnostic Health Check test
 run_test "Avro Doctor Diagnostics" "gjs ${ROOT_DIR}/tests/integration/test-doctor.js"
 
+# KDE Plasma (Wayland): IBus Wayland as KWin's input method
+run_test "KDE Plasma Wayland Input Method" "gjs ${ROOT_DIR}/tests/integration/test-kde-wayland.js"
+
 # 9. Desktop and metadata validation
 run_test "Metadata & Schema Validation" "${ROOT_DIR}/tests/integration/test-metadata.sh"
 

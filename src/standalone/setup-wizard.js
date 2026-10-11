@@ -37,6 +37,19 @@ let Theme = null;
 try { Theme = imports.avrotheme; } catch (e) {}
 let Autostart = null;
 try { Autostart = imports.autostart; } catch (e) {}
+let KdeWayland = null;
+try { KdeWayland = imports.kdewayland; } catch (e) {}
+
+/* KDE Plasma on Wayland without any input method chosen: Avro can type only
+   once IBus Wayland is KWin's input method (src/common/kdewayland.js). */
+function kdeNeedsIBusWayland() {
+    try {
+        let st = KdeWayland ? KdeWayland.status() : null;
+        return !!(st && st.relevant && st.kind === 'none');
+    } catch (e) {
+        return false;
+    }
+}
 
 function findAsset(relPath) {
     for (let p of [scriptDir + '/../../data/' + relPath, scriptDir + '/../' + relPath, '/usr/share/avro-linux/' + relPath]) {
@@ -99,8 +112,10 @@ function describeFailure(exitCode, output) {
 }
 
 /* Adds Avro at the end of this user's keyboard lists (the user's own first
-   keyboard stays the default) and lets IBus load it. */
+   keyboard stays the default) and lets IBus load it. On KDE Plasma (Wayland)
+   without an input method it also chooses IBus Wayland. */
 function setUpAvroForUser() {
+    if (kdeNeedsIBusWayland()) KdeWayland.chooseIBusWayland();
     let lookup = (id) => {
         let source = Gio.SettingsSchemaSource.get_default();
         let schema = source ? source.lookup(id, true) : null;
@@ -403,7 +418,11 @@ function runSetupWizard(targetDeb, parentWindow) {
     p4Banner.pack_start(p4Text, true, true, 0);
     p4.pack_start(p4Banner, false, false, 0);
     let p4Options = new Gtk.Box({ orientation: Gtk.Orientation.VERTICAL, spacing: 10, margin_top: 8 });
-    let checkKeyboardList = new Gtk.CheckButton({ label: "Add Avro to my keyboard list", active: true });
+    let checkKeyboardList = new Gtk.CheckButton({
+        label: kdeNeedsIBusWayland() ? "Add Avro to my keyboard list and choose IBus Wayland as KDE's virtual keyboard" :
+                                       "Add Avro to my keyboard list",
+        active: true
+    });
     let checkTopbar = new Gtk.CheckButton({
         label: "Start Avro TopBar when I log in",
         active: Autostart ? Autostart.isEnabled() || !Autostart.hasEntry() : true
