@@ -4,11 +4,11 @@
 
 | Distribution | Version | Architecture | Status | Session | Test Method |
 |---|---|---|---|---|---|
-| **Debian** | 13 (Trixie) | amd64 | **Verified / Active** | Wayland (KWin) | Live system test |
+| **Debian** | 13 (Trixie) | amd64 | **Verified / Active** | Wayland (KDE Plasma 6) | Real PC: the full 1.3.1 test list by hand |
 | **Debian** | 12 (Bookworm) | amd64 / arm64 | **Supported** | Wayland / X11 | Clean environment install |
 | **Ubuntu** | 24.04 LTS (Noble) | amd64 / arm64 | **Supported** | Wayland (GNOME) | debhelper build / packaging test |
 | **Ubuntu** | 22.04 LTS (Jammy) | amd64 / arm64 | **Supported** | Wayland / X11 | GJS / IBus test suite |
-| **Ubuntu** | 26.04 (Future) | amd64 | **Supported** | Wayland / X11 | Forward-compatible GJS architecture |
+| **Ubuntu** | 26.04 LTS (Resolute) | amd64 | **Expected to work** | Wayland (GNOME 50) | All dependencies available (GJS 1.88, IBus 1.5.34); not yet tested on a desktop |
 | **Linux Mint**| 21 / 22 | amd64 | **Supported** | Cinnamon (X11) | Standard X11 IBus integration |
 | **Pop!_OS** | 22.04 / 24.04 | amd64 | **Supported** | COSMIC / GNOME | FreeDesktop standard layout |
 
@@ -19,7 +19,7 @@
 | Desktop Environment | Wayland | X11 | Notes |
 |---|---|---|---|
 | **GNOME Shell 43 - 46** | **Supported** | **Supported** | Direct ibus bus integration; Avro added to the input sources when the user accepts the TopBar's offer (or with Doctor Auto-Fix). |
-| **KDE Plasma 5.27 & 6.x**| **Supported** | **Supported** | Non-focus-stealing floating window avoids KWin popup focus-out bug. |
+| **KDE Plasma 5.27 & 6.x**| **Supported** | **Supported** | Non-focus-stealing floating window avoids KWin popup focus-out bug. On Wayland, IBus Wayland must be the virtual keyboard: Avro Doctor checks it and can choose it. |
 | **XFCE 4.18** | N/A | **Supported** | Full IBus support with notification area applet. |
 | **Cinnamon 6.x** | N/A | **Supported** | Standard IBus tray integration. |
 | **MATE 1.26** | N/A | **Supported** | Standard IBus tray integration. |
