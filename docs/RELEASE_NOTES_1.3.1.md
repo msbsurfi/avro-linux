@@ -1,58 +1,74 @@
-# Avro Keyboard for Linux 1.3.1
+Avro Linux 1.3.1 is out (15 Oct 2026). This one is mostly bug fixes. Honestly 1.3.0 had more
+problems than we would like to admit, so if you installed it, please update.
 
-Bug-fix release. Download **`avro-linux_1.3.1-1_all.deb`** below.
+### Installing / updating
 
-## Install
-
-Open a terminal in the folder with the file (usually Downloads) and run:
+Grab `avro-linux_1.3.1-1_all.deb` from below, open a terminal where you saved it and run:
 
 ```bash
 cd ~/Downloads
 sudo apt install ./avro-linux_1.3.1-1_all.deb
 ```
 
-Keep the `./`. `apt` also installs what Avro needs (IBus, GJS, …). `sudo dpkg -i` works only
-when all of that is installed already.
+Don't forget the `./` (apt needs it to know it is a file and not a package name). apt will also
+pull in IBus, GJS etc if you don't have them already. Double-clicking the .deb works too if your
+desktop has a package installer like GDebi or Discover, but on some desktops (XFCE for example)
+it just opens an archive viewer, so the terminal way is safer.
 
-Double-clicking the file installs it only where a graphical package installer opens `.deb`
-files (GDebi, or the software center of some Ubuntu / Kubuntu releases). On other desktops,
-for example Xubuntu (XFCE), a double-click just opens the file in an archive viewer: use
-the command above.
+After installing, log out and log back in once. You don't need to restart the whole PC. The
+TopBar will show up and ask if you want Avro in your keyboard list.
 
-Then **log out and log in again** once (no need to restart the computer). The Avro TopBar
-starts and asks once whether to add Avro to your keyboard list.
+Already on 1.3.0? Same command, it updates in place. It won't ask you anything about config
+files this time.
 
-Updating from 1.3.0 works the same way.
+### What got fixed
 
-## Fixed in 1.3.1
+- Bijoy (ANSI) output was wrong for a lot of যুক্তবর্ণ words, you would get a random "&" stuck in
+  the middle. Now it gives the same output as Avro Keyboard on Windows, so প্রোগ্রাম, স্কুল,
+  শব্দ, আন্তর্জাতিক etc all come out right. Also if you click somewhere else in the middle of a
+  word, that half-typed word stays in Bijoy instead of turning into Unicode.
+- "Convert to Unicode" in the converter didn't do anything. It works now.
+- `avro-setup` was crashing as soon as it opened. Fixed, and it won't restart your computer on
+  its own anymore (sorry about that one). It also stopped taking over every .deb file you
+  double-click.
+- The installer was changing everyone's keyboard settings and restarting IBus. It doesn't touch
+  your settings now, the TopBar just asks you once.
+- The TopBar kept putting Avro back in your keyboard list every time you logged in, even after
+  you removed it. It was also hiding the IBus icon. Both fixed. And "Start Avro TopBar when I
+  log in" actually turns off now when you turn it off.
+- Avro Doctor: Copy Report works, it doesn't complain anymore just because you are typing in
+  English, and Bengali font names show properly instead of garbage. Auto-Fix also doesn't
+  switch your keyboard behind your back anymore.
+- Avro Pad zoom buttons work, and typing inside Avro Pad works with the Avro keyboard on.
+- Avro Mouse: backspace after য় ড় ঢ় deletes the whole letter, not just the dot.
+- If you use fcitx or some other input method, Avro won't try to override it at login.
+- Small stuff: window names in the taskbar are right now, and a few warnings are gone.
 
-* **Bijoy (ANSI) output** is now the same as Avro Keyboard on Windows, also for words with
-  যুক্তবর্ণ (প্রোগ্রাম, স্কুল, শব্দ, আন্তর্জাতিক …). No more "&" in the text, and a word that is
-  still being typed stays Bijoy when you click somewhere else.
-* **Unicode ↔ Bijoy converter:** "Convert to Unicode" works.
-* **Avro Setup (`avro-setup`)** opens again. It installs only the Avro package you give it,
-  never restarts your computer by itself, and no longer takes over the opening of every
-  `.deb` file.
-* **Installing no longer changes anyone's keyboard settings** or restarts IBus. Each user
-  chooses to add Avro (the TopBar asks once).
-* **TopBar:** no longer puts Avro back into your keyboard list at every login or hides the
-  IBus panel. "Start Avro TopBar when I log in" can now really be turned off.
-* **Avro Doctor:** "Copy Report" works, typing English is not shown as a problem, and
-  Bengali font names display correctly. Auto-Fix no longer switches your keyboard.
-* **KDE Plasma on Wayland:** Avro can type there only when **IBus Wayland** is chosen in
-  System Settings → Keyboard → Virtual Keyboard. Avro Doctor now says so, and the TopBar's
-  first question, Avro Setup and Doctor's Auto-Fix choose it for you when no other input
-  method is set there. Log out and in once afterwards.
-* **Avro Pad:** zoom works, and its own typing works while the Avro IBus keyboard is on.
-* **Avro Mouse:** Backspace after য় ড় ঢ় removes the whole letter.
-* Input method settings are added at login only when no other input method (such as fcitx)
-  is set up.
-* Window names in the taskbar are correct, and some warnings are gone.
+### KDE Plasma on Wayland, please read
 
-## Uninstall
+On KDE with Wayland, typing only works if **IBus Wayland** is selected in System Settings →
+Keyboard → Virtual Keyboard. Avro never told you this before, so you would install it and then
+nothing happens when you type. Now Avro Doctor checks it, and the TopBar (the first time it
+runs), Avro Setup and Doctor's Auto-Fix can set it for you. Log out and in once after that. If
+you already picked something else there, like fcitx, we leave it alone.
+
+### What we tested
+
+We went through the whole test list by hand on a real Debian 13 PC with KDE Plasma 6 on Wayland
+(125% scaling): Firefox, Chrome, LibreOffice, VS Code, Konsole, KRunner and a Flatpak app. Also
+Ubuntu 24.04 with XFCE, GNOME and KDE on X11. We haven't tried Ubuntu 26.04 or GNOME on Wayland on
+a real machine yet. It should work, but if you try it, tell us how it went.
+
+### Uninstall
 
 ```bash
 sudo apt remove avro-linux
 ```
 
-Your personal dictionary and settings stay in `~/.config/avro`.
+Your own dictionary and settings stay in `~/.config/avro`. Delete that folder if you want a
+clean slate.
+
+Found a bug? Please open an issue here: https://github.com/msbsurfi/avro-linux/issues
+The Avro Doctor report (the Copy Report button) helps us a lot.
+
+Thanks to everyone who tested and reported stuff!
